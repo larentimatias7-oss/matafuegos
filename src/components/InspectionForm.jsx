@@ -20,7 +20,12 @@ import { enqueueOfflineInspection, compressImageFile } from '../utils/offlineQue
 
 export default function InspectionForm({ extinguisher, onBack, onSaved, onInspectNext }) {
   const [inspectorName, setInspectorName] = useState(() => {
-    return localStorage.getItem('firecontrol_inspector') || 'Santi (Inspector HyS)';
+    const saved = localStorage.getItem('firecontrol_inspector');
+    if (saved && (saved.includes('Santi ') || saved === 'Santi' || saved.includes('Santi ('))) {
+      localStorage.setItem('firecontrol_inspector', 'Santiago Amaya (Inspector HyS)');
+      return 'Santiago Amaya (Inspector HyS)';
+    }
+    return saved || 'Santiago Amaya (Inspector HyS)';
   });
 
   const [checklistItems, setChecklistItems] = useState([]);
@@ -531,7 +536,7 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
             value={inspectorName}
             onChange={(e) => setInspectorName(e.target.value)}
             className="input"
-            placeholder="Ej: Santi (Inspector HyS)"
+            placeholder="Ej: Santiago Amaya (Inspector HyS)"
           />
         </div>
 

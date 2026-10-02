@@ -8,8 +8,8 @@ router.get('/me', (req, res) => {
   res.json({
     authenticated: true,
     user: {
-      name: 'Santi (Inspector HyS)',
-      email: 'santi.inspeccion@milicic.com.ar',
+      name: 'Santiago Amaya (Inspector HyS)',
+      email: 'santiago.amaya@milicic.com.ar',
       role: 'INSPECTOR',
       tenant: 'Milicic S.A.'
     }

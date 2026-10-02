@@ -92,7 +92,7 @@ Content-Type: application/json
     [
       "MF-014",
       "2026-10-02 11:30:00",
-      "Santi (Inspector HyS)",
+      "Santiago Amaya (Inspector HyS)",
       "FALLA",
       "Manómetro con aguja en zona roja",
       "Edificio Central - Subsuelo"

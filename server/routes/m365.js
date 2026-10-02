@@ -651,7 +651,7 @@ router.post('/test-webhook', async (req, res) => {
       sample_data: {
         extinguisher_code: 'MF-001',
         location: 'Edificio Central - PB',
-        inspector: 'Santi (Inspector HyS)',
+        inspector: 'Santiago Amaya (Inspector HyS)',
         status: 'OK'
       }
     };

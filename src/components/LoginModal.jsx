@@ -3,7 +3,7 @@ import { Shield, UserCheck, Key, Lock, ArrowRight, Building2 } from 'lucide-reac
 
 export default function LoginModal({ onLogin }) {
   const [localRole, setLocalRole] = useState('INSPECTOR');
-  const [localName, setLocalName] = useState('Santi (Inspector HyS)');
+  const [localName, setLocalName] = useState('Santiago Amaya (Inspector HyS)');
 
   const handleEntraLogin = () => {
     // Redirect to Entra ID endpoint or simulate corporate SSO
@@ -89,7 +89,7 @@ export default function LoginModal({ onLogin }) {
               value={localName}
               onChange={(e) => setLocalName(e.target.value)}
               className="input"
-              placeholder="Ej: Santi (Inspector HyS)"
+              placeholder="Ej: Santiago Amaya (Inspector HyS)"
             />
           </div>
 

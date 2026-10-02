@@ -27,7 +27,17 @@ export default function App() {
   // User & Auth State
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('firecontrol_user');
-    return saved ? JSON.parse(saved) : { name: 'Santi (Inspector HyS)', role: 'INSPECTOR' };
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.name && (parsed.name.includes('Santi ') || parsed.name === 'Santi')) {
+          parsed.name = 'Santiago Amaya (Inspector HyS)';
+          localStorage.setItem('firecontrol_user', JSON.stringify(parsed));
+        }
+        return parsed;
+      } catch (e) {}
+    }
+    return { name: 'Santiago Amaya (Inspector HyS)', role: 'INSPECTOR' };
   });
   const [showLoginModal, setShowLoginModal] = useState(false);
 

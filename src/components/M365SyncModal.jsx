@@ -165,7 +165,7 @@ export default function M365SyncModal({ onExportExcel, onRefreshData }) {
             </h3>
           </div>
           <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1rem' }}>
-            Si Santi o la empresa ya tienen una lista de los 130 matafuegos en una planilla Excel, subila aquí para cargarla masivamente en 2 segundos.
+            Si Santiago Amaya o la empresa ya tienen una lista de los 130 matafuegos en una planilla Excel, subila aquí para cargarla masivamente en 2 segundos.
           </p>
 
           <form onSubmit={handleImportExcel} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
