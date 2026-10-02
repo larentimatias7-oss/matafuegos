@@ -18,22 +18,35 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
   const qrReaderRef = useRef(null);
   const scannerInstanceRef = useRef(null);
 
-  // Parse QR content (whether it's plain code 'MF-001' or full URL 'https://.../?code=MF-001#check')
+  // Parse QR content (supports /m/:publicId, code=MF-XXX, or direct code)
   const handleDecodedText = (decodedText) => {
-    let cleanCode = decodedText.trim();
-    if (cleanCode.includes('code=')) {
+    const raw = decodedText.trim();
+
+    // Check for short public URL /m/<publicId>
+    const mMatch = raw.match(/\/m\/([a-zA-Z0-9_-]+)/);
+    if (mMatch) {
+      onSelectCode(mMatch[1]);
+      return;
+    }
+
+    if (raw.includes('code=')) {
       try {
-        const url = new URL(cleanCode);
+        const url = new URL(raw);
         const codeParam = url.searchParams.get('code');
-        if (codeParam) cleanCode = codeParam;
+        if (codeParam) {
+          onSelectCode(codeParam.toUpperCase());
+          return;
+        }
       } catch (e) {
-        // Fallback regex
-        const match = cleanCode.match(/code=([A-Za-z0-9_-]+)/);
-        if (match) cleanCode = match[1];
+        const match = raw.match(/code=([A-Za-z0-9_-]+)/);
+        if (match) {
+          onSelectCode(match[1].toUpperCase());
+          return;
+        }
       }
     }
-    cleanCode = cleanCode.toUpperCase();
-    onSelectCode(cleanCode);
+
+    onSelectCode(raw.toUpperCase());
   };
 
   useEffect(() => {

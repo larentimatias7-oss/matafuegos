@@ -12,7 +12,11 @@ RUN npm run build
 FROM node:22-alpine AS runner
 WORKDIR /app
 
+# Instalar tzdata y sqlite para soporte de zona horaria y backups
+RUN apk add --no-cache tzdata sqlite bash
+
 ENV NODE_ENV=production
+ENV TZ=America/Argentina/Buenos_Aires
 ENV PORT=3000
 ENV DATA_DIR=/data
 
@@ -20,12 +24,14 @@ ENV DATA_DIR=/data
 COPY package*.json ./
 RUN npm install --omit=dev
 
-# Copy server and built frontend from builder
+# Copy server, scripts and built frontend from builder
 COPY server/ ./server/
+COPY scripts/ ./scripts/
+RUN chmod +x ./scripts/*.sh 2>/dev/null || true
 COPY --from=builder /app/dist ./dist
 
 # Create persistent data directory
-RUN mkdir -p /data
+RUN mkdir -p /data/backups
 
 VOLUME ["/data"]
 EXPOSE 3000

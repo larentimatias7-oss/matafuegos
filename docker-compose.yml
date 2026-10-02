@@ -1,22 +1,25 @@
 version: '3.8'
 
 services:
-  firecontrol:
+  matafuegos:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: firecontrol-365
+    container_name: milicic-matafuegos
     restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
+      - NODE_ENV=production
+      - TZ=America/Argentina/Buenos_Aires
       - PORT=3000
       - DATA_DIR=/data
       - BASE_URL=http://localhost:3000
-      - M365_WEBHOOK_URL=
+    env_file:
+      - .env
     volumes:
-      - firecontrol-data:/data
+      - matafuegos-data:/data
 
 volumes:
-  firecontrol-data:
-    name: firecontrol_365_data
+  matafuegos-data:
+    name: milicic_matafuegos_data

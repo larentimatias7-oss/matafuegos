@@ -1,20 +1,102 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Dashboard from './components/Dashboard';
+import RouteView from './components/RouteView';
 import ExtinguishersList from './components/ExtinguishersList';
 import Scanner from './components/Scanner';
 import InspectionForm from './components/InspectionForm';
+import CasesList from './components/CasesList';
 import QrPrinter from './components/QrPrinter';
 import InspectionHistory from './components/InspectionHistory';
 import M365SyncModal from './components/M365SyncModal';
 import ExtinguisherModal from './components/ExtinguisherModal';
+import LoginModal from './components/LoginModal';
+import { WifiOff, Cloud, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { getOfflineInspections, syncOfflineInspections } from './utils/offlineQueue';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [extinguishers, setExtinguishers] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [pendingOfflineCount, setPendingOfflineCount] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState(null);
+
+  // User & Auth State
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('firecontrol_user');
+    return saved ? JSON.parse(saved) : { name: 'Santi (Inspector HyS)', role: 'INSPECTOR' };
+  });
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
+  // Theme State (Light default per Milicic specifications)
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('firecontrol_theme') || 'light';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('firecontrol_theme', theme);
+  }, [theme]);
+
+  const checkOfflineQueue = async () => {
+    try {
+      const items = await getOfflineInspections();
+      setPendingOfflineCount(items.length);
+    } catch (e) {
+      console.warn('Error verificando cola offline:', e);
+    }
+  };
+
+  const handleTriggerSync = async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    setSyncFeedback(null);
+    try {
+      const result = await syncOfflineInspections();
+      if (result.synced > 0) {
+        setSyncFeedback(`Se sincronizaron ${result.synced} inspección(es) exitosamente.`);
+        fetchData();
+      }
+      await checkOfflineQueue();
+    } catch (e) {
+      setSyncFeedback('Error sincronizando cola: ' + e.message);
+    } finally {
+      setIsSyncing(false);
+      setTimeout(() => setSyncFeedback(null), 4000);
+    }
+  };
+
+  // Network online/offline listener and auto-sync
+  useEffect(() => {
+    checkOfflineQueue();
+
+    const handleOnline = () => {
+      setIsOnline(true);
+      handleTriggerSync();
+    };
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Periodically check queue
+    const interval = setInterval(() => {
+      checkOfflineQueue();
+      if (navigator.onLine && pendingOfflineCount > 0) {
+        handleTriggerSync();
+      }
+    }, 15000);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      clearInterval(interval);
+    };
+  }, [pendingOfflineCount]);
+
   // Inspection flow
   const [inspectingExtinguisher, setInspectingExtinguisher] = useState(null);
 
@@ -56,18 +138,18 @@ export default function App() {
     }
   }, []);
 
-  const handleSelectCode = async (code) => {
+  const handleSelectCode = async (codeOrPublicId) => {
     try {
-      const res = await fetch(`/api/extinguishers/${encodeURIComponent(code)}`);
+      const res = await fetch(`/api/extinguishers/${encodeURIComponent(codeOrPublicId)}`);
       const data = await res.json();
       if (data.success && data.data) {
         setInspectingExtinguisher(data.data);
         setActiveTab('scan');
       } else {
-        alert(`No se encontró ningún matafuego con el código "${code}".`);
+        alert(`No se encontró ningún matafuego con el código "${codeOrPublicId}".`);
       }
     } catch (e) {
-      alert(`Error al buscar matafuego: ${e.message}`);
+      alert(`Error al buscar extintor: ${e.message}`);
     }
   };
 
@@ -76,7 +158,7 @@ export default function App() {
   };
 
   const handleResetSeed = async () => {
-    if (window.confirm('¿Querés reiniciar la base de datos con los 130 matafuegos de prueba con datos y fechas reales?')) {
+    if (window.confirm('¿Desea reiniciar los 130 matafuegos con datos técnicos completos de Milicic S.A.?')) {
       try {
         const res = await fetch('/api/extinguishers/reset-seed', { method: 'POST' });
         const data = await res.json();
@@ -91,7 +173,7 @@ export default function App() {
   };
 
   const handleDeleteExtinguisher = async (id) => {
-    if (window.confirm('¿Estás seguro de eliminar este matafuego de la base de datos?')) {
+    if (window.confirm('¿Está seguro de eliminar este extintor del inventario?')) {
       try {
         const res = await fetch(`/api/extinguishers/${id}`, { method: 'DELETE' });
         const data = await res.json();
@@ -104,9 +186,52 @@ export default function App() {
     }
   };
 
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
+
   return (
     <div className="app-container">
-      {/* Navbar with brand, tabs and fast actions */}
+      
+      {/* Offline Status or Pending Sync Warning Bar */}
+      {(!isOnline || pendingOfflineCount > 0 || syncFeedback) && (
+        <div style={{
+          background: !isOnline ? 'var(--status-pending-bg)' : 'var(--milicic-orange-light)',
+          color: !isOnline ? 'var(--status-pending-text)' : 'var(--milicic-orange-dark)',
+          borderBottom: '1px solid var(--border-color)',
+          padding: '0.45rem 1rem',
+          fontSize: '0.82rem',
+          fontWeight: 700,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '0.5rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {!isOnline ? <WifiOff size={16} /> : <Cloud size={16} />}
+            <span>
+              {syncFeedback ? syncFeedback :
+               !isOnline ? `Modo Sin Conexión (${pendingOfflineCount} guardado/s en dispositivo)` :
+               `Hay ${pendingOfflineCount} inspección(es) pendiente(s) de sincronizar`}
+            </span>
+          </div>
+
+          {isOnline && pendingOfflineCount > 0 && (
+            <button
+              onClick={handleTriggerSync}
+              disabled={isSyncing}
+              className="btn btn-primary"
+              style={{ padding: '0.25rem 0.65rem', fontSize: '0.78rem', minHeight: '34px' }}
+            >
+              <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
+              <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar ahora'}</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Corporate Navbar */}
       <Navbar 
         activeTab={activeTab} 
         setActiveTab={(tab) => {
@@ -114,7 +239,10 @@ export default function App() {
           if (tab !== 'scan') setInspectingExtinguisher(null);
         }}
         onNewExtinguisher={() => setModalState({ open: true, mode: 'create', extinguisher: null })}
-        stats={stats}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        user={user}
+        currentRound={stats?.activeRound}
       />
 
       {/* Main Content Area */}
@@ -131,7 +259,37 @@ export default function App() {
           />
         )}
 
-        {/* TAB 2: INVENTARIO EXTINTORES */}
+        {/* TAB 2: MI RUTA DE INSPECCIÓN */}
+        {activeTab === 'route' && (
+          <RouteView 
+            onInspectCode={(code) => handleSelectCode(code)}
+          />
+        )}
+
+        {/* TAB 3: ESCANEAR / CONTROL MENSUAL */}
+        {activeTab === 'scan' && (
+          inspectingExtinguisher ? (
+            <InspectionForm 
+              extinguisher={inspectingExtinguisher}
+              onBack={() => setInspectingExtinguisher(null)}
+              onSaved={() => {
+                fetchData();
+                setInspectingExtinguisher(null);
+              }}
+              onInspectNext={(nextCode) => {
+                fetchData();
+                handleSelectCode(nextCode);
+              }}
+            />
+          ) : (
+            <Scanner 
+              extinguishers={extinguishers}
+              onSelectCode={handleSelectCode}
+            />
+          )
+        )}
+
+        {/* TAB 4: INVENTARIO EXTINTORES */}
         {activeTab === 'extinguishers' && (
           <ExtinguishersList 
             extinguishers={extinguishers}
@@ -146,36 +304,22 @@ export default function App() {
           />
         )}
 
-        {/* TAB 3: ESCANEAR / CONTROL MENSUAL */}
-        {activeTab === 'scan' && (
-          inspectingExtinguisher ? (
-            <InspectionForm 
-              extinguisher={inspectingExtinguisher}
-              onBack={() => setInspectingExtinguisher(null)}
-              onSaved={() => {
-                fetchData();
-                setInspectingExtinguisher(null);
-              }}
-            />
-          ) : (
-            <Scanner 
-              extinguishers={extinguishers}
-              onSelectCode={handleSelectCode}
-            />
-          )
+        {/* TAB 5: CASOS Y ANOMALÍAS */}
+        {activeTab === 'cases' && (
+          <CasesList />
         )}
 
-        {/* TAB 4: IMPRESIÓN MASIVA DE QRS */}
+        {/* TAB 6: IMPRESIÓN DE ETIQUETAS QR */}
         {activeTab === 'qrs' && (
           <QrPrinter />
         )}
 
-        {/* TAB 5: HISTORIAL AUDITORÍA */}
+        {/* TAB 7: HISTORIAL AUDITABLE */}
         {activeTab === 'history' && (
           <InspectionHistory onExportExcel={handleExportExcel} />
         )}
 
-        {/* TAB 6: MICROSOFT 365 INTEGRATION */}
+        {/* TAB 8: MICROSOFT 365 INTEGRATION */}
         {activeTab === 'm365' && (
           <M365SyncModal 
             onExportExcel={handleExportExcel} 
@@ -194,6 +338,17 @@ export default function App() {
           onSave={() => {
             setModalState({ open: false, mode: 'create', extinguisher: null });
             fetchData();
+          }}
+        />
+      )}
+
+      {/* Optional Login Modal */}
+      {showLoginModal && (
+        <LoginModal 
+          onLogin={(u) => {
+            setUser(u);
+            localStorage.setItem('firecontrol_user', JSON.stringify(u));
+            setShowLoginModal(false);
           }}
         />
       )}

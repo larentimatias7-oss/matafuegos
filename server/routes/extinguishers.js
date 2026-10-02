@@ -1,11 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../db');
+const { db, generatePublicId } = require('../db');
 
 // Helper to determine monthly inspection status
-// Verde: inspeccionado este mes y aprobado
-// Amarillo: pendiente de inspección este mes
-// Rojo: inspeccionado este mes con falla O carga anual vencida
 function getMonthlyStatus(extinguisher, currentMonth) {
   const isChargeExpired = extinguisher.expiration_charge < new Date().toISOString().split('T')[0];
 
@@ -19,7 +16,7 @@ function getMonthlyStatus(extinguisher, currentMonth) {
   if (isChargeExpired) {
     return {
       statusKey: 'EXPIRED',
-      badgeColor: 'red',
+      badgeColor: 'expired',
       label: 'Carga Anual Vencida',
       inspectedThisMonth: !!lastInspectionThisMonth,
       passed: lastInspectionThisMonth ? Boolean(lastInspectionThisMonth.passed) : null
@@ -29,8 +26,8 @@ function getMonthlyStatus(extinguisher, currentMonth) {
   if (!lastInspectionThisMonth) {
     return {
       statusKey: 'PENDING',
-      badgeColor: 'yellow',
-      label: 'Pendiente Mes Actual',
+      badgeColor: 'pending',
+      label: 'Pendiente Mes',
       inspectedThisMonth: false,
       passed: null
     };
@@ -39,7 +36,7 @@ function getMonthlyStatus(extinguisher, currentMonth) {
   if (lastInspectionThisMonth.passed === 1) {
     return {
       statusKey: 'OK',
-      badgeColor: 'green',
+      badgeColor: 'ok',
       label: 'Controlado OK',
       inspectedThisMonth: true,
       passed: true,
@@ -48,13 +45,32 @@ function getMonthlyStatus(extinguisher, currentMonth) {
   } else {
     return {
       statusKey: 'FAULT',
-      badgeColor: 'red',
+      badgeColor: 'fault',
       label: 'Con Anomalías',
       inspectedThisMonth: true,
       passed: false,
       date: lastInspectionThisMonth.inspection_date,
       observations: lastInspectionThisMonth.observations
     };
+  }
+}
+
+// Helper to log changes to audit_logs
+function logAudit(entityType, entityId, action, changedBy, oldValues, newValues) {
+  try {
+    db.prepare(`
+      INSERT INTO audit_logs (entity_type, entity_id, action, changed_by, old_values, new_values)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      entityType,
+      entityId,
+      action,
+      changedBy || 'Sistema',
+      oldValues ? JSON.stringify(oldValues) : null,
+      newValues ? JSON.stringify(newValues) : null
+    );
+  } catch (err) {
+    console.error('Audit log error:', err.message);
   }
 }
 
@@ -81,9 +97,9 @@ router.get('/', (req, res) => {
       params.push(status);
     }
     if (search) {
-      query += ' AND (code LIKE ? OR location LIKE ? OR area LIKE ? OR notes LIKE ?)';
+      query += ' AND (code LIKE ? OR location LIKE ? OR area LIKE ? OR building LIKE ? OR notes LIKE ? OR manufacturer LIKE ? OR public_id = ?)';
       const term = `%${search}%`;
-      params.push(term, term, term, term);
+      params.push(term, term, term, term, term, term, search.trim().toLowerCase());
     }
 
     query += ' ORDER BY code ASC';
@@ -111,7 +127,7 @@ router.get('/', (req, res) => {
   }
 });
 
-// GET single extinguisher by id or code
+// GET single extinguisher by id, code or public_id
 router.get('/:idOrCode', (req, res) => {
   try {
     const { idOrCode } = req.params;
@@ -122,6 +138,9 @@ router.get('/:idOrCode', (req, res) => {
     }
     if (!ext) {
       ext = db.prepare('SELECT * FROM extinguishers WHERE code = ?').get(idOrCode.toUpperCase());
+    }
+    if (!ext) {
+      ext = db.prepare('SELECT * FROM extinguishers WHERE public_id = ?').get(idOrCode.toLowerCase());
     }
 
     if (!ext) {
@@ -136,6 +155,20 @@ router.get('/:idOrCode', (req, res) => {
     const inspections = db.prepare(`
       SELECT * FROM inspections 
       WHERE extinguisher_id = ? 
+      ORDER BY id DESC LIMIT 15
+    `).all(ext.id);
+
+    // Get open cases
+    const cases = db.prepare(`
+      SELECT * FROM cases 
+      WHERE extinguisher_id = ? 
+      ORDER BY id DESC LIMIT 5
+    `).all(ext.id);
+
+    // Get audit history
+    const auditHistory = db.prepare(`
+      SELECT * FROM audit_logs
+      WHERE entity_type = 'EXTINGUISHER' AND entity_id = ?
       ORDER BY id DESC LIMIT 10
     `).all(ext.id);
 
@@ -144,7 +177,9 @@ router.get('/:idOrCode', (req, res) => {
       data: {
         ...ext,
         monthlyStatus,
-        inspections
+        inspections,
+        cases,
+        auditHistory
       }
     });
   } catch (error) {
@@ -155,37 +190,68 @@ router.get('/:idOrCode', (req, res) => {
 // POST create new extinguisher
 router.post('/', (req, res) => {
   try {
-    const { code, type, capacity, location, area, floor, expiration_charge, expiration_ph, status, notes } = req.body;
+    const { 
+      code, type, capacity, location, area, floor, building = 'Edificio Central',
+      location_ref = '', manufacturer = '', fab_year = null, lifespan_limit = '',
+      collar_year_color = '', last_charge_date = '', expiration_charge,
+      last_ph_date = '', expiration_ph, supplier = '', certificate_number = '',
+      status = 'OPERATIVO', notes = '', changed_by = 'Admin'
+    } = req.body;
 
     if (!code || !type || !capacity || !location || !expiration_charge || !expiration_ph) {
       return res.status(400).json({ success: false, error: 'Campos obligatorios incompletos' });
     }
 
     const cleanCode = code.trim().toUpperCase();
+    const publicId = generatePublicId();
 
     const insert = db.prepare(`
-      INSERT INTO extinguishers (code, type, capacity, location, area, floor, expiration_charge, expiration_ph, status, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO extinguishers (
+        code, public_id, type, capacity, location, area, floor, building,
+        location_ref, manufacturer, fab_year, lifespan_limit, last_charge_date,
+        expiration_charge, collar_year_color, last_ph_date, expiration_ph,
+        supplier, certificate_number, status, notes
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?, ?, ?,
+        ?, ?, ?, ?
+      )
     `);
 
     const result = insert.run(
       cleanCode,
+      publicId,
       type,
       capacity,
       location,
       area || '',
       floor || '',
+      building,
+      location_ref,
+      manufacturer,
+      fab_year ? Number(fab_year) : null,
+      lifespan_limit,
+      last_charge_date,
       expiration_charge,
+      collar_year_color,
+      last_ph_date,
       expiration_ph,
-      status || 'OPERATIVO',
-      notes || ''
+      supplier,
+      certificate_number,
+      status,
+      notes
     );
+
+    const newId = result.lastInsertRowid;
+    logAudit('EXTINGUISHER', newId, 'CREATE', changed_by, null, { code: cleanCode, location, type, capacity });
 
     res.status(201).json({
       success: true,
       message: 'Matafuego creado con éxito',
-      id: result.lastInsertRowid,
-      code: cleanCode
+      id: newId,
+      code: cleanCode,
+      public_id: publicId
     });
   } catch (error) {
     if (error.message.includes('UNIQUE constraint failed')) {
@@ -195,11 +261,22 @@ router.post('/', (req, res) => {
   }
 });
 
-// PUT update extinguisher
+// PUT update extinguisher with full audit logging
 router.put('/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const { code, type, capacity, location, area, floor, expiration_charge, expiration_ph, status, notes } = req.body;
+    const oldExt = db.prepare('SELECT * FROM extinguishers WHERE id = ?').get(id);
+
+    if (!oldExt) {
+      return res.status(404).json({ success: false, error: 'Matafuego no encontrado' });
+    }
+
+    const { 
+      code, type, capacity, location, area, floor, building,
+      location_ref, manufacturer, fab_year, lifespan_limit, collar_year_color,
+      last_charge_date, expiration_charge, last_ph_date, expiration_ph,
+      supplier, certificate_number, status, notes, changed_by = 'Operario / Admin'
+    } = req.body;
 
     const update = db.prepare(`
       UPDATE extinguishers SET
@@ -209,8 +286,18 @@ router.put('/:id', (req, res) => {
         location = COALESCE(?, location),
         area = COALESCE(?, area),
         floor = COALESCE(?, floor),
+        building = COALESCE(?, building),
+        location_ref = COALESCE(?, location_ref),
+        manufacturer = COALESCE(?, manufacturer),
+        fab_year = COALESCE(?, fab_year),
+        lifespan_limit = COALESCE(?, lifespan_limit),
+        collar_year_color = COALESCE(?, collar_year_color),
+        last_charge_date = COALESCE(?, last_charge_date),
         expiration_charge = COALESCE(?, expiration_charge),
+        last_ph_date = COALESCE(?, last_ph_date),
         expiration_ph = COALESCE(?, expiration_ph),
+        supplier = COALESCE(?, supplier),
+        certificate_number = COALESCE(?, certificate_number),
         status = COALESCE(?, status),
         notes = COALESCE(?, notes),
         updated_at = datetime('now', 'localtime')
@@ -224,14 +311,32 @@ router.put('/:id', (req, res) => {
       location,
       area,
       floor,
+      building,
+      location_ref,
+      manufacturer,
+      fab_year ? Number(fab_year) : null,
+      lifespan_limit,
+      collar_year_color,
+      last_charge_date,
       expiration_charge,
+      last_ph_date,
       expiration_ph,
+      supplier,
+      certificate_number,
       status,
       notes,
       id
     );
 
-    res.json({ success: true, message: 'Matafuego actualizado' });
+    // Audit log
+    const changes = {};
+    if (location && location !== oldExt.location) changes.location = { from: oldExt.location, to: location };
+    if (status && status !== oldExt.status) changes.status = { from: oldExt.status, to: status };
+    if (expiration_charge && expiration_charge !== oldExt.expiration_charge) changes.expiration_charge = { from: oldExt.expiration_charge, to: expiration_charge };
+
+    logAudit('EXTINGUISHER', id, 'UPDATE', changed_by, oldExt, req.body);
+
+    res.json({ success: true, message: 'Ficha de extintor actualizada' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -241,8 +346,9 @@ router.put('/:id', (req, res) => {
 router.delete('/:id', (req, res) => {
   try {
     const { id } = req.params;
+    const oldExt = db.prepare('SELECT * FROM extinguishers WHERE id = ?').get(id);
     db.prepare('DELETE FROM extinguishers WHERE id = ?').run(id);
-    db.prepare('DELETE FROM inspections WHERE extinguisher_id = ?').run(id);
+    logAudit('EXTINGUISHER', id, 'DELETE', 'Admin', oldExt, null);
     res.json({ success: true, message: 'Matafuego eliminado correctamente' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -252,6 +358,7 @@ router.delete('/:id', (req, res) => {
 // POST reset to 130 sample extinguishers
 router.post('/reset-seed', (req, res) => {
   try {
+    db.exec('DELETE FROM cases');
     db.exec('DELETE FROM inspections');
     db.exec('DELETE FROM extinguishers');
     const { seed130Extinguishers } = require('../db');

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, QrCode, Save, Trash2, Printer, ExternalLink } from 'lucide-react';
+import { X, QrCode, Save, Trash2, Printer, ExternalLink, History, Info } from 'lucide-react';
 
 export default function ExtinguisherModal({ extinguisher, mode, onClose, onSave }) {
   const isQrMode = mode === 'qr';
@@ -12,8 +12,16 @@ export default function ExtinguisherModal({ extinguisher, mode, onClose, onSave 
     location: '',
     floor: 'Planta Baja',
     area: 'Oficinas',
+    building: 'Base Central Rosario',
+    location_ref: '',
+    manufacturer: 'Georgia / Melisam S.A.',
+    fab_year: '2021',
+    lifespan_limit: '2041-12-31',
+    collar_year_color: '2026 - Marbete Naranja Oficial',
     expiration_charge: '',
     expiration_ph: '',
+    supplier: 'Taller Certificado IRAM #1042',
+    certificate_number: '',
     status: 'OPERATIVO',
     notes: ''
   });
@@ -22,6 +30,7 @@ export default function ExtinguisherModal({ extinguisher, mode, onClose, onSave 
   const [loadingQr, setLoadingQr] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('data'); // 'data' | 'audit'
 
   useEffect(() => {
     if (extinguisher) {
@@ -32,8 +41,16 @@ export default function ExtinguisherModal({ extinguisher, mode, onClose, onSave 
         location: extinguisher.location || '',
         floor: extinguisher.floor || 'Planta Baja',
         area: extinguisher.area || '',
+        building: extinguisher.building || 'Base Central Rosario',
+        location_ref: extinguisher.location_ref || '',
+        manufacturer: extinguisher.manufacturer || 'Georgia / Melisam S.A.',
+        fab_year: extinguisher.fab_year || '2021',
+        lifespan_limit: extinguisher.lifespan_limit || '',
+        collar_year_color: extinguisher.collar_year_color || '2026 - Marbete Naranja Oficial',
         expiration_charge: extinguisher.expiration_charge || '',
         expiration_ph: extinguisher.expiration_ph || '',
+        supplier: extinguisher.supplier || 'Taller Certificado IRAM #1042',
+        certificate_number: extinguisher.certificate_number || '',
         status: extinguisher.status || 'OPERATIVO',
         notes: extinguisher.notes || ''
       });
@@ -51,14 +68,14 @@ export default function ExtinguisherModal({ extinguisher, mode, onClose, onSave 
           .finally(() => setLoadingQr(false));
       }
     } else {
-      // Default dates for new extinguisher
       const now = new Date();
       const nextYear = new Date(now.getTime() + 365 * 86400000).toISOString().split('T')[0];
       const next5Years = new Date(now.getTime() + 5 * 365 * 86400000).toISOString().split('T')[0];
       setForm(prev => ({
         ...prev,
         expiration_charge: nextYear,
-        expiration_ph: next5Years
+        expiration_ph: next5Years,
+        lifespan_limit: `${now.getFullYear() + 20}-12-31`
       }));
     }
   }, [extinguisher, isQrMode]);
@@ -80,7 +97,7 @@ export default function ExtinguisherModal({ extinguisher, mode, onClose, onSave 
 
       const data = await res.json();
       if (!data.success) {
-        throw new Error(data.error || 'Error al guardar');
+        throw new Error(data.error || 'Error al guardar extintor');
       }
 
       onSave();
@@ -93,49 +110,60 @@ export default function ExtinguisherModal({ extinguisher, mode, onClose, onSave 
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
+      <div className="card" onClick={e => e.stopPropagation()} style={{ maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
         
         {/* Header */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '1.25rem 1.5rem',
-          borderBottom: '1px solid var(--border-color)'
+          paddingBottom: '0.85rem',
+          borderBottom: '1.5px solid var(--border-color)',
+          marginBottom: '1rem'
         }}>
-          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff' }}>
-            {isQrMode 
-              ? `Código QR: ${extinguisher?.code}` 
-              : (isEditing ? `Editar Extintor ${extinguisher?.code}` : 'Nuevo Extintor')}
-          </h3>
-          <button onClick={onClose} className="btn btn-outline btn-sm" style={{ padding: '0.2rem' }}>
+          <div>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)' }}>
+              {isQrMode 
+                ? `Etiqueta QR: ${extinguisher?.code}` 
+                : (isEditing ? `Ficha Técnica Extintor ${extinguisher?.code}` : 'Nuevo Extintor')}
+            </h3>
+            {extinguisher?.public_id && (
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                ID Público QR: {extinguisher.public_id}
+              </span>
+            )}
+          </div>
+
+          <button onClick={onClose} className="btn btn-secondary btn-sm" style={{ padding: '0.25rem 0.5rem' }}>
             <X size={18} />
           </button>
         </div>
 
         {/* QR Mode View */}
         {isQrMode ? (
-          <div style={{ padding: '2rem 1.5rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ padding: '1.5rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             {loadingQr ? (
-              <p style={{ color: '#94a3b8' }}>Generando QR...</p>
+              <p style={{ color: 'var(--text-muted)' }}>Generando código QR Nivel H...</p>
             ) : qrDataUrl ? (
               <>
                 <div style={{
                   background: '#ffffff',
                   padding: '1rem',
                   borderRadius: '12px',
-                  boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
-                  marginBottom: '1rem'
+                  boxShadow: '0 8px 20px rgba(0,0,0,0.15)',
+                  marginBottom: '1rem',
+                  border: '2px solid var(--milicic-orange)'
                 }}>
                   <img src={qrDataUrl} alt={extinguisher.code} style={{ width: '220px', height: '220px', display: 'block' }} />
                 </div>
-                <div className="font-mono" style={{ fontSize: '1.4rem', fontWeight: 800, color: '#38bdf8' }}>
+
+                <div className="font-mono" style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--milicic-orange)' }}>
                   {extinguisher.code}
                 </div>
-                <p style={{ color: '#cbd5e1', fontWeight: 600, fontSize: '0.9rem', marginTop: '0.25rem' }}>
+                <p style={{ color: 'var(--text-main)', fontWeight: 700, fontSize: '0.95rem', marginTop: '0.25rem' }}>
                   {extinguisher.type} {extinguisher.capacity}
                 </p>
-                <p style={{ color: '#94a3b8', fontSize: '0.8rem', maxWidth: '350px' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', maxWidth: '350px' }}>
                   {extinguisher.location}
                 </p>
 
@@ -149,21 +177,21 @@ export default function ExtinguisherModal({ extinguisher, mode, onClose, onSave 
                   </a>
                   <button onClick={() => window.print()} className="btn btn-secondary">
                     <Printer size={16} />
-                    <span>Imprimir</span>
+                    <span>Imprimir Etiqueta</span>
                   </button>
                 </div>
               </>
             ) : (
-              <p style={{ color: '#f87171' }}>No se pudo generar el código QR.</p>
+              <p style={{ color: 'var(--status-fault-text)' }}>No se pudo generar el código QR.</p>
             )}
           </div>
         ) : (
-          /* Edit / Create Form */
-          <form onSubmit={handleSubmit} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          /* Technical Specs Edit Form */
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
             
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <div>
-                <label className="label">Código Identificador</label>
+                <label className="label">Código Interno</label>
                 <input
                   type="text"
                   required
@@ -175,7 +203,7 @@ export default function ExtinguisherModal({ extinguisher, mode, onClose, onSave 
               </div>
 
               <div>
-                <label className="label">Estado Operativo</label>
+                <label className="label">Estado del Equipo</label>
                 <select
                   value={form.status}
                   onChange={e => setForm({ ...form, status: e.target.value })}
@@ -183,12 +211,13 @@ export default function ExtinguisherModal({ extinguisher, mode, onClose, onSave 
                 >
                   <option value="OPERATIVO">OPERATIVO</option>
                   <option value="EN_TALLER">EN TALLER</option>
-                  <option value="BAJA">DE BAJA</option>
+                  <option value="FUERA_DE_SERVICIO">FUERA DE SERVICIO</option>
+                  <option value="REEMPLAZADO">REEMPLAZADO</option>
                 </select>
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <div>
                 <label className="label">Tipo de Extintor</label>
                 <select
@@ -198,9 +227,9 @@ export default function ExtinguisherModal({ extinguisher, mode, onClose, onSave 
                 >
                   <option value="Polvo ABC">Polvo ABC (Triclase)</option>
                   <option value="CO2">CO2 (Dióxido de Carbono)</option>
-                  <option value="Agua">Agua Bajo Presión (A)</option>
+                  <option value="Agua">Agua Bajo Presión</option>
                   <option value="Acetato K">Acetato de Potasio (Clase K)</option>
-                  <option value="Haloclean">Halón / HCFC</option>
+                  <option value="Haloclean">Haloclean / HCFC</option>
                 </select>
               </div>
 
@@ -222,19 +251,18 @@ export default function ExtinguisherModal({ extinguisher, mode, onClose, onSave 
               <input
                 type="text"
                 required
-                placeholder="Ej: Piso 2 - Pasillo Norte frente a sala de reuniones"
+                placeholder="Ej: Piso 2 - Pasillo Norte frente a tableros"
                 value={form.location}
                 onChange={e => setForm({ ...form, location: e.target.value })}
                 className="input"
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
               <div>
                 <label className="label">Piso / Nivel</label>
                 <input
                   type="text"
-                  placeholder="Ej: PB, Piso 1, Subsuelo"
                   value={form.floor}
                   onChange={e => setForm({ ...form, floor: e.target.value })}
                   className="input"
@@ -245,15 +273,46 @@ export default function ExtinguisherModal({ extinguisher, mode, onClose, onSave 
                 <label className="label">Sector / Área</label>
                 <input
                   type="text"
-                  placeholder="Ej: Oficinas, Cocheras, IT"
                   value={form.area}
                   onChange={e => setForm({ ...form, area: e.target.value })}
                   className="input"
                 />
               </div>
+
+              <div>
+                <label className="label">Edificio / Planta</label>
+                <input
+                  type="text"
+                  value={form.building}
+                  onChange={e => setForm({ ...form, building: e.target.value })}
+                  className="input"
+                />
+              </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div>
+                <label className="label">Fabricante del Cilindro</label>
+                <input
+                  type="text"
+                  value={form.manufacturer}
+                  onChange={e => setForm({ ...form, manufacturer: e.target.value })}
+                  className="input"
+                />
+              </div>
+
+              <div>
+                <label className="label">Año de Fabricación</label>
+                <input
+                  type="number"
+                  value={form.fab_year}
+                  onChange={e => setForm({ ...form, fab_year: e.target.value })}
+                  className="input"
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <div>
                 <label className="label">Vto. Carga Anual (Mantenimiento)</label>
                 <input
@@ -266,7 +325,7 @@ export default function ExtinguisherModal({ extinguisher, mode, onClose, onSave 
               </div>
 
               <div>
-                <label className="label">Vto. Prueba Hidráulica (5 años)</label>
+                <label className="label">Vto. Prueba Hidráulica (PH 5 Años)</label>
                 <input
                   type="date"
                   required
@@ -277,11 +336,33 @@ export default function ExtinguisherModal({ extinguisher, mode, onClose, onSave 
               </div>
             </div>
 
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div>
+                <label className="label">Marbete Anual (Año y Color)</label>
+                <input
+                  type="text"
+                  value={form.collar_year_color}
+                  onChange={e => setForm({ ...form, collar_year_color: e.target.value })}
+                  className="input"
+                />
+              </div>
+
+              <div>
+                <label className="label">Taller / Proveedor Habilitado</label>
+                <input
+                  type="text"
+                  value={form.supplier}
+                  onChange={e => setForm({ ...form, supplier: e.target.value })}
+                  className="input"
+                />
+              </div>
+            </div>
+
             <div>
               <label className="label">Notas / Observaciones</label>
               <textarea
                 rows="2"
-                placeholder="Observaciones de instalación o soporte..."
+                placeholder="Observaciones de instalación, soporte o certificados..."
                 value={form.notes}
                 onChange={e => setForm({ ...form, notes: e.target.value })}
                 className="textarea"
@@ -289,8 +370,8 @@ export default function ExtinguisherModal({ extinguisher, mode, onClose, onSave 
             </div>
 
             {error && (
-              <div style={{ color: '#ef4444', fontSize: '0.85rem' }}>
-                ⚠️ {error}
+              <div style={{ color: 'var(--status-fault-text)', fontSize: '0.85rem' }}>
+                {error}
               </div>
             )}
 
@@ -300,7 +381,7 @@ export default function ExtinguisherModal({ extinguisher, mode, onClose, onSave 
               </button>
               <button type="submit" disabled={saving} className="btn btn-primary">
                 <Save size={16} />
-                <span>{saving ? 'Guardando...' : 'Guardar Extintor'}</span>
+                <span>{saving ? 'Guardando...' : 'Guardar Ficha Técnica'}</span>
               </button>
             </div>
 

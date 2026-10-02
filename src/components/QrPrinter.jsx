@@ -3,12 +3,12 @@ import {
   Printer, 
   QrCode, 
   Filter, 
-  Download, 
-  Flame, 
   Settings, 
   Check, 
-  ExternalLink,
-  Layers
+  Layers, 
+  FileText,
+  Tag,
+  Search
 } from 'lucide-react';
 
 export default function QrPrinter() {
@@ -16,11 +16,12 @@ export default function QrPrinter() {
   const [loading, setLoading] = useState(true);
   const [selectedFloor, setSelectedFloor] = useState('');
   const [selectedArea, setSelectedArea] = useState('');
+  const [labelFormat, setLabelFormat] = useState('grid_a4'); // 'grid_a4' | 'single_tag'
+  const [singleCodeSearch, setSingleCodeSearch] = useState('');
   const [baseUrl, setBaseUrl] = useState(window.location.origin);
   const [savingUrl, setSavingUrl] = useState(false);
   const [urlSaved, setUrlSaved] = useState(false);
 
-  // Fetch settings to get configured base URL
   useEffect(() => {
     fetch('/api/m365/settings')
       .then(res => res.json())
@@ -34,7 +35,6 @@ export default function QrPrinter() {
       .catch(() => {});
   }, []);
 
-  // Fetch batch QRs
   const loadQrs = () => {
     setLoading(true);
     let url = '/api/qrs/batch';
@@ -50,7 +50,7 @@ export default function QrPrinter() {
           setQrs(data.data);
         }
       })
-      .catch(err => console.error(err))
+      .catch(console.error)
       .finally(() => setLoading(false));
   };
 
@@ -69,7 +69,7 @@ export default function QrPrinter() {
       });
       setUrlSaved(true);
       setTimeout(() => setUrlSaved(false), 2000);
-      loadQrs(); // regenerate with new URL
+      loadQrs();
     } catch (e) {
       console.error(e);
     } finally {
@@ -81,11 +81,15 @@ export default function QrPrinter() {
     window.print();
   };
 
+  const displayedQrs = singleCodeSearch 
+    ? qrs.filter(q => q.code.toLowerCase().includes(singleCodeSearch.toLowerCase()) || q.location.toLowerCase().includes(singleCodeSearch.toLowerCase()))
+    : qrs;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       
-      {/* Top Configuration & Print Actions (Hidden on print) */}
-      <div className="glass-card no-print">
+      {/* Controls & Configuration */}
+      <div className="card no-print">
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -95,196 +99,278 @@ export default function QrPrinter() {
           marginBottom: '1rem'
         }}>
           <div>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Printer size={22} color="#ef4444" />
-              <span>Generador de Etiquetas QR para Impresión ({qrs.length})</span>
+            <h2 className="card-title">
+              Generador de Etiquetas QR (Norma IRAM 3517-2)
             </h2>
-            <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
-              Diseño optimizado para imprimir en hojas adhesivas A4 o recortar. Cada etiqueta incluye código QR, identificación y ubicación.
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+              Códigos QR Nivel H con alta tolerancia a suciedad, legibles a 5 cm y 30 cm de distancia.
             </p>
           </div>
 
-          <button 
-            onClick={handlePrint}
-            className="btn btn-primary btn-lg"
-          >
-            <Printer size={18} />
-            <span>Imprimir {qrs.length} Etiquetas</span>
-          </button>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            <button 
+              onClick={handlePrint}
+              className="btn btn-primary"
+            >
+              <Printer size={18} />
+              <span>Imprimir {displayedQrs.length} Etiquetas</span>
+            </button>
+          </div>
         </div>
 
-        {/* Base URL configuration (critical for Dokploy / production domain) */}
+        {/* Format Selector & Filters */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '0.75rem',
+          paddingBottom: '1rem',
+          borderBottom: '1px solid var(--border-color)',
+          marginBottom: '1rem'
+        }}>
+          <div>
+            <label className="label">Formato de Impresión</label>
+            <div style={{ display: 'flex', gap: '0.35rem' }}>
+              <button
+                type="button"
+                onClick={() => setLabelFormat('grid_a4')}
+                className={`btn btn-sm ${labelFormat === 'grid_a4' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ flex: 1 }}
+              >
+                <Layers size={14} />
+                <span>Grilla A4 (12 por hoja)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setLabelFormat('single_tag')}
+                className={`btn btn-sm ${labelFormat === 'single_tag' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ flex: 1 }}
+              >
+                <Tag size={14} />
+                <span>Etiqueta 70x40 mm</span>
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="label">Filtrar por Nivel / Piso</label>
+            <select 
+              value={selectedFloor} 
+              onChange={(e) => setSelectedFloor(e.target.value)}
+              className="select"
+              style={{ minHeight: '38px' }}
+            >
+              <option value="">Todos los Pisos</option>
+              <option value="Planta Baja">Planta Baja</option>
+              <option value="Piso 1">Piso 1</option>
+              <option value="Piso 2">Piso 2</option>
+              <option value="Piso 3">Piso 3</option>
+              <option value="Piso 4">Piso 4</option>
+              <option value="Subsuelo">Subsuelo / Cochera</option>
+              <option value="Exterior / Depósito">Depósito / Obra</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="label">Reimprimir 1 Extintor (Buscador)</label>
+            <div style={{ position: 'relative' }}>
+              <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+              <input
+                type="text"
+                placeholder="Ej: MF-025..."
+                value={singleCodeSearch}
+                onChange={e => setSingleCodeSearch(e.target.value)}
+                className="input"
+                style={{ paddingLeft: '2.2rem', minHeight: '38px' }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Base URL configuration */}
         <form onSubmit={handleSaveBaseUrl} style={{
           display: 'flex',
           alignItems: 'center',
           gap: '0.75rem',
-          padding: '0.75rem 1rem',
-          background: 'rgba(15, 23, 42, 0.6)',
-          borderRadius: '8px',
-          border: '1px solid var(--border-color)',
-          flexWrap: 'wrap',
-          marginBottom: '1rem'
+          flexWrap: 'wrap'
         }}>
-          <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>
-            URL Base para los Códigos QR:
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 700 }}>
+            URL Base para QR:
           </span>
           <input
             type="text"
             value={baseUrl}
             onChange={(e) => setBaseUrl(e.target.value)}
             className="input"
-            style={{ maxWidth: '340px', padding: '0.4rem 0.75rem', fontSize: '0.82rem' }}
-            placeholder="https://matafuegos.miempresa.com"
+            style={{ maxWidth: '380px', minHeight: '36px', fontSize: '0.85rem' }}
+            placeholder="https://matafuegos.milicic.com.ar"
           />
           <button type="submit" disabled={savingUrl} className="btn btn-secondary btn-sm">
-            {urlSaved ? <Check size={14} color="#10b981" /> : <Settings size={14} />}
-            <span>{urlSaved ? 'Guardado' : 'Actualizar QRs'}</span>
+            {urlSaved ? <Check size={14} color="var(--status-ok-text)" /> : <Settings size={14} />}
+            <span>{urlSaved ? 'Guardado' : 'Actualizar Dominio'}</span>
           </button>
-          <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-            (Poné el dominio de Dokploy o IP de tu red para que los celulares puedan abrir la app al escanear)
-          </span>
         </form>
-
-        {/* Filter controls */}
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Filter size={15} color="#94a3b8" />
-            <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Filtrar por Nivel:</span>
-          </div>
-          <select 
-            value={selectedFloor} 
-            onChange={(e) => setSelectedFloor(e.target.value)}
-            className="select"
-            style={{ maxWidth: '240px' }}
-          >
-            <option value="">Todos los Pisos (130 etiquetas)</option>
-            <option value="Planta Baja">Planta Baja</option>
-            <option value="Piso 1">Piso 1</option>
-            <option value="Piso 2">Piso 2</option>
-            <option value="Piso 3">Piso 3</option>
-            <option value="Piso 4">Piso 4</option>
-            <option value="Subsuelo">Subsuelo / Cochera</option>
-            <option value="Exterior / Depósito">Depósito / Exterior</option>
-          </select>
-        </div>
       </div>
 
-      {/* Labels Grid for Screen and Print */}
+      {/* Printable Labels Container */}
       {loading ? (
-        <div className="glass-card" style={{ textAlign: 'center', padding: '3rem' }}>
-          <p style={{ color: '#94a3b8' }}>Generando códigos QR de alta resolución...</p>
-        </div>
+        <div className="card skeleton" style={{ height: '300px' }} />
       ) : (
         <div className="print-area">
-          <div className="qr-label-grid" style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: '1rem'
-          }}>
-            {qrs.map((item) => (
-              <div 
-                key={item.id} 
-                className="qr-label-card"
-                style={{
-                  background: '#ffffff',
-                  color: '#0f172a',
-                  border: '2px solid #e2e8f0',
-                  borderRadius: '12px',
-                  padding: '1rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  textAlign: 'center',
-                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                }}
-              >
-                {/* Header of the label */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  width: '100%',
-                  borderBottom: '2px solid #ea580c',
-                  paddingBottom: '0.4rem',
-                  marginBottom: '0.6rem'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <img src="/logo-milicic.svg" alt="Milicic" style={{ height: '18px', width: 'auto' }} onError={(e) => { e.target.src = '/logo-milicic.png'; }} />
-                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0f172a', letterSpacing: '0.02em' }}>
-                      CONTROL EXTINTOR
+          {labelFormat === 'grid_a4' ? (
+            /* FORMATO 1: GRILLA A4 */
+            <div className="qr-label-grid" style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: '12px'
+            }}>
+              {displayedQrs.map((item) => (
+                <div 
+                  key={item.id} 
+                  className="qr-label-card"
+                  style={{
+                    background: '#ffffff',
+                    color: '#0f172a',
+                    border: '2px solid #e2e8f0',
+                    borderRadius: '10px',
+                    padding: '0.85rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    textAlign: 'center',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.06)'
+                  }}
+                >
+                  {/* Header with Milicic Logo */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    width: '100%',
+                    borderBottom: '2px solid #ea580c',
+                    paddingBottom: '0.35rem',
+                    marginBottom: '0.5rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <img src="/logo-milicic.svg" alt="Milicic" style={{ height: '18px', width: 'auto' }} onError={(e) => { e.target.src = '/logo-milicic.png'; }} />
+                      <span style={{ fontSize: '0.72rem', fontWeight: 900, color: '#0f172a' }}>
+                        CONTROL EXTINTOR
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#ea580c', background: '#fff7ed', padding: '1px 5px', borderRadius: '3px' }}>
+                      IRAM 3517-2
                     </span>
                   </div>
-                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#ea580c', background: '#fff7ed', padding: '1px 6px', borderRadius: '4px', border: '1px solid #fdba74' }}>
-                    IRAM 3517-2
-                  </span>
-                </div>
 
-                {/* QR Code image */}
-                <div style={{
-                  background: '#ffffff',
-                  padding: '0.4rem',
-                  borderRadius: '6px',
-                  border: '1px solid #cbd5e1',
-                  marginBottom: '0.6rem'
-                }}>
-                  <img 
-                    src={item.qrDataUrl} 
-                    alt={`QR ${item.code}`}
-                    style={{ width: '150px', height: '150px', display: 'block' }}
-                  />
-                </div>
+                  {/* QR Image (Level H) */}
+                  <div style={{
+                    background: '#ffffff',
+                    padding: '4px',
+                    borderRadius: '4px',
+                    border: '1px solid #cbd5e1',
+                    marginBottom: '0.5rem'
+                  }}>
+                    <img 
+                      src={item.qrDataUrl} 
+                      alt={`QR ${item.code}`}
+                      style={{ width: '140px', height: '140px', display: 'block' }}
+                    />
+                  </div>
 
-                {/* Code and Specs */}
-                <div style={{
-                  fontSize: '1.35rem',
-                  fontWeight: 900,
-                  fontFamily: 'JetBrains Mono, monospace',
-                  color: '#0f172a',
-                  letterSpacing: '0.02em',
-                  lineHeight: 1.2
-                }}>
-                  {item.code}
-                </div>
+                  {/* Code */}
+                  <div className="font-mono" style={{
+                    fontSize: '1.45rem',
+                    fontWeight: 900,
+                    color: '#0f172a',
+                    lineHeight: 1.1
+                  }}>
+                    {item.code}
+                  </div>
 
-                <div style={{
-                  fontSize: '0.85rem',
-                  fontWeight: 700,
-                  color: '#2563eb',
-                  marginBottom: '0.35rem'
-                }}>
-                  {item.type} • {item.capacity}
-                </div>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#ea580c', marginBottom: '0.2rem' }}>
+                    {item.type} • {item.capacity}
+                  </div>
 
-                <div style={{
-                  fontSize: '0.75rem',
-                  color: '#334155',
-                  fontWeight: 600,
-                  maxWidth: '250px',
-                  lineHeight: 1.3,
-                  marginBottom: '0.5rem',
-                  minHeight: '2rem'
-                }}>
-                  {item.location}
-                </div>
+                  <div style={{ fontSize: '0.72rem', color: '#334155', fontWeight: 600, minHeight: '1.8rem', lineHeight: 1.25 }}>
+                    {item.location}
+                  </div>
 
-                {/* Footer instructions */}
-                <div style={{
-                  borderTop: '1px dashed #cbd5e1',
-                  width: '100%',
-                  paddingTop: '0.4rem',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  fontSize: '0.65rem',
-                  color: '#64748b'
-                }}>
-                  <span>Nivel: {item.floor || 'PB'}</span>
-                  <span style={{ fontWeight: 600, color: '#0f172a' }}>Escanear para auditar</span>
+                  <div style={{
+                    borderTop: '1px dashed #cbd5e1',
+                    width: '100%',
+                    paddingTop: '0.35rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    fontSize: '0.65rem',
+                    color: '#64748b'
+                  }}>
+                    <span>{item.floor}</span>
+                    <span style={{ fontWeight: 700, color: '#0f172a' }}>id: {item.public_id}</span>
+                  </div>
                 </div>
+              ))}
+            </div>
+          ) : (
+            /* FORMATO 2: ETIQUETA INDIVIDUAL 70x40 mm CON CÓDIGO EN GRANDE AL LADO */
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+              gap: '12px'
+            }}>
+              {displayedQrs.map((item) => (
+                <div 
+                  key={item.id} 
+                  className="qr-label-card"
+                  style={{
+                    background: '#ffffff',
+                    color: '#0f172a',
+                    border: '2px solid #000000',
+                    borderRadius: '8px',
+                    padding: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.06)'
+                  }}
+                >
+                  {/* Left: QR Code */}
+                  <div style={{ flexShrink: 0, textAlign: 'center' }}>
+                    <img 
+                      src={item.qrDataUrl} 
+                      alt={`QR ${item.code}`}
+                      style={{ width: '110px', height: '110px', display: 'block' }}
+                    />
+                    <span style={{ fontSize: '0.62rem', color: '#64748b', fontFamily: 'var(--font-mono)' }}>
+                      id: {item.public_id}
+                    </span>
+                  </div>
 
-              </div>
-            ))}
-          </div>
+                  {/* Right: Big Code, Location, Logo */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.2rem', textAlign: 'left' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <img src="/logo-milicic.svg" alt="Milicic" style={{ height: '16px', width: 'auto' }} onError={(e) => { e.target.src = '/logo-milicic.png'; }} />
+                      <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#ea580c' }}>IRAM 3517-2</span>
+                    </div>
+
+                    <div className="font-mono" style={{ fontSize: '1.8rem', fontWeight: 900, color: '#0f172a', lineHeight: 1 }}>
+                      {item.code}
+                    </div>
+
+                    <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#ea580c' }}>
+                      {item.type} {item.capacity}
+                    </div>
+
+                    <div style={{ fontSize: '0.75rem', color: '#334155', fontWeight: 600, lineHeight: 1.2 }}>
+                      {item.location}
+                    </div>
+
+                    <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                      Nivel: {item.floor} • Sector: {item.area || 'General'}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

@@ -10,96 +10,167 @@ const upload = multer({ storage: multer.memoryStorage() });
 router.get('/export-excel', async (req, res) => {
   try {
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'FireControl 365';
+    workbook.creator = 'Milicic S.A. - Control de Extintores';
     workbook.created = new Date();
     workbook.properties.date1904 = true;
 
-    // --- SHEET 1: INVENTARIO DE MATAFUEGOS ---
-    const extSheet = workbook.addWorksheet('Inventario Matafuegos', {
-      views: [{ state: 'frozen', ySplit: 3 }]
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const todayStr = now.toISOString().split('T')[0];
+
+    // Datos generales
+    const round = db.prepare("SELECT * FROM rounds WHERE status = 'OPEN' ORDER BY id DESC LIMIT 1").get();
+    const totalExt = db.prepare('SELECT COUNT(*) as c FROM extinguishers').get().c;
+    const inspectedCount = round 
+      ? db.prepare('SELECT COUNT(DISTINCT extinguisher_id) as c FROM inspections WHERE round_id = ?').get(round.id).c 
+      : 0;
+    const passedCount = round
+      ? db.prepare('SELECT COUNT(DISTINCT extinguisher_id) as c FROM inspections WHERE round_id = ? AND passed = 1').get(round.id).c
+      : 0;
+    const failedCount = round
+      ? db.prepare('SELECT COUNT(DISTINCT extinguisher_id) as c FROM inspections WHERE round_id = ? AND passed = 0').get(round.id).c
+      : 0;
+    const openCasesCount = db.prepare("SELECT COUNT(*) as c FROM cases WHERE status IN ('OPEN', 'IN_WORKSHOP', 'TEMP_REPLACED')").get().c;
+
+    // --- HOJA 1: RESUMEN EJECUTIVO (AUDITORÍA & ART) ---
+    const sumSheet = workbook.addWorksheet('Resumen Ejecutivo', {
+      views: [{ showGridLines: true }]
     });
 
-    // Title banner
-    extSheet.mergeCells('A1:J1');
-    const titleCell = extSheet.getCell('A1');
-    titleCell.value = 'MILICIC S.A. | CONTROL Y SEGUIMIENTO DE EXTINTORES - IRAM 3517-2';
-    titleCell.font = { name: 'Segoe UI', size: 13, bold: true, color: { argb: 'FFFFFFFF' } };
-    titleCell.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FF0F172A' } // Milicic Slate Dark
-    };
+    sumSheet.mergeCells('A1:G1');
+    const titleCell = sumSheet.getCell('A1');
+    titleCell.value = 'MILICIC S.A. | INFORME MENSUAL DE CONTROL DE EXTINTORES - IRAM 3517-2';
+    titleCell.font = { name: 'Segoe UI', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } };
     titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
-    extSheet.getRow(1).height = 30;
+    sumSheet.getRow(1).height = 36;
 
-    // Subtitle / Date
-    extSheet.mergeCells('A2:J2');
-    const subCell = extSheet.getCell('A2');
-    subCell.value = `Exportado el: ${new Date().toLocaleString('es-AR')} | Milicic S.A. • Excel 365 & SharePoint`;
-    subCell.font = { name: 'Segoe UI', size: 10, italic: true, color: { argb: 'FF94A3B8' } };
+    sumSheet.mergeCells('A2:G2');
+    const subCell = sumSheet.getCell('A2');
+    subCell.value = `Ronda Activa: ${round ? round.title : currentMonth} | Emisión: ${new Date().toLocaleDateString('es-AR')} | Válido para ART y Auditorías`;
+    subCell.font = { name: 'Segoe UI', size: 10, italic: true, color: { argb: 'FF475569' } };
     subCell.alignment = { vertical: 'middle', horizontal: 'center' };
-    extSheet.getRow(2).height = 20;
+    sumSheet.getRow(2).height = 22;
 
-    // Column Headers
+    // KPI Table
+    const kpis = [
+      ['Total Equipos en Parque', totalExt, 'Total de extintores inventariados'],
+      ['Equipos Inspeccionados en el Mes', inspectedCount, `${totalExt > 0 ? Math.round((inspectedCount/totalExt)*100) : 0}% de cobertura`],
+      ['Inspecciones Conformes (OK)', passedCount, 'Sin anomalías registradas'],
+      ['Inspecciones con Falla / No Conformes', failedCount, 'Requieren acción correctiva'],
+      ['Casos de Anomalías en Gestión', openCasesCount, 'Abiertos, en taller o con reemplazo']
+    ];
+
+    sumSheet.getCell('A4').value = 'MÉTRICA DE GESTIÓN';
+    sumSheet.getCell('A4').font = { name: 'Segoe UI', bold: true, color: { argb: 'FFFFFFFF' } };
+    sumSheet.getCell('A4').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEA580C' } };
+    sumSheet.mergeCells('A4:C4');
+
+    sumSheet.getCell('D4').value = 'VALOR';
+    sumSheet.getCell('D4').font = { name: 'Segoe UI', bold: true, color: { argb: 'FFFFFFFF' } };
+    sumSheet.getCell('D4').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEA580C' } };
+    sumSheet.getCell('D4').alignment = { horizontal: 'center' };
+
+    sumSheet.getCell('E4').value = 'DETALLE / OBSERVACIÓN';
+    sumSheet.getCell('E4').font = { name: 'Segoe UI', bold: true, color: { argb: 'FFFFFFFF' } };
+    sumSheet.getCell('E4').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEA580C' } };
+    sumSheet.mergeCells('E4:G4');
+
+    kpis.forEach((kpi, idx) => {
+      const rNum = 5 + idx;
+      sumSheet.mergeCells(`A${rNum}:C${rNum}`);
+      sumSheet.getCell(`A${rNum}`).value = kpi[0];
+      sumSheet.getCell(`A${rNum}`).font = { name: 'Segoe UI', bold: true };
+      
+      sumSheet.getCell(`D${rNum}`).value = kpi[1];
+      sumSheet.getCell(`D${rNum}`).font = { name: 'Segoe UI', bold: true, size: 12 };
+      sumSheet.getCell(`D${rNum}`).alignment = { horizontal: 'center' };
+
+      sumSheet.mergeCells(`E${rNum}:G${rNum}`);
+      sumSheet.getCell(`E${rNum}`).value = kpi[2];
+      sumSheet.getCell(`E${rNum}`).font = { name: 'Segoe UI', italic: true, color: { argb: 'FF64748B' } };
+      sumSheet.getRow(rNum).height = 24;
+    });
+
+    // Cuadro de Firmas
+    const signRow = 12;
+    sumSheet.mergeCells(`A${signRow}:C${signRow}`);
+    sumSheet.getCell(`A${signRow}`).value = 'RESPONSABLE HIGIENE Y SEGURIDAD LABORAL';
+    sumSheet.getCell(`A${signRow}`).font = { name: 'Segoe UI', bold: true, size: 9 };
+    sumSheet.getCell(`A${signRow}`).alignment = { horizontal: 'center' };
+
+    sumSheet.mergeCells(`E${signRow}:G${signRow}`);
+    sumSheet.getCell(`E${signRow}`).value = 'FIRMA Y SELLO / AUDITORÍA ART';
+    sumSheet.getCell(`E${signRow}`).font = { name: 'Segoe UI', bold: true, size: 9 };
+    sumSheet.getCell(`E${signRow}`).alignment = { horizontal: 'center' };
+
+    sumSheet.mergeCells(`A${signRow + 3}:C${signRow + 3}`);
+    sumSheet.getCell(`A${signRow + 3}`).value = 'Aclaración / Matrícula Profesional';
+    sumSheet.getCell(`A${signRow + 3}`).border = { top: { style: 'thin' } };
+    sumSheet.getCell(`A${signRow + 3}`).alignment = { horizontal: 'center' };
+
+    sumSheet.mergeCells(`E${signRow + 3}:G${signRow + 3}`);
+    sumSheet.getCell(`E${signRow + 3}`).value = 'Fecha y Conformidad';
+    sumSheet.getCell(`E${signRow + 3}`).border = { top: { style: 'thin' } };
+    sumSheet.getCell(`E${signRow + 3}`).alignment = { horizontal: 'center' };
+
+    // --- HOJA 2: INVENTARIO DE MATAFUEGOS ---
+    const extSheet = workbook.addWorksheet('Inventario Matafuegos', {
+      views: [{ state: 'frozen', ySplit: 2 }]
+    });
+
     const headers = [
       { key: 'code', header: 'Código', width: 14 },
       { key: 'type', header: 'Tipo Extintor', width: 16 },
       { key: 'capacity', header: 'Capacidad', width: 14 },
-      { key: 'location', header: 'Ubicación Detallada', width: 32 },
+      { key: 'location', header: 'Ubicación Detallada', width: 30 },
       { key: 'floor', header: 'Piso / Nivel', width: 16 },
-      { key: 'area', header: 'Sector / Área', width: 22 },
+      { key: 'area', header: 'Sector / Área', width: 20 },
+      { key: 'manufacturer', header: 'Fabricante', width: 16 },
+      { key: 'fab_year', header: 'Año Fab.', width: 12 },
       { key: 'expiration_charge', header: 'Vto. Recarga Anual', width: 18 },
-      { key: 'expiration_ph', header: 'Vto. Prueba Hidráulica', width: 20 },
+      { key: 'expiration_ph', header: 'Vto. Prueba Hidr. (5a)', width: 22 },
+      { key: 'collar_year_color', header: 'Marbete/Collarín', width: 18 },
       { key: 'status', header: 'Estado Físico', width: 16 },
-      { key: 'monthly_status', header: 'Estado Mes Actual', width: 20 }
+      { key: 'monthly_status', header: 'Control del Mes', width: 18 }
     ];
 
-    const headerRow = extSheet.getRow(3);
+    const headerRow = extSheet.getRow(2);
     headers.forEach((col, idx) => {
       const cell = headerRow.getCell(idx + 1);
       cell.value = col.header;
-      cell.font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
-      cell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FFEA580C' } // Milicic Orange
-      };
+      cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEA580C' } };
       cell.alignment = { vertical: 'middle', horizontal: 'center' };
       extSheet.getColumn(idx + 1).width = col.width;
     });
     headerRow.height = 24;
 
-    // Query all extinguishers
-    const now = new Date();
-    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const todayStr = now.toISOString().split('T')[0];
-
     const extinguishers = db.prepare('SELECT * FROM extinguishers ORDER BY code ASC').all();
 
     extinguishers.forEach((ext, index) => {
-      const rowNum = index + 4;
+      const rowNum = index + 3;
       const row = extSheet.getRow(rowNum);
 
-      // Check current month inspection
       const lastInsp = db.prepare(`
         SELECT * FROM inspections 
-        WHERE extinguisher_id = ? AND year_month = ?
+        WHERE extinguisher_id = ? AND (round_id = ? OR year_month = ?)
         ORDER BY id DESC LIMIT 1
-      `).get(ext.id, currentMonth);
+      `).get(ext.id, round?.id || 0, currentMonth);
 
       let monthlyLabel = 'Pendiente';
-      let statusColor = 'FFFEF08A'; // Yellow
+      let statusColor = 'FFFEF08A';
 
       if (ext.expiration_charge < todayStr) {
         monthlyLabel = 'Carga Vencida';
-        statusColor = 'FFFECACA'; // Red
+        statusColor = 'FFFECACA';
       } else if (lastInsp) {
         if (lastInsp.passed === 1) {
-          monthlyLabel = 'Controlado OK';
-          statusColor = 'FFBBF7D0'; // Green
+          monthlyLabel = 'Conforme OK';
+          statusColor = 'FFBBF7D0';
         } else {
-          monthlyLabel = 'Con Anomalías';
-          statusColor = 'FFFECACA'; // Red
+          monthlyLabel = 'Con Falla';
+          statusColor = 'FFFECACA';
         }
       }
 
@@ -110,67 +181,43 @@ router.get('/export-excel', async (req, res) => {
         ext.location,
         ext.floor,
         ext.area,
+        ext.manufacturer || 'N/A',
+        ext.fab_year || 'N/A',
         ext.expiration_charge,
         ext.expiration_ph,
+        ext.collar_year_color || 'Vigente',
         ext.status,
         monthlyLabel
       ];
 
-      // Border and alignment
-      for (let colIdx = 1; colIdx <= 10; colIdx++) {
+      for (let colIdx = 1; colIdx <= 13; colIdx++) {
         const cell = row.getCell(colIdx);
-        cell.font = { name: 'Segoe UI', size: 10 };
+        cell.font = { name: 'Segoe UI', size: 9 };
         cell.alignment = { vertical: 'middle', horizontal: colIdx === 4 ? 'left' : 'center' };
-        cell.border = {
-          top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-          bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-          right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
-        };
       }
 
-      // Highlight monthly status cell
-      const statusCell = row.getCell(10);
-      statusCell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: statusColor }
-      };
-      statusCell.font = { name: 'Segoe UI', size: 10, bold: true };
-
+      const statusCell = row.getCell(13);
+      statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: statusColor } };
+      statusCell.font = { name: 'Segoe UI', size: 9, bold: true };
       row.height = 20;
     });
 
-    // --- SHEET 2: HISTORIAL DE INSPECCIONES ---
-    const inspSheet = workbook.addWorksheet('Historial Inspecciones', {
+    // --- HOJA 3: HISTORIAL DE INSPECCIONES ---
+    const inspSheet = workbook.addWorksheet('Inspecciones Mensuales', {
       views: [{ state: 'frozen', ySplit: 2 }]
     });
-
-    inspSheet.mergeCells('A1:L1');
-    const inspTitle = inspSheet.getCell('A1');
-    inspTitle.value = 'MILICIC S.A. | REGISTRO AUDITABLE DE INSPECCIONES MENSUALES';
-    inspTitle.font = { name: 'Segoe UI', size: 13, bold: true, color: { argb: 'FFFFFFFF' } };
-    inspTitle.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FF0F172A' } // Milicic Slate Dark
-    };
-    inspTitle.alignment = { vertical: 'middle', horizontal: 'center' };
-    inspSheet.getRow(1).height = 28;
 
     const inspHeaders = [
       { header: 'ID', width: 8 },
       { header: 'Código', width: 14 },
       { header: 'Fecha y Hora', width: 20 },
       { header: 'Inspector', width: 22 },
-      { header: 'Mes Auditoría', width: 15 },
+      { header: 'Ronda', width: 18 },
       { header: 'Resultado', width: 16 },
-      { header: 'Acceso Libre', width: 14 },
-      { header: 'Manómetro OK', width: 15 },
-      { header: 'Precinto OK', width: 14 },
-      { header: 'Cilindro/Manguera', width: 16 },
-      { header: 'Señalización', width: 14 },
-      { header: 'Observaciones', width: 35 }
+      { header: 'Reinspección', width: 16 },
+      { header: 'Tiempo (seg)', width: 14 },
+      { header: 'Antifraude', width: 14 },
+      { header: 'Observaciones / Detalle', width: 40 }
     ];
 
     const inspHeaderRow = inspSheet.getRow(2);
@@ -178,19 +225,15 @@ router.get('/export-excel', async (req, res) => {
       const cell = inspHeaderRow.getCell(idx + 1);
       cell.value = col.header;
       cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
-      cell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FFEA580C' } // Milicic Orange
-      };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } };
       cell.alignment = { vertical: 'middle', horizontal: 'center' };
       inspSheet.getColumn(idx + 1).width = col.width;
     });
-    inspHeaderRow.height = 22;
+    inspHeaderRow.height = 24;
 
     const inspections = db.prepare(`
       SELECT * FROM inspections 
-      ORDER BY inspection_date DESC 
+      ORDER BY id DESC 
       LIMIT 1000
     `).all();
 
@@ -202,19 +245,17 @@ router.get('/export-excel', async (req, res) => {
         insp.inspection_date,
         insp.inspector_name,
         insp.year_month,
-        insp.passed === 1 ? 'APROBADO' : 'CON ANOMALÍAS',
-        insp.check_location === 1 ? 'OK' : 'FALLA',
-        insp.check_pressure === 1 ? 'OK' : 'FALLA',
-        insp.check_seal === 1 ? 'OK' : 'FALLA',
-        insp.check_physical === 1 ? 'OK' : 'FALLA',
-        insp.check_signage === 1 ? 'OK' : 'FALLA',
+        insp.passed === 1 ? 'CONFORME' : 'CON ANOMALÍA',
+        insp.is_reinspection ? `Sí (${insp.reinspection_reason || ''})` : 'No',
+        insp.duration_seconds || 'N/D',
+        insp.is_suspicious === 1 ? 'SOSPECHOSA' : 'OK',
         insp.observations || 'Sin observaciones'
       ];
 
-      for (let colIdx = 1; colIdx <= 12; colIdx++) {
+      for (let colIdx = 1; colIdx <= 10; colIdx++) {
         const cell = row.getCell(colIdx);
         cell.font = { name: 'Segoe UI', size: 9 };
-        cell.alignment = { vertical: 'middle', horizontal: colIdx === 12 ? 'left' : 'center' };
+        cell.alignment = { vertical: 'middle', horizontal: colIdx === 10 ? 'left' : 'center' };
       }
 
       const resCell = row.getCell(6);
@@ -225,7 +266,55 @@ router.get('/export-excel', async (req, res) => {
         fgColor: { argb: insp.passed === 1 ? 'FFBBF7D0' : 'FFFECACA' }
       };
 
-      row.height = 18;
+      row.height = 19;
+    });
+
+    // --- HOJA 4: CASOS Y ANOMALÍAS ---
+    const caseSheet = workbook.addWorksheet('Casos de Anomalías', {
+      views: [{ state: 'frozen', ySplit: 2 }]
+    });
+
+    const caseHeaders = [
+      { header: 'ID Caso', width: 10 },
+      { header: 'Código Extintor', width: 16 },
+      { header: 'Fecha Detección', width: 20 },
+      { header: 'Estado', width: 18 },
+      { header: 'Antigüedad (días)', width: 18 },
+      { header: 'Equipo Reemplazo', width: 18 },
+      { header: 'Descripción de la Falla', width: 45 }
+    ];
+
+    const caseHeaderRow = caseSheet.getRow(2);
+    caseHeaders.forEach((col, idx) => {
+      const cell = caseHeaderRow.getCell(idx + 1);
+      cell.value = col.header;
+      cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDC2626' } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      caseSheet.getColumn(idx + 1).width = col.width;
+    });
+    caseHeaderRow.height = 24;
+
+    const cases = db.prepare('SELECT * FROM cases ORDER BY id DESC').all();
+    cases.forEach((c, index) => {
+      const daysOld = Math.floor((Date.now() - new Date(c.created_at).getTime()) / (1000 * 60 * 60 * 24));
+      const row = caseSheet.getRow(index + 3);
+      row.values = [
+        `#CASO-${c.id}`,
+        c.extinguisher_code,
+        c.created_at,
+        c.status,
+        daysOld,
+        c.temp_replacement_code || 'Ninguno',
+        c.title + (c.description ? ` - ${c.description}` : '')
+      ];
+
+      for (let colIdx = 1; colIdx <= 7; colIdx++) {
+        const cell = row.getCell(colIdx);
+        cell.font = { name: 'Segoe UI', size: 9 };
+        cell.alignment = { vertical: 'middle', horizontal: colIdx === 7 ? 'left' : 'center' };
+      }
+      row.height = 19;
     });
 
     res.setHeader(
@@ -234,7 +323,7 @@ router.get('/export-excel', async (req, res) => {
     );
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename="Control_Matafuegos_${currentMonth}.xlsx"`
+      `attachment; filename="Milicic_Control_Matafuegos_${currentMonth}.xlsx"`
     );
 
     await workbook.xlsx.write(res);
@@ -242,6 +331,183 @@ router.get('/export-excel', async (req, res) => {
   } catch (error) {
     console.error('Error generating M365 Excel:', error);
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET HTML printable report for ART and Fire Department Audits
+router.get('/report-html', (req, res) => {
+  try {
+    const round = db.prepare("SELECT * FROM rounds WHERE status = 'OPEN' ORDER BY id DESC LIMIT 1").get();
+    const extinguishers = db.prepare('SELECT * FROM extinguishers ORDER BY code ASC').all();
+    const cases = db.prepare("SELECT * FROM cases WHERE status IN ('OPEN', 'IN_WORKSHOP', 'TEMP_REPLACED')").all();
+    const stats = db.prepare(`
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN expiration_charge < date('now') THEN 1 ELSE 0 END) as charge_expired,
+        SUM(CASE WHEN expiration_ph < date('now') THEN 1 ELSE 0 END) as ph_expired
+      FROM extinguishers
+    `).get();
+
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const inspected = round 
+      ? db.prepare('SELECT COUNT(DISTINCT extinguisher_id) as c FROM inspections WHERE round_id = ?').get(round.id).c
+      : 0;
+
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Milicic S.A. | Informe Oficial de Control de Extintores</title>
+  <style>
+    @page { size: A4 portrait; margin: 15mm; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; color: #0F172A; margin: 0; padding: 0; font-size: 11pt; line-height: 1.4; }
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #EA580C; padding-bottom: 12px; margin-bottom: 20px; }
+    .brand { font-size: 20pt; font-weight: 900; color: #0F172A; }
+    .brand span { color: #EA580C; }
+    .title-box { text-align: right; }
+    .title-box h1 { margin: 0; font-size: 14pt; color: #0F172A; }
+    .title-box p { margin: 2px 0 0 0; font-size: 9pt; color: #64748B; }
+    
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+    .kpi-card { background: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 6px; padding: 10px; text-align: center; }
+    .kpi-val { font-size: 18pt; font-weight: 800; color: #EA580C; }
+    .kpi-lbl { font-size: 8pt; text-transform: uppercase; color: #475569; font-weight: 700; }
+    
+    h2 { font-size: 11pt; border-left: 4px solid #EA580C; padding-left: 8px; margin: 15px 0 8px 0; text-transform: uppercase; color: #0F172A; }
+    table { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin-bottom: 15px; }
+    th { background: #0F172A; color: #FFFFFF; font-weight: 700; text-align: left; padding: 6px 8px; }
+    td { border-bottom: 1px solid #E2E8F0; padding: 5px 8px; }
+    tr:nth-child(even) td { background: #F8FAFC; }
+    .tag-ok { color: #16A34A; font-weight: 700; }
+    .tag-fail { color: #DC2626; font-weight: 700; }
+    .tag-warn { color: #D97706; font-weight: 700; }
+
+    .signatures { margin-top: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; page-break-inside: avoid; }
+    .sign-box { border-top: 1px solid #0F172A; text-align: center; padding-top: 8px; }
+    .sign-title { font-weight: 700; font-size: 9pt; }
+    .sign-sub { font-size: 8pt; color: #64748B; }
+
+    .footer { font-size: 7.5pt; color: #94A3B8; text-align: center; margin-top: 20px; border-top: 1px solid #E2E8F0; padding-top: 6px; }
+
+    @media print {
+      .no-print { display: none; }
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+  <div class="no-print" style="background: #FFF7ED; border: 1px solid #FDBA74; padding: 12px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; border-radius: 6px;">
+    <span><strong>Informe Oficial de Auditoría y ART</strong> - Listo para imprimir o guardar en PDF</span>
+    <button onclick="window.print()" style="background: #EA580C; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer;">
+      Imprimir / Guardar como PDF
+    </button>
+  </div>
+
+  <div class="header">
+    <div class="brand">MILICIC <span>S.A.</span></div>
+    <div class="title-box">
+      <h1>CONTROL PERIÓDICO DE EXTINTORES</h1>
+      <p>Norma IRAM 3517-2 • Periodo: ${round ? round.title : currentMonth}</p>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-val">${extinguishers.length}</div>
+      <div class="kpi-lbl">Total Equipos</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val">${inspected}</div>
+      <div class="kpi-lbl">Inspeccionados</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val" style="color: ${cases.length > 0 ? '#DC2626' : '#16A34A'}">${cases.length}</div>
+      <div class="kpi-lbl">Casos / Fallas</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val" style="color: ${stats.charge_expired > 0 ? '#DC2626' : '#16A34A'}">${stats.charge_expired}</div>
+      <div class="kpi-lbl">Cargas Vencidas</div>
+    </div>
+  </div>
+
+  <h2>1. Resumen de Anomalías y Casos Abiertos</h2>
+  ${cases.length === 0 ? '<p style="font-size: 8.5pt; color: #16A34A; font-weight: bold;">Sin casos de anomalías abiertos. Todos los equipos se encuentran operativos.</p>' : `
+  <table>
+    <thead>
+      <tr>
+        <th>Caso</th>
+        <th>Código</th>
+        <th>Fecha Detección</th>
+        <th>Estado</th>
+        <th>Reemplazo Temporal</th>
+        <th>Descripción de Falla</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${cases.map(c => `
+        <tr>
+          <td><strong>#CASO-${c.id}</strong></td>
+          <td><strong>${c.extinguisher_code}</strong></td>
+          <td>${c.created_at}</td>
+          <td><span class="tag-fail">${c.status}</span></td>
+          <td>${c.temp_replacement_code || 'No asignado'}</td>
+          <td>${c.title}</td>
+        </tr>
+      `).join('')}
+    </tbody>
+  </table>
+  `}
+
+  <h2>2. Parque de Extintores e Inspecciones (Muestra Principal)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th>Tipo / Cap.</th>
+        <th>Ubicación / Sector</th>
+        <th>Piso</th>
+        <th>Vto. Carga</th>
+        <th>Vto. PH</th>
+        <th>Estado</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${extinguishers.slice(0, 45).map(e => `
+        <tr>
+          <td><strong>${e.code}</strong></td>
+          <td>${e.type} (${e.capacity})</td>
+          <td>${e.location}</td>
+          <td>${e.floor}</td>
+          <td>${e.expiration_charge}</td>
+          <td>${e.expiration_ph}</td>
+          <td><span class="${e.status === 'OPERATIVO' ? 'tag-ok' : 'tag-fail'}">${e.status}</span></td>
+        </tr>
+      `).join('')}
+    </tbody>
+  </table>
+
+  <div class="signatures">
+    <div class="sign-box">
+      <div class="sign-title">RESPONSABLE DE HIGIENE Y SEGURIDAD</div>
+      <div class="sign-sub">Milicic S.A. • Matrícula Profesional</div>
+    </div>
+    <div class="sign-box">
+      <div class="sign-title">AUDITORÍA EXTERNA / ART / BOMBEROS</div>
+      <div class="sign-sub">Firma, Aclaración y Sello</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Documento confidencial generado automáticamente por el Sistema de Control de Extintores de Milicic S.A. • Cumplimiento IRAM 3517-2 y Ley 19.587 de Higiene y Seguridad en el Trabajo.
+  </div>
+</body>
+</html>`;
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+  } catch (error) {
+    console.error('Error generating printable report:', error);
+    res.status(500).send('Error generando reporte');
   }
 });
 
@@ -261,7 +527,6 @@ router.post('/import-excel', upload.single('file'), async (req, res) => {
     }
 
     let inserted = 0;
-    let updated = 0;
     let skipped = 0;
 
     const upsertStmt = db.prepare(`
@@ -281,7 +546,6 @@ router.post('/import-excel', upload.single('file'), async (req, res) => {
     `);
 
     worksheet.eachRow((row, rowNumber) => {
-      // Skip header rows
       if (rowNumber <= 3) return;
 
       const code = row.getCell(1).text ? row.getCell(1).text.trim().toUpperCase() : null;
@@ -299,7 +563,6 @@ router.post('/import-excel', upload.single('file'), async (req, res) => {
       let expCharge = row.getCell(7).text ? row.getCell(7).text.trim() : '';
       let expPh = row.getCell(8).text ? row.getCell(8).text.trim() : '';
 
-      // Normalize dates if in DD/MM/YYYY
       if (expCharge.includes('/')) {
         const parts = expCharge.split('/');
         if (parts.length === 3) expCharge = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
@@ -383,12 +646,12 @@ router.post('/test-webhook', async (req, res) => {
 
     const testPayload = {
       event: 'TEST_CONNECTION',
-      message: 'Prueba de conectividad desde FireControl 365 a Power Automate / Excel 365',
+      message: 'Prueba de conectividad desde Milicic Matafuegos a Power Automate / Excel 365',
       timestamp: new Date().toISOString(),
       sample_data: {
         extinguisher_code: 'MF-001',
-        location: 'Prueba de conexión exitosa',
-        inspector: 'Admin',
+        location: 'Edificio Central - PB',
+        inspector: 'Santi (Inspector HyS)',
         status: 'OK'
       }
     };

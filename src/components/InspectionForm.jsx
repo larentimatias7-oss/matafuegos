@@ -1,110 +1,204 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   CheckCircle2, 
   XCircle, 
-  ShieldCheck, 
-  Flame, 
   MapPin, 
   Calendar, 
-  Gauge, 
   AlertTriangle, 
   Send, 
   ArrowLeft,
   Zap,
-  Check,
-  Building
+  Camera,
+  Info,
+  Clock,
+  RotateCcw,
+  ShieldCheck,
+  Building,
+  WifiOff
 } from 'lucide-react';
+import { enqueueOfflineInspection, compressImageFile } from '../utils/offlineQueue';
 
-export default function InspectionForm({ extinguisher, onBack, onSaved }) {
+export default function InspectionForm({ extinguisher, onBack, onSaved, onInspectNext }) {
   const [inspectorName, setInspectorName] = useState(() => {
-    return localStorage.getItem('firecontrol_inspector') || 'Santi (Inspector)';
+    return localStorage.getItem('firecontrol_inspector') || 'Santi (Inspector HyS)';
   });
 
-  const [checks, setChecks] = useState({
-    check_location: 1,
-    check_pressure: 1,
-    check_seal: 1,
-    check_physical: 1,
-    check_signage: 1,
-    check_card: 1
-  });
-
+  const [checklistItems, setChecklistItems] = useState([]);
+  const [loadingChecklist, setLoadingChecklist] = useState(true);
+  const [checks, setChecks] = useState({});
   const [observations, setObservations] = useState('');
+  const [photoUrl, setPhotoUrl] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(false);
+  const [savedResult, setSavedResult] = useState(null);
 
-  // Save inspector name to localStorage on change
+  // Re-inspection handling
+  const isAlreadyInspected = extinguisher?.monthlyStatus?.inspectedThisMonth;
+  const [isReinspection, setIsReinspection] = useState(Boolean(isAlreadyInspected));
+  const [reinspectionReason, setReinspectionReason] = useState('');
+
+  // Antifraud duration timer
+  const startTimeRef = useRef(Date.now());
+  const [geoCoords, setGeoCoords] = useState(null);
+
+  useEffect(() => {
+    startTimeRef.current = Date.now();
+
+    // Request geolocation if available
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setGeoCoords({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracy: pos.coords.accuracy
+          });
+        },
+        () => {},
+        { timeout: 5000, enableHighAccuracy: false }
+      );
+    }
+
+    // Load checklist items from API
+    fetch(`/api/checklist?type=${encodeURIComponent(extinguisher?.type || '')}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.items) {
+          setChecklistItems(data.items);
+          const initial = {};
+          data.items.forEach(it => {
+            initial[it.code] = 1; // Default OK
+          });
+          setChecks(initial);
+        }
+      })
+      .catch(console.error)
+      .finally(() => setLoadingChecklist(false));
+  }, [extinguisher]);
+
+  // Save inspector name to localStorage
   useEffect(() => {
     if (inspectorName) {
       localStorage.setItem('firecontrol_inspector', inspectorName);
     }
   }, [inspectorName]);
 
-  const toggleCheck = (field) => {
+  const toggleCheck = (code, value) => {
     setChecks(prev => ({
       ...prev,
-      [field]: prev[field] === 1 ? 0 : 1
+      [code]: value
     }));
   };
 
   const markAllOk = () => {
-    setChecks({
-      check_location: 1,
-      check_pressure: 1,
-      check_seal: 1,
-      check_physical: 1,
-      check_signage: 1,
-      check_card: 1
+    const updated = {};
+    checklistItems.forEach(it => {
+      updated[it.code] = 1;
     });
+    setChecks(updated);
+    setObservations('');
   };
 
-  const isAllOk = Object.values(checks).every(val => val === 1);
+  const hasAnyFailure = Object.values(checks).some(val => val === 0);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!inspectorName.trim()) {
       setError('Por favor ingresá tu nombre de inspector.');
+      return;
+    }
+
+    if (isAlreadyInspected && !reinspectionReason.trim()) {
+      setError('Para reinspeccionar un extintor en la misma ronda es obligatorio indicar el motivo.');
       return;
     }
 
     setSaving(true);
     setError(null);
 
+    const durationSeconds = Math.round((Date.now() - startTimeRef.current) / 1000);
+
+    // Haptic feedback
+    if (navigator.vibrate) {
+      navigator.vibrate([40]);
+    }
+
+    const inspectionPayload = {
+      extinguisher_id: extinguisher.id,
+      extinguisher_code: extinguisher.code,
+      inspector_name: inspectorName.trim(),
+      check_location: checks.check_location !== undefined ? checks.check_location : 1,
+      check_pressure: checks.check_pressure !== undefined ? checks.check_pressure : 1,
+      check_seal: checks.check_seal !== undefined ? checks.check_seal : 1,
+      check_physical: checks.check_physical !== undefined ? checks.check_physical : 1,
+      check_signage: checks.check_signage !== undefined ? checks.check_signage : 1,
+      check_card: checks.check_card !== undefined ? checks.check_card : 1,
+      checklist_results: checks,
+      observations: observations.trim(),
+      photo_url: photoUrl,
+      duration_seconds: durationSeconds,
+      latitude: geoCoords?.latitude,
+      longitude: geoCoords?.longitude,
+      geo_accuracy: geoCoords?.accuracy,
+      is_reinspection: isAlreadyInspected ? 1 : 0,
+      reinspection_reason: reinspectionReason.trim()
+    };
+
+    // Si el navegador ya detecta que no hay conexión, guardamos offline directamente
+    if (!navigator.onLine) {
+      try {
+        await enqueueOfflineInspection(inspectionPayload);
+        setSavedResult({
+          success: true,
+          passed: !hasAnyFailure,
+          isOffline: true,
+          message: 'Sin conexión a Internet. El control se guardó en tu dispositivo y se sincronizará automáticamente al recuperar señal.',
+          nextPendingCode: null
+        });
+        setSaving(false);
+        return;
+      } catch (errOffline) {
+        setError('Error al guardar localmente: ' + errOffline.message);
+        setSaving(false);
+        return;
+      }
+    }
+
     try {
       const response = await fetch('/api/inspections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          extinguisher_id: extinguisher.id,
-          extinguisher_code: extinguisher.code,
-          inspector_name: inspectorName.trim(),
-          ...checks,
-          observations: observations.trim()
-        })
+        body: JSON.stringify(inspectionPayload)
       });
 
       const data = await response.json();
       if (!data.success) {
-        throw new Error(data.error || 'Error al guardar inspección');
+        throw new Error(data.error || 'Error al guardar el control mensual');
       }
 
-      setSuccess(true);
-      if (onSaved) {
-        setTimeout(() => {
-          onSaved();
-        }, 1200);
-      }
+      setSavedResult(data);
     } catch (err) {
-      setError(err.message);
-    } finally {
+      // Si falló por error de red o timeout, respaldar en IndexedDB
+      console.warn('Fallo de red en envío, respaldando offline:', err);
+      try {
+        await enqueueOfflineInspection(inspectionPayload);
+        setSavedResult({
+          success: true,
+          passed: !hasAnyFailure,
+          isOffline: true,
+          message: 'Conexión inestable. El control se guardó localmente y se enviará en segundo plano cuando vuelva la red.',
+          nextPendingCode: null
+        });
+      } catch (errOffline) {
+        setError('Error de conexión y no se pudo almacenar offline: ' + errOffline.message);
+      }
       setSaving(false);
     }
   };
 
   if (!extinguisher) {
     return (
-      <div className="glass-card" style={{ textAlign: 'center', padding: '2rem' }}>
+      <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
         <p>No se seleccionó ningún matafuego.</p>
         <button onClick={onBack} className="btn btn-secondary" style={{ marginTop: '1rem' }}>
           Volver
@@ -113,272 +207,324 @@ export default function InspectionForm({ extinguisher, onBack, onSaved }) {
     );
   }
 
-  const isChargeExpired = extinguisher.expiration_charge < new Date().toISOString().split('T')[0];
-
-  return (
-    <div style={{ maxWidth: '680px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-      
-      {/* Top Navigation */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <button onClick={onBack} className="btn btn-secondary btn-sm">
-          <ArrowLeft size={16} />
-          <span>Volver al Escáner / Lista</span>
-        </button>
-        <span className="badge badge-blue">Norma IRAM 3517-2</span>
-      </div>
-
-      {/* Extinguisher Details Header Card */}
-      <div className="glass-card" style={{
-        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
-        borderLeft: isAllOk ? '4px solid #10b981' : '4px solid #ef4444'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.25rem' }}>
-              <span className="font-mono" style={{ fontSize: '1.5rem', fontWeight: 800, color: '#38bdf8' }}>
-                {extinguisher.code}
-              </span>
-              <span className="badge badge-green" style={{ background: '#3b82f6', color: '#fff' }}>
-                {extinguisher.type} {extinguisher.capacity}
-              </span>
-            </div>
-            
-            <p style={{ color: '#f1f5f9', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.95rem' }}>
-              <MapPin size={16} color="#f87171" />
-              <span>{extinguisher.location}</span>
-            </p>
-            <p style={{ color: '#94a3b8', fontSize: '0.8rem', marginLeft: '1.4rem' }}>
-              Nivel: {extinguisher.floor} • Sector: {extinguisher.area || 'General'}
-            </p>
-          </div>
-
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Vto. Carga Anual</div>
-            <div style={{ fontWeight: 700, color: isChargeExpired ? '#f87171' : '#34d399', fontSize: '0.9rem' }}>
-              {extinguisher.expiration_charge} {isChargeExpired && '(VENCIDO)'}
-            </div>
-            <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.2rem' }}>
-              Vto. PH: {extinguisher.expiration_ph}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Success Notification */}
-      {success && (
+  // Saved confirmation view with "Siguiente Pendiente"
+  if (savedResult) {
+    return (
+      <div className="card" style={{ textAlign: 'center', padding: '2rem 1.25rem', maxWidth: '580px', margin: '0 auto' }}>
         <div style={{
-          padding: '1.25rem',
-          borderRadius: '12px',
-          background: 'rgba(16, 185, 129, 0.15)',
-          border: '1px solid #10b981',
-          color: '#34d399',
-          textAlign: 'center',
-          fontWeight: 700,
+          width: '64px',
+          height: '64px',
+          borderRadius: '50%',
+          background: savedResult.passed ? 'var(--status-ok-bg)' : 'var(--status-fault-bg)',
+          color: savedResult.passed ? 'var(--status-ok-text)' : 'var(--status-fault-text)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          margin: '0 auto 1rem auto'
+        }}>
+          {savedResult.passed ? <CheckCircle2 size={36} /> : <AlertTriangle size={36} />}
+        </div>
+
+        <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.35rem' }}>
+          {savedResult.passed ? '¡Control Mensual Guardado!' : 'Control Registrado con Anomalía'}
+        </h3>
+        
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+          {savedResult.message}
+        </p>
+
+        {savedResult.nextPendingCode ? (
+          <div style={{
+            background: 'var(--status-pending-bg)',
+            border: '1.5px solid var(--status-pending-border)',
+            borderRadius: '10px',
+            padding: '1.25rem',
+            marginBottom: '1.5rem',
+            textAlign: 'left'
+          }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--status-pending-text)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+              Siguiente equipo en tu ruta:
+            </div>
+            <div className="font-mono" style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--milicic-orange)' }}>
+              {savedResult.nextPendingCode}
+            </div>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-body)', fontWeight: 600 }}>
+              {savedResult.nextPendingLocation}
+            </div>
+          </div>
+        ) : (
+          <p style={{ color: 'var(--status-ok-text)', fontWeight: 700, marginBottom: '1.5rem' }}>
+            ¡Excelente! No quedan más extintores pendientes en este sector.
+          </p>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {savedResult.nextPendingCode && (
+            <button
+              onClick={() => onInspectNext(savedResult.nextPendingCode)}
+              className="btn btn-primary btn-full"
+            >
+              <span>Ir a {savedResult.nextPendingCode}</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => {
+              if (onSaved) onSaved();
+            }}
+            className="btn btn-secondary btn-full"
+          >
+            <span>Volver a la Ronda / Lista</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const isChargeExpired = extinguisher.expiration_charge < new Date().toISOString().split('T')[0];
+
+  return (
+    <div style={{ maxWidth: '680px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      
+      {/* Top Bar Navigation */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <button onClick={onBack} className="btn btn-secondary btn-sm">
+          <ArrowLeft size={16} />
+          <span>Volver</span>
+        </button>
+
+        <span className="status-badge info">
+          <ShieldCheck size={14} />
+          <span>IRAM 3517-2</span>
+        </span>
+      </div>
+
+      {/* Extinguisher Header Card */}
+      <div className="card" style={{ borderLeft: '4px solid var(--milicic-orange)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <span className="font-mono" style={{ fontSize: '1.45rem', fontWeight: 900, color: 'var(--milicic-orange)' }}>
+                {extinguisher.code}
+              </span>
+              <span className="status-badge info" style={{ fontWeight: 800 }}>
+                {extinguisher.type} {extinguisher.capacity}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-main)', fontWeight: 700, fontSize: '0.95rem', marginTop: '0.25rem' }}>
+              <MapPin size={16} color="var(--milicic-orange)" />
+              <span>{extinguisher.location}</span>
+            </div>
+
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+              {extinguisher.floor} • Sector: {extinguisher.area || 'General'} • {extinguisher.building || 'Edificio Central'}
+            </div>
+          </div>
+
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Vto. Carga Anual</div>
+            <div style={{ fontWeight: 800, color: isChargeExpired ? 'var(--status-fault-text)' : 'var(--status-ok-text)', fontSize: '0.92rem' }}>
+              {extinguisher.expiration_charge} {isChargeExpired && '(VENCIDO)'}
+            </div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+              PH: {extinguisher.expiration_ph}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Re-inspection Warning Alert */}
+      {isAlreadyInspected && (
+        <div style={{
+          padding: '0.85rem 1rem',
+          borderRadius: '8px',
+          background: 'var(--status-pending-bg)',
+          border: '1.5px solid var(--status-pending-border)',
+          color: 'var(--status-pending-text)',
+          fontSize: '0.85rem',
+          display: 'flex',
+          flexDirection: 'column',
           gap: '0.5rem'
         }}>
-          <CheckCircle2 size={24} />
-          <span>¡Control mensual registrado con éxito! Sincronizando con Microsoft 365...</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}>
+            <RotateCcw size={16} />
+            <span>Re-inspección en la misma ronda:</span>
+          </div>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-body)' }}>
+            Este extintor ya fue controlado este mes. Al guardar, se conservará la inspección previa en el historial inmutable de auditoría.
+          </p>
+          <div>
+            <label className="label" style={{ color: 'var(--status-pending-text)' }}>Motivo de la Re-inspección *</label>
+            <input
+              type="text"
+              required
+              placeholder="Ej: Se reemplazó manómetro o se despejó mercadería del puesto"
+              value={reinspectionReason}
+              onChange={(e) => setReinspectionReason(e.target.value)}
+              className="input"
+              style={{ background: '#ffffff', minHeight: '42px' }}
+            />
+          </div>
         </div>
       )}
 
-      {/* Main Inspection Form */}
-      <form onSubmit={handleSubmit} className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-        
-        {/* Quick 1-Tap All OK Button */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '0.75rem',
-          paddingBottom: '1rem',
-          borderBottom: '1px solid var(--border-color)'
-        }}>
-          <div>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff' }}>
-              Puntos de Control Mensual
-            </h3>
-            <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-              Marcá los puntos verificados o usá el botón rápido si todo está en orden.
-            </p>
-          </div>
+      {/* Official Normative Disclaimer */}
+      <div style={{
+        padding: '0.65rem 0.85rem',
+        borderRadius: '6px',
+        background: 'var(--milicic-orange-soft)',
+        border: '1px solid var(--milicic-orange-border)',
+        color: 'var(--milicic-slate-body)',
+        fontSize: '0.78rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem'
+      }}>
+        <Info size={16} color="var(--milicic-orange)" style={{ flexShrink: 0 }} />
+        <span>Validar checklist y plazos con el responsable de Seguridad e Higiene y la normativa aplicable (IRAM 3517-2).</span>
+      </div>
 
-          <button
-            type="button"
-            onClick={markAllOk}
-            className="btn btn-success btn-sm"
-            style={{ fontWeight: 700 }}
-          >
-            <Zap size={16} />
-            <span>⚡ Marcar Todo OK</span>
-          </button>
-        </div>
+      {/* Quick 1-Tap Shortcut Button */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
+        <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          Checklist Mensual
+        </span>
 
-        {/* 6 Checklist items conforming to IRAM 3517-2 */}
-        <div>
-          {/* Check 1: Acceso y Ubicación */}
-          <div 
-            className={`check-item ${checks.check_location === 1 ? 'passed' : 'failed'}`}
-            onClick={() => toggleCheck('check_location')}
-          >
-            <div>
-              <div style={{ fontWeight: 600, color: '#fff', fontSize: '0.9rem' }}>
-                1. Ubicación y Acceso Despejado
+        <button
+          type="button"
+          onClick={markAllOk}
+          className="btn btn-success btn-sm"
+          style={{ fontWeight: 800, padding: '0.4rem 1rem' }}
+        >
+          <Zap size={16} />
+          <span>Todo OK</span>
+        </button>
+      </div>
+
+      {/* Dynamic Checklist Toggles */}
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        {checklistItems.map((item) => {
+          const isOk = checks[item.code] === 1;
+
+          return (
+            <div key={item.code} className="inspector-toggle-card">
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.92rem' }}>
+                  {item.label}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: '1.3' }}>
+                  {item.description}
+                </div>
               </div>
-              <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
-                En su puesto asignado, a altura reglamentaria y sin objetos ni muebles que bloqueen el acceso rápido.
+
+              {/* Big Binary Toggles */}
+              <div className="toggle-group">
+                <button
+                  type="button"
+                  onClick={() => toggleCheck(item.code, 1)}
+                  className={`toggle-btn ${isOk ? 'active-ok' : ''}`}
+                >
+                  <CheckCircle2 size={16} />
+                  <span>OK</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleCheck(item.code, 0)}
+                  className={`toggle-btn ${!isOk ? 'active-fail' : ''}`}
+                >
+                  <XCircle size={16} />
+                  <span>Falla</span>
+                </button>
               </div>
             </div>
-            {checks.check_location === 1 ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#10b981', fontWeight: 700 }}>
-                <CheckCircle2 size={22} />
-                <span>OK</span>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#ef4444', fontWeight: 700 }}>
-                <XCircle size={22} />
-                <span>FALLA</span>
-              </div>
-            )}
-          </div>
+          );
+        })}
 
-          {/* Check 2: Manómetro / Presión */}
-          <div 
-            className={`check-item ${checks.check_pressure === 1 ? 'passed' : 'failed'}`}
-            onClick={() => toggleCheck('check_pressure')}
-          >
+        {/* Observation & Photo (EXPANDS CONDITIONALLY ONLY IF THERE IS A FAILURE) */}
+        {hasAnyFailure && (
+          <div className="card" style={{
+            background: 'var(--status-fault-bg)',
+            border: '1.5px solid var(--status-fault-border)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.75rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--status-fault-text)', fontWeight: 800, fontSize: '0.92rem' }}>
+              <AlertTriangle size={18} />
+              <span>Se abrirá un caso de anomalía automáticamente</span>
+            </div>
+
             <div>
-              <div style={{ fontWeight: 600, color: '#fff', fontSize: '0.9rem' }}>
-                2. Presión / Manómetro en Verde
-              </div>
-              <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
-                Aguja en zona verde de operatividad. (En extintores de CO2 sin manómetro: peso adecuado).
+              <label className="label" style={{ color: 'var(--status-fault-text)' }}>
+                Detalle de la Falla / Observación *
+              </label>
+              <textarea
+                rows="2"
+                required
+                value={observations}
+                onChange={(e) => setObservations(e.target.value)}
+                className="textarea"
+                placeholder="Describí la falla: manómetro en rojo, precinto roto, etc."
+                style={{ background: '#ffffff' }}
+              />
+            </div>
+
+            <div>
+              <label className="label" style={{ color: 'var(--status-fault-text)' }}>
+                Foto de la Anomalía (Cámara o archivo)
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <label className="btn btn-secondary" style={{ flex: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
+                    <Camera size={18} />
+                    <span>Tomar / Subir Foto</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      style={{ display: 'none' }}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          try {
+                            const compressed = await compressImageFile(file, 1024, 0.7);
+                            setPhotoUrl(compressed);
+                          } catch (err) {
+                            console.error('Error al comprimir foto:', err);
+                          }
+                        }
+                      }}
+                    />
+                  </label>
+                  {photoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setPhotoUrl('')}
+                      className="btn"
+                      style={{ background: '#ffffff', border: '1px solid var(--border-color)', color: 'var(--text-muted)' }}
+                    >
+                      Quitar
+                    </button>
+                  )}
+                </div>
+
+                {photoUrl && (
+                  <div style={{ position: 'relative', marginTop: '0.25rem', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--status-fault-border)', maxHeight: '160px' }}>
+                    <img src={photoUrl} alt="Foto anomalía" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <span style={{ position: 'absolute', bottom: '4px', right: '6px', background: 'rgba(0,0,0,0.6)', color: '#ffffff', padding: '2px 6px', borderRadius: '4px', fontSize: '0.72rem' }}>
+                      Comprimida para celular
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
-            {checks.check_pressure === 1 ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#10b981', fontWeight: 700 }}>
-                <CheckCircle2 size={22} />
-                <span>OK</span>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#ef4444', fontWeight: 700 }}>
-                <XCircle size={22} />
-                <span>FALLA</span>
-              </div>
-            )}
           </div>
-
-          {/* Check 3: Precinto y Seguro */}
-          <div 
-            className={`check-item ${checks.check_seal === 1 ? 'passed' : 'failed'}`}
-            onClick={() => toggleCheck('check_seal')}
-          >
-            <div>
-              <div style={{ fontWeight: 600, color: '#fff', fontSize: '0.9rem' }}>
-                3. Precinto y Pasador de Seguridad
-              </div>
-              <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
-                Traba metálica colocada y precinto plástico inviolado (garantiza que no fue disparado ni manipulado).
-              </div>
-            </div>
-            {checks.check_seal === 1 ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#10b981', fontWeight: 700 }}>
-                <CheckCircle2 size={22} />
-                <span>OK</span>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#ef4444', fontWeight: 700 }}>
-                <XCircle size={22} />
-                <span>FALLA</span>
-              </div>
-            )}
-          </div>
-
-          {/* Check 4: Estado Físico, Manguera y Tobera */}
-          <div 
-            className={`check-item ${checks.check_physical === 1 ? 'passed' : 'failed'}`}
-            onClick={() => toggleCheck('check_physical')}
-          >
-            <div>
-              <div style={{ fontWeight: 600, color: '#fff', fontSize: '0.9rem' }}>
-                4. Cilindro, Manguera y Boquilla
-              </div>
-              <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
-                Sin signos de corrosión profunda, abolladuras, y manguera flexible sin rajaduras ni tobera tapada.
-              </div>
-            </div>
-            {checks.check_physical === 1 ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#10b981', fontWeight: 700 }}>
-                <CheckCircle2 size={22} />
-                <span>OK</span>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#ef4444', fontWeight: 700 }}>
-                <XCircle size={22} />
-                <span>FALLA</span>
-              </div>
-            )}
-          </div>
-
-          {/* Check 5: Chapa Baliza y Señalización */}
-          <div 
-            className={`check-item ${checks.check_signage === 1 ? 'passed' : 'failed'}`}
-            onClick={() => toggleCheck('check_signage')}
-          >
-            <div>
-              <div style={{ fontWeight: 600, color: '#fff', fontSize: '0.9rem' }}>
-                5. Señalización y Chapa Baliza
-              </div>
-              <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
-                Chapa baliza visible detrás del extintor y cartel reglamentario visible a distancia adecuada.
-              </div>
-            </div>
-            {checks.check_signage === 1 ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#10b981', fontWeight: 700 }}>
-                <CheckCircle2 size={22} />
-                <span>OK</span>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#ef4444', fontWeight: 700 }}>
-                <XCircle size={22} />
-                <span>FALLA</span>
-              </div>
-            )}
-          </div>
-
-          {/* Check 6: Tarjeta y Marbete */}
-          <div 
-            className={`check-item ${checks.check_card === 1 ? 'passed' : 'failed'}`}
-            onClick={() => toggleCheck('check_card')}
-          >
-            <div>
-              <div style={{ fontWeight: 600, color: '#fff', fontSize: '0.9rem' }}>
-                6. Tarjeta de Control y Marbete Vigente
-              </div>
-              <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
-                Tarjeta plástica o cartón identificatorio legible y marbete del cuello con año correspondiente.
-              </div>
-            </div>
-            {checks.check_card === 1 ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#10b981', fontWeight: 700 }}>
-                <CheckCircle2 size={22} />
-                <span>OK</span>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#ef4444', fontWeight: 700 }}>
-                <XCircle size={22} />
-                <span>FALLA</span>
-              </div>
-            )}
-          </div>
-        </div>
+        )}
 
         {/* Inspector Name */}
         <div>
-          <label className="label">Nombre del Inspector / Responsable</label>
+          <label className="label">Inspector / Operario Responsable</label>
           <input
             type="text"
             required
@@ -389,34 +535,24 @@ export default function InspectionForm({ extinguisher, onBack, onSaved }) {
           />
         </div>
 
-        {/* Observaciones */}
-        <div>
-          <label className="label">Observaciones / Anomalías detectadas (Opcional)</label>
-          <textarea
-            rows="2"
-            value={observations}
-            onChange={(e) => setObservations(e.target.value)}
-            className="textarea"
-            placeholder="Ej: Manómetro con baja presión; o acceso parcialmente tapado por cajas."
-          />
-        </div>
-
         {error && (
-          <div style={{ color: '#ef4444', fontSize: '0.85rem' }}>
-            ⚠️ {error}
+          <div style={{ color: 'var(--status-fault-text)', fontSize: '0.85rem', fontWeight: 600 }}>
+            {error}
           </div>
         )}
 
-        {/* Submit Button */}
-        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+        {/* STICKY BOTTOM THUMB BAR (ACCESSIBLE CON EL PULGAR) */}
+        <div className="thumb-bar">
           <button
             type="submit"
             disabled={saving}
-            className={`btn ${isAllOk ? 'btn-success' : 'btn-primary'} btn-lg`}
-            style={{ flex: 1 }}
+            className={`btn ${hasAnyFailure ? 'btn-danger' : 'btn-primary'} btn-full`}
+            style={{ fontWeight: 800, fontSize: '1.05rem', minHeight: '52px' }}
           >
             <Send size={18} />
-            <span>{saving ? 'Guardando...' : (isAllOk ? 'Guardar Control Mensual (OK)' : 'Guardar con Observaciones')}</span>
+            <span>
+              {saving ? 'Guardando...' : (hasAnyFailure ? 'Guardar y Abrir Caso' : 'Guardar y Siguiente')}
+            </span>
           </button>
         </div>
 

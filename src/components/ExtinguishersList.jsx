@@ -11,7 +11,8 @@ import {
   AlertTriangle, 
   Clock, 
   Flame,
-  Download,
+  ShieldAlert,
+  Building,
   Calendar
 } from 'lucide-react';
 
@@ -30,7 +31,6 @@ export default function ExtinguishersList({
   const [page, setPage] = useState(1);
   const pageSize = 25;
 
-  // Extract unique floors and types
   const floors = useMemo(() => {
     const list = [...new Set(extinguishers.map(e => e.floor).filter(Boolean))];
     return list.sort();
@@ -41,14 +41,15 @@ export default function ExtinguishersList({
     return list.sort();
   }, [extinguishers]);
 
-  // Filtered list
   const filtered = useMemo(() => {
     return extinguishers.filter(ext => {
       const matchSearch = !searchTerm || 
         ext.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
         ext.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (ext.area && ext.area.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (ext.notes && ext.notes.toLowerCase().includes(searchTerm.toLowerCase()));
+        (ext.building && ext.building.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (ext.manufacturer && ext.manufacturer.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (ext.public_id && ext.public_id.toLowerCase().includes(searchTerm.toLowerCase()));
 
       const matchFloor = !selectedFloor || ext.floor === selectedFloor;
       const matchType = !selectedType || ext.type === selectedType;
@@ -73,7 +74,7 @@ export default function ExtinguishersList({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       
       {/* Header and Controls */}
-      <div className="glass-card" style={{ padding: '1.25rem' }}>
+      <div className="card" style={{ padding: '1.25rem' }}>
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -83,11 +84,11 @@ export default function ExtinguishersList({
           marginBottom: '1rem'
         }}>
           <div>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff' }}>
-              Inventario de Extintores ({extinguishers.length})
+            <h2 className="card-title">
+              Inventario de Extintores ({extinguishers.length} Equipos)
             </h2>
-            <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
-              Mostrando {filtered.length} extintores según filtros aplicados.
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+              Base de datos auditada de extintores asignados a plantas y obras de Milicic S.A.
             </p>
           </div>
 
@@ -103,32 +104,29 @@ export default function ExtinguishersList({
           gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
           gap: '0.75rem'
         }}>
-          {/* Search Box */}
           <div style={{ position: 'relative', gridColumn: 'span 2' }}>
-            <Search size={16} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+            <Search size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
             <input 
               type="text"
-              placeholder="Buscar por código (ej: MF-001), ubicación o sector..."
+              placeholder="Buscar por código (ej: MF-001), ubicación, fabricante o sector..."
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
               className="input"
-              style={{ paddingLeft: '2.4rem' }}
+              style={{ paddingLeft: '2.5rem' }}
             />
           </div>
 
-          {/* Filter Floor */}
           <div>
             <select 
               value={selectedFloor} 
               onChange={(e) => { setSelectedFloor(e.target.value); setPage(1); }}
               className="select"
             >
-              <option value="">Todos los Pisos / Niveles</option>
+              <option value="">Todos los Pisos</option>
               {floors.map(f => <option key={f} value={f}>{f}</option>)}
             </select>
           </div>
 
-          {/* Filter Type */}
           <div>
             <select 
               value={selectedType} 
@@ -140,17 +138,16 @@ export default function ExtinguishersList({
             </select>
           </div>
 
-          {/* Filter Monthly Status */}
           <div>
             <select 
               value={selectedStatus} 
               onChange={(e) => { setSelectedStatus(e.target.value); setPage(1); }}
               className="select"
             >
-              <option value="">Estado Mes: Todos</option>
-              <option value="OK">🟢 Controlados OK</option>
-              <option value="PENDING">🟡 Pendientes este mes</option>
-              <option value="FAULT">🔴 Falla / Vencidos</option>
+              <option value="">Estado: Todos</option>
+              <option value="OK">Controlados OK</option>
+              <option value="PENDING">Pendientes Ronda</option>
+              <option value="FAULT">Con Falla / Vencidos</option>
             </select>
           </div>
         </div>
@@ -163,18 +160,18 @@ export default function ExtinguishersList({
             <tr>
               <th>Código</th>
               <th>Tipo y Capacidad</th>
-              <th>Ubicación</th>
-              <th>Piso / Sector</th>
+              <th>Ubicación y Sector</th>
+              <th>Fabricante / Año</th>
               <th>Vto. Carga Anual</th>
               <th>Vto. PH</th>
-              <th>Estado Mes</th>
+              <th>Estado Ronda</th>
               <th style={{ textAlign: 'right' }}>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan="8" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
+                <td colSpan="8" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
                   No se encontraron extintores con los filtros seleccionados.
                 </td>
               </tr>
@@ -188,49 +185,55 @@ export default function ExtinguishersList({
                     {/* Código */}
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                        <span className="font-mono" style={{ fontWeight: 800, color: '#38bdf8', fontSize: '0.9rem' }}>
+                        <span className="font-mono" style={{ fontWeight: 800, color: 'var(--milicic-orange)', fontSize: '0.95rem' }}>
                           {ext.code}
                         </span>
                         <button 
                           onClick={() => onShowQr(ext)}
-                          className="btn btn-outline btn-sm"
-                          style={{ padding: '0.2rem 0.35rem', borderRadius: '4px' }}
+                          className="btn btn-secondary btn-sm"
+                          style={{ minHeight: '30px', padding: '0.2rem 0.4rem' }}
                           title="Ver QR individual"
                         >
                           <QrCode size={14} />
                         </button>
                       </div>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                        id: {ext.public_id}
+                      </div>
                     </td>
 
                     {/* Tipo y Capacidad */}
                     <td>
-                      <div style={{ fontWeight: 600, color: '#f1f5f9' }}>{ext.type}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{ext.capacity}</div>
+                      <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{ext.type}</div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{ext.capacity}</div>
                     </td>
 
                     {/* Ubicación */}
                     <td>
-                      <div style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={ext.location}>
+                      <div style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600, color: 'var(--text-main)' }} title={ext.location}>
                         {ext.location}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        {ext.floor} • {ext.area}
                       </div>
                     </td>
 
-                    {/* Piso / Sector */}
+                    {/* Fabricante / Año */}
                     <td>
-                      <div>{ext.floor || 'S/D'}</div>
-                      <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{ext.area || ''}</div>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-body)' }}>{ext.manufacturer || 'S/D'}</div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Fab: {ext.fab_year || 'S/D'}</div>
                     </td>
 
                     {/* Vencimiento Carga Anual */}
                     <td>
-                      <span style={{ 
-                        color: isChargeExpired ? '#f87171' : '#cbd5e1',
-                        fontWeight: isChargeExpired ? 700 : 400
+                      <div style={{ 
+                        color: isChargeExpired ? 'var(--status-expired-text)' : 'var(--text-body)',
+                        fontWeight: isChargeExpired ? 800 : 500
                       }}>
                         {ext.expiration_charge}
-                      </span>
+                      </div>
                       {isChargeExpired && (
-                        <div style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 600 }}>
+                        <div style={{ fontSize: '0.68rem', color: 'var(--status-expired-text)', fontWeight: 800 }}>
                           VENCIDO
                         </div>
                       )}
@@ -238,25 +241,25 @@ export default function ExtinguishersList({
 
                     {/* Vencimiento PH */}
                     <td>
-                      <span style={{ color: '#94a3b8', fontSize: '0.82rem' }}>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                         {ext.expiration_ph}
                       </span>
                     </td>
 
-                    {/* Estado Mes */}
+                    {/* Estado Ronda */}
                     <td>
-                      {ms?.badgeColor === 'green' && (
-                        <span className="badge badge-green" title={ms.label}>
+                      {ms?.badgeColor === 'ok' && (
+                        <span className="status-badge ok" title={ms.label}>
                           <CheckCircle2 size={12} /> OK
                         </span>
                       )}
-                      {ms?.badgeColor === 'yellow' && (
-                        <span className="badge badge-yellow" title={ms.label}>
+                      {ms?.badgeColor === 'pending' && (
+                        <span className="status-badge pending" title={ms.label}>
                           <Clock size={12} /> Pendiente
                         </span>
                       )}
-                      {ms?.badgeColor === 'red' && (
-                        <span className="badge badge-red" title={ms.label}>
+                      {(ms?.badgeColor === 'fault' || ms?.badgeColor === 'expired') && (
+                        <span className="status-badge fault" title={ms.label}>
                           <AlertTriangle size={12} /> {ms.statusKey === 'EXPIRED' ? 'Vencido' : 'Falla'}
                         </span>
                       )}
@@ -269,6 +272,7 @@ export default function ExtinguishersList({
                           onClick={() => onInspect(ext)}
                           className="btn btn-primary btn-sm"
                           title="Registrar control mensual"
+                          style={{ padding: '0.35rem 0.75rem', fontSize: '0.82rem' }}
                         >
                           <ScanLine size={14} />
                           <span>Controlar</span>
@@ -277,15 +281,16 @@ export default function ExtinguishersList({
                         <button 
                           onClick={() => onEdit(ext)}
                           className="btn btn-secondary btn-sm"
-                          title="Editar datos"
+                          style={{ padding: '0.35rem 0.6rem' }}
+                          title="Editar ficha técnica"
                         >
                           <Edit2 size={14} />
                         </button>
 
                         <button 
                           onClick={() => onDelete(ext.id)}
-                          className="btn btn-outline btn-sm"
-                          style={{ color: '#f87171' }}
+                          className="btn btn-secondary btn-sm"
+                          style={{ padding: '0.35rem 0.6rem', color: 'var(--status-fault-text)' }}
                           title="Eliminar"
                         >
                           <Trash2 size={14} />
@@ -308,7 +313,7 @@ export default function ExtinguishersList({
           justifyContent: 'space-between',
           padding: '0.5rem 1rem'
         }}>
-          <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
             Página {page} de {totalPages} ({filtered.length} extintores)
           </span>
 

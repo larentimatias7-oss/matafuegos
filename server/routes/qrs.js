@@ -6,25 +6,29 @@ const { db } = require('../db');
 // Helper to get base URL
 function getBaseUrl() {
   const row = db.prepare("SELECT value FROM settings WHERE key = 'base_url'").get();
-  return row ? row.value : 'http://localhost:5173';
+  return row ? row.value : 'http://localhost:3000';
 }
 
 // GET single QR data URL
-router.get('/single/:code', async (req, res) => {
+router.get('/single/:codeOrPublicId', async (req, res) => {
   try {
-    const { code } = req.params;
-    const ext = db.prepare('SELECT * FROM extinguishers WHERE code = ?').get(code.toUpperCase());
+    const { codeOrPublicId } = req.params;
+    let ext = db.prepare('SELECT * FROM extinguishers WHERE code = ?').get(codeOrPublicId.toUpperCase());
+    if (!ext) {
+      ext = db.prepare('SELECT * FROM extinguishers WHERE public_id = ?').get(codeOrPublicId.toLowerCase());
+    }
 
     if (!ext) {
       return res.status(404).json({ success: false, error: 'Matafuego no encontrado' });
     }
 
     const baseUrl = getBaseUrl();
-    const qrTargetUrl = `${baseUrl}/?code=${encodeURIComponent(ext.code)}#check`;
+    const qrTargetUrl = `${baseUrl}/m/${ext.public_id}`;
 
+    // Level H error correction (30% damage resistance)
     const qrDataUrl = await QRCode.toDataURL(qrTargetUrl, {
       errorCorrectionLevel: 'H',
-      margin: 2,
+      margin: 1,
       width: 320,
       color: {
         dark: '#0f172a',
@@ -35,6 +39,7 @@ router.get('/single/:code', async (req, res) => {
     res.json({
       success: true,
       code: ext.code,
+      public_id: ext.public_id,
       url: qrTargetUrl,
       qrDataUrl,
       extinguisher: ext
@@ -44,11 +49,11 @@ router.get('/single/:code', async (req, res) => {
   }
 });
 
-// GET batch QRs for all extinguishers (or filter by floor/area)
+// GET batch QRs with filters (floor, area, building)
 router.get('/batch', async (req, res) => {
   try {
-    const { floor, area, codes } = req.query;
-    let query = "SELECT * FROM extinguishers WHERE status != 'BAJA'";
+    const { floor, area, building, codes, format = 'grid' } = req.query;
+    let query = "SELECT * FROM extinguishers WHERE status != 'FUERA_DE_SERVICIO'";
     const params = [];
 
     if (floor) {
@@ -58,6 +63,10 @@ router.get('/batch', async (req, res) => {
     if (area) {
       query += ' AND area = ?';
       params.push(area);
+    }
+    if (building) {
+      query += ' AND building = ?';
+      params.push(building);
     }
     if (codes) {
       const codeList = codes.split(',').map(c => c.trim().toUpperCase());
@@ -71,14 +80,14 @@ router.get('/batch', async (req, res) => {
 
     const baseUrl = getBaseUrl();
 
-    // Generate QRs
+    // Generate QRs with Error Correction Level H
     const results = await Promise.all(
       extinguishers.map(async (ext) => {
-        const qrTargetUrl = `${baseUrl}/?code=${encodeURIComponent(ext.code)}#check`;
+        const qrTargetUrl = `${baseUrl}/m/${ext.public_id}`;
         const qrDataUrl = await QRCode.toDataURL(qrTargetUrl, {
-          errorCorrectionLevel: 'M',
+          errorCorrectionLevel: 'H',
           margin: 1,
-          width: 250,
+          width: 280,
           color: {
             dark: '#0f172a',
             light: '#ffffff'
@@ -88,11 +97,14 @@ router.get('/batch', async (req, res) => {
         return {
           id: ext.id,
           code: ext.code,
+          public_id: ext.public_id,
           type: ext.type,
           capacity: ext.capacity,
           location: ext.location,
           floor: ext.floor,
           area: ext.area,
+          building: ext.building,
+          manufacturer: ext.manufacturer,
           expiration_charge: ext.expiration_charge,
           expiration_ph: ext.expiration_ph,
           qrTargetUrl,
@@ -104,6 +116,7 @@ router.get('/batch', async (req, res) => {
     res.json({
       success: true,
       total: results.length,
+      format,
       data: results
     });
   } catch (error) {
