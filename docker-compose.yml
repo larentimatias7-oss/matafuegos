@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  firecontrol:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: firecontrol-365
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - DATA_DIR=/data
+      - BASE_URL=http://localhost:3000
+      - M365_WEBHOOK_URL=
+    volumes:
+      - firecontrol-data:/data
+
+volumes:
+  firecontrol-data:
+    name: firecontrol_365_data
