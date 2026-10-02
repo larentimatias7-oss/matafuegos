@@ -22,12 +22,12 @@ router.get('/export-excel', async (req, res) => {
     // Title banner
     extSheet.mergeCells('A1:J1');
     const titleCell = extSheet.getCell('A1');
-    titleCell.value = 'CONTROL Y SEGUIMIENTO DE EXTINTORES - NORMA IRAM 3517-2';
-    titleCell.font = { name: 'Segoe UI', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+    titleCell.value = 'MILICIC S.A. | CONTROL Y SEGUIMIENTO DE EXTINTORES - IRAM 3517-2';
+    titleCell.font = { name: 'Segoe UI', size: 13, bold: true, color: { argb: 'FFFFFFFF' } };
     titleCell.fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FF1E3A8A' } // Deep Microsoft Blue
+      fgColor: { argb: 'FF0F172A' } // Milicic Slate Dark
     };
     titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
     extSheet.getRow(1).height = 30;
@@ -35,8 +35,8 @@ router.get('/export-excel', async (req, res) => {
     // Subtitle / Date
     extSheet.mergeCells('A2:J2');
     const subCell = extSheet.getCell('A2');
-    subCell.value = `Exportado el: ${new Date().toLocaleString('es-AR')} | Compatible con Excel 365 Online & SharePoint`;
-    subCell.font = { name: 'Segoe UI', size: 10, italic: true, color: { argb: 'FF475569' } };
+    subCell.value = `Exportado el: ${new Date().toLocaleString('es-AR')} | Milicic S.A. • Excel 365 & SharePoint`;
+    subCell.font = { name: 'Segoe UI', size: 10, italic: true, color: { argb: 'FF94A3B8' } };
     subCell.alignment = { vertical: 'middle', horizontal: 'center' };
     extSheet.getRow(2).height = 20;
 
@@ -62,7 +62,7 @@ router.get('/export-excel', async (req, res) => {
       cell.fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: 'FF2563EB' }
+        fgColor: { argb: 'FFEA580C' } // Milicic Orange
       };
       cell.alignment = { vertical: 'middle', horizontal: 'center' };
       extSheet.getColumn(idx + 1).width = col.width;
@@ -148,12 +148,12 @@ router.get('/export-excel', async (req, res) => {
 
     inspSheet.mergeCells('A1:L1');
     const inspTitle = inspSheet.getCell('A1');
-    inspTitle.value = 'REGISTRO AUDITABLE DE INSPECCIONES MENSUALES';
+    inspTitle.value = 'MILICIC S.A. | REGISTRO AUDITABLE DE INSPECCIONES MENSUALES';
     inspTitle.font = { name: 'Segoe UI', size: 13, bold: true, color: { argb: 'FFFFFFFF' } };
     inspTitle.fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FF0F766E' } // Teal
+      fgColor: { argb: 'FF0F172A' } // Milicic Slate Dark
     };
     inspTitle.alignment = { vertical: 'middle', horizontal: 'center' };
     inspSheet.getRow(1).height = 28;
@@ -181,7 +181,7 @@ router.get('/export-excel', async (req, res) => {
       cell.fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: 'FF14B8A6' }
+        fgColor: { argb: 'FFEA580C' } // Milicic Orange
       };
       cell.alignment = { vertical: 'middle', horizontal: 'center' };
       inspSheet.getColumn(idx + 1).width = col.width;

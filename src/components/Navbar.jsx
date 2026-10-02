@@ -46,23 +46,33 @@ export default function Navbar({ activeTab, setActiveTab, onNewExtinguisher, sta
         gap: '1rem'
       }}>
         {/* Brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
           <div style={{
-            background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
-            width: '42px',
-            height: '42px',
-            borderRadius: '10px',
+            background: '#ffffff',
+            padding: '4px 8px',
+            borderRadius: '8px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(239, 68, 68, 0.4)'
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
           }}>
-            <Flame size={24} color="#ffffff" />
+            <img src="/logo-milicic.svg" alt="Milicic S.A." style={{ height: '30px', width: 'auto' }} onError={(e) => { e.target.src = '/logo-milicic.png'; }} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontWeight: 800, fontSize: '1.2rem', letterSpacing: '-0.02em', color: '#fff' }}>
-                FireControl
+              <span style={{ fontWeight: 800, fontSize: '1.15rem', letterSpacing: '-0.02em', color: '#fff' }}>
+                Control Matafuegos
+              </span>
+              <span style={{
+                background: '#ea580c',
+                color: '#fff',
+                fontSize: '0.65rem',
+                fontWeight: 800,
+                padding: '0.15rem 0.5rem',
+                borderRadius: '4px',
+                letterSpacing: '0.05em'
+              }}>
+                MILICIC
               </span>
               <span style={{
                 background: '#0078d4',
@@ -114,7 +124,7 @@ export default function Navbar({ activeTab, setActiveTab, onNewExtinguisher, sta
                   whiteSpace: 'nowrap',
                   transition: 'all 0.15s ease',
                   background: isActive 
-                    ? (tab.highlight ? '#ef4444' : '#334155') 
+                    ? (tab.highlight ? '#ea580c' : '#334155') 
                     : 'transparent',
                   color: isActive ? '#ffffff' : '#94a3b8',
                   boxShadow: isActive ? '0 2px 6px rgba(0,0,0,0.2)' : 'none'

@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Reporte Institucional Ejecutivo | Milicic S.A.</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 22mm 16mm 20mm 16mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    :root {
+      --primary: #ea580c;
+      --primary-hover: #c2410c;
+      --primary-light: #fff7ed;
+      --primary-border: #fdba74;
+      --dark-slate: #0f172a;
+      --slate-lead: #1e293b;
+      --slate-text: #334155;
+      --slate-body: #475569;
+      --slate-muted: #64748b;
+      --slate-light: #94a3b8;
+      --card-bg: #f8fafc;
+      --border-color: #e2e8f0;
+      --success: #16a34a;
+      --success-bg: #dcfce7;
+      --warning: #d97706;
+      --warning-bg: #fef3c7;
+      --danger: #dc2626;
+      --danger-bg: #fee2e2;
+      --info: #0891b2;
+      --info-bg: #ecfeff;
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      font-family: var(--font-family);
+      color: var(--slate-text);
+      line-height: 1.45;
+      margin: 0;
+      padding: 0;
+      font-size: 9.5pt;
+      background: #ffffff;
+    }
+
+    .page {
+      page-break-after: always;
+      break-after: page;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      min-height: 100%;
+    }
+
+    /* Portada Corporativa */
+    .cover-page {
+      page-break-after: always;
+      break-after: page;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 250mm;
+      padding: 20mm 10mm 10mm 10mm;
+    }
+
+    .cover-top {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .cover-logo {
+      height: 48px;
+      margin-bottom: 25mm;
+      object-fit: contain;
+    }
+
+    .category-badge {
+      display: inline-block;
+      background: var(--primary-light);
+      color: var(--primary);
+      border: 1px solid var(--primary-border);
+      padding: 5px 12px;
+      border-radius: 4px;
+      font-size: 8.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 12mm;
+    }
+
+    .cover-title {
+      font-size: 26pt;
+      font-weight: 800;
+      color: var(--dark-slate);
+      line-height: 1.15;
+      margin: 0 0 6mm 0;
+      letter-spacing: -0.5px;
+    }
+
+    .cover-title span {
+      color: var(--primary);
+    }
+
+    .cover-subtitle {
+      font-size: 13pt;
+      color: var(--slate-body);
+      font-weight: 500;
+      line-height: 1.4;
+      max-width: 90%;
+      margin: 0;
+    }
+
+    .cover-footer {
+      border-top: 2px solid var(--primary);
+      padding-top: 8mm;
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 15mm;
+    }
+
+    .meta-group {
+      font-size: 8.5pt;
+      color: var(--slate-muted);
+      line-height: 1.6;
+    }
+
+    .meta-group strong {
+      color: var(--slate-lead);
+      font-weight: 600;
+    }
+
+    /* Estructura de Páginas de Contenido */
+    .content-header {
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 6px;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .content-title {
+      font-size: 15pt;
+      font-weight: 800;
+      color: var(--dark-slate);
+      margin: 0;
+      letter-spacing: -0.3px;
+    }
+
+    .content-subtitle {
+      font-size: 8.5pt;
+      color: var(--primary);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 0;
+    }
+
+    /* Grilla de Métricas / KPI */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .kpi-box {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-top: 3px solid var(--primary);
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+
+    .kpi-label {
+      font-size: 7.5pt;
+      color: var(--slate-muted);
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      margin-bottom: 4px;
+    }
+
+    .kpi-number {
+      font-size: 16pt;
+      font-weight: 800;
+      color: var(--dark-slate);
+      line-height: 1.1;
+      margin-bottom: 2px;
+    }
+
+    .kpi-desc {
+      font-size: 7.5pt;
+      color: var(--slate-body);
+    }
+
+    /* Callouts y Cajas Informativas */
+    .callout {
+      background-color: var(--primary-light);
+      border-left: 4px solid var(--primary);
+      padding: 10px 14px;
+      border-radius: 4px;
+      margin-bottom: 14px;
+      font-size: 9pt;
+      color: var(--slate-text);
+    }
+
+    .callout-title {
+      font-weight: 700;
+      color: var(--primary-hover);
+      margin-bottom: 4px;
+      font-size: 9.5pt;
+    }
+
+    /* Tablas Corporativas */
+    .milicic-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 16px;
+      font-size: 8.5pt;
+    }
+
+    .milicic-table th {
+      background-color: var(--dark-slate);
+      color: #ffffff;
+      padding: 8px 10px;
+      font-weight: 700;
+      text-align: left;
+      font-size: 7.8pt;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      border: 1px solid var(--dark-slate);
+    }
+
+    .milicic-table td {
+      padding: 8px 10px;
+      border: 1px solid var(--border-color);
+      color: var(--slate-body);
+    }
+
+    .milicic-table tbody tr:nth-child(even) {
+      background-color: #f8fafc;
+    }
+
+    .milicic-table .text-right {
+      text-align: right;
+    }
+
+    .milicic-table .text-center {
+      text-align: center;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 12px;
+      font-size: 7.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .badge-success { background: var(--success-bg); color: var(--success); }
+    .badge-warning { background: var(--warning-bg); color: var(--warning); }
+    .badge-danger  { background: var(--danger-bg);  color: var(--danger); }
+    .badge-orange  { background: var(--primary-light); color: var(--primary); }
+
+    /* Firmas / Aprobaciones */
+    .signatures-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin-top: 25px;
+    }
+
+    .signature-card {
+      border-top: 1.5px solid var(--slate-light);
+      padding-top: 8px;
+      text-align: center;
+      font-size: 8pt;
+      color: var(--slate-muted);
+    }
+
+    .signature-card strong {
+      display: block;
+      color: var(--dark-slate);
+      font-size: 8.5pt;
+      margin-bottom: 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== PÁGINA 1: PORTADA ==================== -->
+  <div class="cover-page">
+    <div class="cover-top">
+      <!-- Se puede reemplazar por <img src="assets/logo-milicic.png" class="cover-logo" /> -->
+      <img src="assets/logo-milicic.png" alt="Milicic S.A." class="cover-logo" onerror="this.outerHTML='<div style=\'font-size:24pt;font-weight:800;color:#ea580c;margin-bottom:20mm;\'>MILICIC S.A.</div>'" />
+      
+      <div class="category-badge">Informe Técnico & Ejecutivo</div>
+      
+      <h1 class="cover-title">
+        Infraestructura & Operaciones <span>Críticas</span>
+      </h1>
+      
+      <p class="cover-subtitle">
+        Arquitectura de alta disponibilidad, conectividad satelital y continuidad operativa en campamentos mineros y faenas remotas.
+      </p>
+    </div>
+
+    <div class="cover-footer">
+      <div class="meta-group">
+        <div><strong>Empresa:</strong> Milicic S.A. | Construcción, Minería e Infraestructura</div>
+        <div><strong>Área Emisora:</strong> Gerencia de Tecnología e Infraestructura de TI</div>
+        <div><strong>Referencia:</strong> DOC-MIL-IT-2026-V1</div>
+      </div>
+      <div class="meta-group" style="text-align: right;">
+        <div><strong>Fecha:</strong> 23 de Septiembre, 2026</div>
+        <div><strong>Clasificación:</strong> Confidencial / Uso Interno</div>
+        <div><strong>Versión:</strong> 1.0 Final</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PÁGINA 2: RESUMEN EJECUTIVO & KPIs ==================== -->
+  <div class="page">
+    <div class="content-header">
+      <div>
+        <h2 class="content-title">Resumen Ejecutivo & Métricas de Red</h2>
+        <p class="content-subtitle">Estado de Situación Operativa</p>
+      </div>
+      <div style="font-size: 8pt; color: var(--slate-muted);">Milicic S.A. | Informe Gerencial</div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-box">
+        <div class="kpi-label">Disponibilidad SLA</div>
+        <div class="kpi-number">99.98%</div>
+        <div class="kpi-desc">Objetivo mensual cumplido</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-label">Oficinas Satélites</div>
+        <div class="kpi-number">14 / 14</div>
+        <div class="kpi-desc">100% nodos en línea</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-label">Usuarios Locales</div>
+        <div class="kpi-number">485</div>
+        <div class="kpi-desc">Autenticados en faena</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-label">Incidentes Críticos</div>
+        <div class="kpi-number">0</div>
+        <div class="kpi-desc">En los últimos 30 días</div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="callout-title">Resumen Estratégico</div>
+      La infraestructura de autenticación distribuida y balanceo de enlaces satelitales (Starlink + WAN de respaldo) garantiza que el 100% de los operadores y maquinistas continúen operando en modo isla local ante cortes imprevistos en la troncal hacia la sede central.
+    </div>
+
+    <h3 style="font-size: 11pt; font-weight: 700; color: var(--dark-slate); margin: 12px 0 8px 0;">
+      Desglose Operativo por Sitio Remoto
+    </h3>
+
+    <table class="milicic-table">
+      <thead>
+        <tr>
+          <th>Sitio / Campamento</th>
+          <th>Región / Ubicación</th>
+          <th>Enlace Principal</th>
+          <th>Controlador Local</th>
+          <th class="text-center">Estado</th>
+          <th class="text-right">Latencia Media</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Campamento Minero Los Azules</strong></td>
+          <td>San Juan (Alta Cordillera)</td>
+          <td>Starlink Business Gen3</td>
+          <td>Raspberry Pi 5 + Samba AD</td>
+          <td class="text-center"><span class="badge badge-success">En Línea</span></td>
+          <td class="text-right font-mono">38 ms</td>
+        </tr>
+        <tr>
+          <td><strong>Proyecto Litio Salar del Hombre Muerto</strong></td>
+          <td>Catamarca (Puna)</td>
+          <td>Starlink + 4G Redundante</td>
+          <td>Raspberry Pi 5 + Samba AD</td>
+          <td class="text-center"><span class="badge badge-success">En Línea</span></td>
+          <td class="text-right font-mono">42 ms</td>
+        </tr>
+        <tr>
+          <td><strong>Obrador Autopista Ruta 34</strong></td>
+          <td>Santa Fe</td>
+          <td>Fibra Óptica Local</td>
+          <td>Micro-Server Ubuntu</td>
+          <td class="text-center"><span class="badge badge-success">En Línea</span></td>
+          <td class="text-right font-mono">14 ms</td>
+        </tr>
+        <tr>
+          <td><strong>Parque Eólico La Angostura</strong></td>
+          <td>Chubut (Patagonia)</td>
+          <td>Starlink Standard</td>
+          <td>Raspberry Pi 4 (8GB)</td>
+          <td class="text-center"><span class="badge badge-warning">Starlink Only</span></td>
+          <td class="text-right font-mono">51 ms</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="signatures-grid">
+      <div class="signature-card">
+        <strong>Ing. Matías Larenti</strong>
+        Líder de Infraestructura y Redes<br/>Milicic S.A.
+      </div>
+      <div class="signature-card">
+        <strong>Gerencia de TI</strong>
+        Supervisión de Operaciones<br/>Milicic S.A.
+      </div>
+      <div class="signature-card">
+        <strong>Dirección de Operaciones</strong>
+        Aprobación Ejecutiva<br/>Milicic S.A.
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

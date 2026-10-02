@@ -204,17 +204,17 @@ export default function QrPrinter() {
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   width: '100%',
-                  borderBottom: '1.5px solid #dc2626',
+                  borderBottom: '2px solid #ea580c',
                   paddingBottom: '0.4rem',
                   marginBottom: '0.6rem'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <Flame size={18} color="#dc2626" />
-                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#dc2626', letterSpacing: '0.04em' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <img src="/logo-milicic.svg" alt="Milicic" style={{ height: '18px', width: 'auto' }} onError={(e) => { e.target.src = '/logo-milicic.png'; }} />
+                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0f172a', letterSpacing: '0.02em' }}>
                       CONTROL EXTINTOR
                     </span>
                   </div>
-                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#475569' }}>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#ea580c', background: '#fff7ed', padding: '1px 6px', borderRadius: '4px', border: '1px solid #fdba74' }}>
                     IRAM 3517-2
                   </span>
                 </div>
