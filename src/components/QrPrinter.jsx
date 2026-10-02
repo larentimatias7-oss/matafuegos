@@ -153,7 +153,7 @@ export default function QrPrinter() {
                 className={`btn btn-sm ${labelFormat === 'grid_a4' ? 'btn-primary' : 'btn-secondary'}`}
                 style={{ flex: 1 }}
               >
-                <Layers size={14} />
+                <Stack size={14} weight="bold" aria-hidden="true" />
                 <span>Grilla A4 (12 por hoja)</span>
               </button>
               <button
@@ -190,7 +190,7 @@ export default function QrPrinter() {
           <div>
             <label className="label">Reimprimir 1 Extintor (Buscador)</label>
             <div style={{ position: 'relative' }}>
-              <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+              <MagnifyingGlass size={16} weight="bold" color="var(--text-muted)" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} aria-hidden="true" />
               <input
                 type="text"
                 placeholder="Ej: MF-025..."
@@ -222,7 +222,7 @@ export default function QrPrinter() {
             placeholder="https://matafuegos.milicic.com.ar"
           />
           <button type="submit" disabled={savingUrl} className="btn btn-secondary btn-sm">
-            {urlSaved ? <Check size={14} color="var(--status-ok-text)" /> : <Settings size={14} />}
+            {urlSaved ? <Check size={14} weight="bold" color="var(--status-ok-text)" aria-hidden="true" /> : <Gear size={14} weight="bold" aria-hidden="true" />}
             <span>{urlSaved ? 'Guardado' : 'Actualizar Dominio'}</span>
           </button>
         </form>
