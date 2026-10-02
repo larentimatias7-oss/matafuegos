@@ -6,21 +6,43 @@ import {
   Flame, 
   AlertCircle, 
   CheckCircle2, 
-  Sparkles,
-  RefreshCw
+  RefreshCw,
+  Zap,
+  ZapOff,
+  Keyboard,
+  ShieldAlert,
+  ArrowRight,
+  Info
 } from 'lucide-react';
 
 export default function Scanner({ extinguishers = [], onSelectCode }) {
-  const [mode, setMode] = useState('camera'); // 'camera' or 'manual'
+  const [mode, setMode] = useState('camera'); // 'camera' | 'manual'
   const [manualCode, setManualCode] = useState('');
   const [cameraError, setCameraError] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
-  const qrReaderRef = useRef(null);
-  const scannerInstanceRef = useRef(null);
+  const [torchOn, setTorchOn] = useState(false);
+  const [hasTorch, setHasTorch] = useState(false);
+  const [isSecure, setIsSecure] = useState(true);
 
-  // Parse QR content (supports /m/:publicId, code=MF-XXX, or direct code)
+  const scannerInstanceRef = useRef(null);
+  const videoTrackRef = useRef(null);
+
+  useEffect(() => {
+    // Check if secure context (HTTPS or localhost)
+    if (typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      setIsSecure(false);
+      setCameraError('La cámara requiere HTTPS. Por favor abrí la app desde una dirección segura (https://...)');
+    }
+  }, []);
+
+  // Parse QR content
   const handleDecodedText = (decodedText) => {
     const raw = decodedText.trim();
+
+    // Haptic feedback upon scan
+    if (navigator.vibrate) {
+      navigator.vibrate([60]);
+    }
 
     // Check for short public URL /m/<publicId>
     const mMatch = raw.match(/\/m\/([a-zA-Z0-9_-]+)/);
@@ -49,8 +71,24 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
     onSelectCode(raw.toUpperCase());
   };
 
+  const toggleTorch = async () => {
+    if (videoTrackRef.current) {
+      try {
+        const next = !torchOn;
+        await videoTrackRef.current.applyConstraints({
+          advanced: [{ torch: next }]
+        });
+        setTorchOn(next);
+      } catch (err) {
+        console.warn('Torch toggle error:', err);
+      }
+    }
+  };
+
   useEffect(() => {
-    if (mode === 'camera') {
+    if (mode === 'camera' && isSecure) {
+      let isMounted = true;
+
       const startScanner = async () => {
         try {
           setCameraError(null);
@@ -58,37 +96,63 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
           scannerInstanceRef.current = html5QrCode;
 
           const config = {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
+            fps: 15,
+            qrbox: { width: 240, height: 240 },
             aspectRatio: 1.0
           };
 
           await html5QrCode.start(
-            { facingMode: 'environment' },
+            { facingMode: { ideal: 'environment' } },
             config,
             (decodedText) => {
-              // On success
-              html5QrCode.stop().then(() => {
-                handleDecodedText(decodedText);
-              }).catch(() => {
-                handleDecodedText(decodedText);
-              });
+              if (isMounted) {
+                html5QrCode.stop().then(() => {
+                  handleDecodedText(decodedText);
+                }).catch(() => {
+                  handleDecodedText(decodedText);
+                });
+              }
             },
-            (errorMessage) => {
-              // Ignore frame errors
-            }
+            () => {}
           );
-          setIsScanning(true);
+
+          if (isMounted) {
+            setIsScanning(true);
+
+            // Detect torch support
+            try {
+              const videoElement = document.querySelector('#qr-reader-container video');
+              if (videoElement && videoElement.srcObject) {
+                const track = videoElement.srcObject.getVideoTracks()[0];
+                videoTrackRef.current = track;
+                const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+                if (capabilities.torch) {
+                  setHasTorch(true);
+                }
+              }
+            } catch (torchErr) {
+              console.warn('Torch detection error:', torchErr);
+            }
+          }
         } catch (err) {
           console.warn('Camera start error:', err);
-          setCameraError('No se pudo acceder a la cámara o permisos denegados. Podés usar el selector manual abajo.');
-          setIsScanning(false);
+          if (isMounted) {
+            setIsScanning(false);
+            if (err.name === 'NotAllowedError' || err.toString().includes('Permission denied')) {
+              setCameraError('Permiso de cámara denegado. Para habilitarlo: tocá el candado en la barra del navegador, seleccioná "Permisos del sitio" y activá la Cámara.');
+            } else if (!window.isSecureContext) {
+              setCameraError('La cámara requiere un contexto seguro (HTTPS). Abrí la aplicación desde una dirección HTTPS.');
+            } else {
+              setCameraError('No se pudo iniciar la cámara trasera. Asegurate de que no esté en uso por otra app o utilizá la selección manual abajo.');
+            }
+          }
         }
       };
 
       startScanner();
 
       return () => {
+        isMounted = false;
         if (scannerInstanceRef.current) {
           scannerInstanceRef.current.stop().catch(() => {}).finally(() => {
             scannerInstanceRef.current.clear();
@@ -96,187 +160,245 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
         }
       };
     }
-  }, [mode]);
+  }, [mode, isSecure]);
 
   const handleManualSubmit = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (manualCode.trim()) {
       handleDecodedText(manualCode.trim());
     }
   };
 
   return (
-    <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+    <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
       
-      {/* Header */}
-      <div className="glass-card" style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
-        <div style={{
-          width: '56px',
-          height: '56px',
-          borderRadius: '50%',
-          background: 'rgba(239, 68, 68, 0.15)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          margin: '0 auto 0.75rem auto'
-        }}>
-          <Camera size={28} color="#ef4444" />
+      {/* Top Banner */}
+      <div className="card" style={{ padding: '0.85rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <div>
+          <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+            Escanear Código QR
+          </h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: 0 }}>
+            Apuntá la cámara al extintor para abrir la ficha de control.
+          </p>
         </div>
-        <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#fff', marginBottom: '0.35rem' }}>
-          Escanear Matafuego
-        </h2>
-        <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
-          Apuntá con la cámara al código QR de la etiqueta del extintor para abrir la ficha de control mensual.
-        </p>
 
-        {/* Mode Switch Tabs */}
-        <div style={{
-          display: 'inline-flex',
-          background: '#0f172a',
-          padding: '0.25rem',
-          borderRadius: '8px',
-          marginTop: '1rem',
-          border: '1px solid rgba(148, 163, 184, 0.15)'
-        }}>
+        {/* Mode Switcher */}
+        <div style={{ display: 'flex', gap: '0.35rem', background: 'var(--bg-app)', padding: '3px', borderRadius: 'var(--radius-sm)' }}>
           <button
             onClick={() => setMode('camera')}
-            style={{
-              padding: '0.45rem 1rem',
-              borderRadius: '6px',
-              border: 'none',
-              background: mode === 'camera' ? '#ef4444' : 'transparent',
-              color: mode === 'camera' ? '#fff' : '#94a3b8',
-              fontWeight: 600,
-              fontSize: '0.8rem',
-              cursor: 'pointer'
-            }}
+            className={`btn btn-sm ${mode === 'camera' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ minHeight: '34px', padding: '0.2rem 0.65rem', fontSize: '0.78rem' }}
           >
-            📷 Cámara en Vivo
+            <Camera size={14} />
+            <span>Cámara</span>
           </button>
+
           <button
             onClick={() => setMode('manual')}
-            style={{
-              padding: '0.45rem 1rem',
-              borderRadius: '6px',
-              border: 'none',
-              background: mode === 'manual' ? '#ef4444' : 'transparent',
-              color: mode === 'manual' ? '#fff' : '#94a3b8',
-              fontWeight: 600,
-              fontSize: '0.8rem',
-              cursor: 'pointer'
-            }}
+            className={`btn btn-sm ${mode === 'manual' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ minHeight: '34px', padding: '0.2rem 0.65rem', fontSize: '0.78rem' }}
           >
-            ⌨️ Selección Manual
+            <Keyboard size={14} />
+            <span>Manual</span>
           </button>
         </div>
       </div>
 
-      {/* Camera Scanner View */}
-      {mode === 'camera' && (
-        <div className="glass-card" style={{ padding: '1rem', textAlign: 'center' }}>
+      {/* Security Context Warning */}
+      {!isSecure && (
+        <div style={{
+          padding: '1rem',
+          borderRadius: 'var(--radius-sm)',
+          background: 'var(--status-fault-bg)',
+          border: '1.5px solid var(--status-fault-border)',
+          color: 'var(--status-fault-text)',
+          fontSize: '0.85rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800, marginBottom: '0.35rem' }}>
+            <ShieldAlert size={18} />
+            <span>La cámara requiere HTTPS</span>
+          </div>
+          <p style={{ marginBottom: '0.65rem' }}>
+            Los navegadores bloquean la cámara (getUserMedia) en conexiones HTTP no seguras. Abrí la app desde la dirección <strong>https://...</strong> o usá el túnel seguro para escanear con la cámara.
+          </p>
+          <button 
+            onClick={() => setMode('manual')}
+            className="btn btn-secondary btn-sm"
+          >
+            Usar Entrada Manual por Código
+          </button>
+        </div>
+      )}
+
+      {/* Mode 1: Camera Scanner */}
+      {mode === 'camera' && isSecure && (
+        <div className="card" style={{ padding: '0.5rem', position: 'relative', overflow: 'hidden' }}>
+          
           {cameraError ? (
             <div style={{
-              padding: '1.25rem',
-              borderRadius: '8px',
-              background: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              color: '#f87171',
-              fontSize: '0.85rem',
-              marginBottom: '1rem'
+              padding: '1.5rem 1rem',
+              textAlign: 'center',
+              color: 'var(--status-fault-text)',
+              background: 'var(--status-fault-bg)',
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--status-fault-border)'
             }}>
-              <AlertCircle size={24} style={{ margin: '0 auto 0.5rem auto' }} />
-              <p>{cameraError}</p>
+              <AlertCircle size={32} style={{ margin: '0 auto 0.65rem auto' }} />
+              <p style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.5rem' }}>
+                {cameraError}
+              </p>
               <button 
                 onClick={() => setMode('manual')} 
-                className="btn btn-secondary btn-sm"
-                style={{ marginTop: '0.75rem' }}
+                className="btn btn-primary btn-sm"
+                style={{ marginTop: '0.5rem' }}
               >
-                Cambiar a Entrada Manual
+                <Keyboard size={15} />
+                <span>Ingresar Código Manualmente</span>
               </button>
             </div>
           ) : (
-            <div style={{ position: 'relative', overflow: 'hidden', borderRadius: '12px' }}>
+            <div className="scanner-fullscreen-wrapper">
+              {/* HTML5 QrCode Target */}
               <div 
                 id="qr-reader-container" 
                 style={{ 
                   width: '100%', 
-                  minHeight: '280px',
-                  background: '#000',
-                  borderRadius: '12px'
+                  height: '100%', 
+                  minHeight: '340px',
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center' 
                 }} 
               />
-              <p style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: '#94a3b8' }}>
-                Centrá el código QR dentro del recuadro para detectar automáticamente.
-              </p>
+
+              {/* Reticle Overlay */}
+              <div className="scanner-reticle-overlay">
+                <div className="scanner-frame">
+                  <div className="scanner-scan-line" />
+                </div>
+              </div>
+
+              {/* Torch Button if available */}
+              {hasTorch && (
+                <button
+                  type="button"
+                  onClick={toggleTorch}
+                  style={{
+                    position: 'absolute',
+                    top: '12px',
+                    right: '12px',
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '50%',
+                    background: torchOn ? 'var(--milicic-orange)' : 'rgba(0,0,0,0.6)',
+                    color: '#ffffff',
+                    border: '1.5px solid rgba(255,255,255,0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    zIndex: 10
+                  }}
+                  title={torchOn ? 'Apagar linterna' : 'Encender linterna'}
+                >
+                  {torchOn ? <Zap size={20} /> : <ZapOff size={20} />}
+                </button>
+              )}
+
+              {/* Footer instruction overlay */}
+              <div style={{
+                position: 'absolute',
+                bottom: '12px',
+                left: '12px',
+                right: '12px',
+                background: 'rgba(15, 23, 42, 0.8)',
+                color: '#ffffff',
+                padding: '0.5rem 0.85rem',
+                borderRadius: '8px',
+                fontSize: '0.78rem',
+                textAlign: 'center',
+                backdropFilter: 'blur(4px)',
+                zIndex: 10
+              }}>
+                Encuadre el código QR del extintor dentro del recuadro naranja
+              </div>
             </div>
           )}
+
+          {/* Quick Fallback Input Below Camera */}
+          <div style={{ marginTop: '0.75rem', padding: '0.5rem' }}>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.35rem', fontWeight: 700 }}>
+              ¿Problemas para escanear? Ingreso rápido por código:
+            </div>
+            <form onSubmit={handleManualSubmit} style={{ display: 'flex', gap: '0.4rem' }}>
+              <input 
+                type="text"
+                placeholder="Ej: MF-014 o public_id"
+                value={manualCode}
+                onChange={(e) => setManualCode(e.target.value)}
+                className="input"
+                style={{ flex: 1, textTransform: 'uppercase' }}
+              />
+              <button type="submit" className="btn btn-secondary" style={{ flexShrink: 0 }}>
+                <ArrowRight size={18} />
+              </button>
+            </form>
+          </div>
         </div>
       )}
 
-      {/* Manual Selection View */}
-      {(mode === 'manual' || cameraError) && (
-        <div className="glass-card">
-          <form onSubmit={handleManualSubmit}>
-            <label className="label">Seleccionar Matafuego por Código o Ubicación</label>
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-              <select
+      {/* Mode 2: Manual Selection View */}
+      {mode === 'manual' && (
+        <div className="card" style={{ padding: '1.25rem' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
+            Selección Manual de Extintor
+          </h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
+            Ingresá el código del extintor o elegilo de la lista para auditarlo:
+          </p>
+
+          <form onSubmit={handleManualSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div>
+              <label className="label">Escribir Código (ej: MF-001 al MF-130)</label>
+              <input 
+                type="text"
+                required
+                placeholder="MF-XXX..."
                 value={manualCode}
                 onChange={(e) => setManualCode(e.target.value)}
-                className="select"
-                style={{ flex: 1 }}
-              >
-                <option value="">-- Elegir un matafuego de la lista --</option>
-                {extinguishers.map((ext) => (
-                  <option key={ext.id} value={ext.code}>
-                    {ext.code} - {ext.location} ({ext.type} {ext.capacity})
-                  </option>
-                ))}
-              </select>
-              <button type="submit" disabled={!manualCode} className="btn btn-primary">
-                Inspeccionar
-              </button>
+                className="input font-mono"
+                style={{ textTransform: 'uppercase', fontSize: '1.1rem', fontWeight: 700 }}
+              />
             </div>
 
-            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
-              <label className="label">O escribir el código directamente</label>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <input
-                  type="text"
-                  placeholder="Ej: MF-001"
-                  value={manualCode}
-                  onChange={(e) => setManualCode(e.target.value.toUpperCase())}
-                  className="input font-mono"
-                  style={{ textTransform: 'uppercase' }}
-                />
-                <button type="submit" disabled={!manualCode} className="btn btn-secondary">
-                  Abrir
-                </button>
+            {extinguishers.length > 0 && (
+              <div>
+                <label className="label">O seleccionar del listado de la planta</label>
+                <select 
+                  onChange={(e) => {
+                    if (e.target.value) handleDecodedText(e.target.value);
+                  }}
+                  className="select font-mono"
+                  defaultValue=""
+                >
+                  <option value="" disabled>Seleccionar extintor...</option>
+                  {extinguishers.map((ext) => (
+                    <option key={ext.id} value={ext.code}>
+                      {ext.code} - {ext.location} ({ext.type})
+                    </option>
+                  ))}
+                </select>
               </div>
-            </div>
+            )}
+
+            <button type="submit" className="btn btn-primary btn-full" style={{ minHeight: '48px', fontWeight: 800 }}>
+              <ArrowRight size={18} />
+              <span>Abrir Ficha de Inspección</span>
+            </button>
           </form>
         </div>
       )}
-
-      {/* Quick Tips for Inspector */}
-      <div style={{
-        padding: '1rem',
-        borderRadius: '8px',
-        background: 'rgba(37, 99, 235, 0.08)',
-        border: '1px solid rgba(37, 99, 235, 0.2)',
-        fontSize: '0.8rem',
-        color: '#93c5fd',
-        display: 'flex',
-        gap: '0.75rem',
-        alignItems: 'flex-start'
-      }}>
-        <Sparkles size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
-        <div>
-          <strong style={{ display: 'block', marginBottom: '0.2rem', color: '#bfdbfe' }}>
-            Ronda Rápida de Inspección:
-          </strong>
-          Pegá las etiquetas QR generadas en la parte frontal o soporte de cada matafuego. Al escanearlo, el formulario te permite pulsar <strong>"Todo OK"</strong> en un solo toque, registrando el control en menos de 10 segundos.
-        </div>
-      </div>
 
     </div>
   );

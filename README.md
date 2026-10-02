@@ -132,3 +132,103 @@ El script genera un archivo comprimido `matafuegos_backup_YYYYMMDD_HHMMSS.db.gz`
 - **Rate Limiting**: Limitador por IP para prevenir ataques de denegación o scripts de fuerza bruta.
 - **Control Antifraude**: Detección de inspecciones anormalmente veloces (< 5 segundos) o repetitivas, marcadas en el panel sin bloquear la operación de campo.
 - **Historial Inmutable**: Prohibición de borrado o sobreescritura de inspecciones históricas; las correcciones generan un nuevo registro de reinspección indicando motivo reglamentario.
+
+---
+
+## 📱 8. Uso en Celulares y PWA (Modo Aplicación)
+
+La aplicación está diseñada bajo filosofía **Mobile-First** con ergonomía para una sola mano, zonas táctiles >= 48px y soporte PWA standalone.
+
+### Cómo instalar la aplicación en el celular:
+
+#### En Android (Google Chrome):
+1. Abrí la URL del sistema en Chrome (ej: `https://matafuegos.milicic.com.ar` o el túnel de prueba).
+2. Aparecerá un aviso en la parte inferior **"Agregar Milicic Matafuegos a la pantalla principal"** o tocá el menú de tres puntos (⋮) arriba a la derecha.
+3. Seleccioná **"Instalar aplicación"** o **"Agregar a la pantalla principal"**.
+4. Ahora abrirá como aplicación nativa (pantalla completa, sin barra de direcciones del navegador).
+
+#### En iPhone / iPad (Safari):
+1. Abrí la URL del sistema en Safari.
+2. Tocá el botón **Compartir** (el ícono de un cuadrado con una flecha hacia arriba en la barra inferior).
+3. Deslizá hacia abajo y seleccioná **"Agregar al inicio"** (Add to Home Screen).
+4. Asigná el nombre y confirmá tocando **"Agregar"**. La app se abrirá en modo standalone con splash e ícono institucional.
+
+### Cómo permitir la cámara para escanear QR:
+- Al ingresar por primera vez a la pestaña **Escanear**, el navegador solicitará: *"¿Permitir que el sitio use tu cámara?"*. Tocá **"Permitir"**.
+- Si fue bloqueada accidentalmente:
+  - **Android (Chrome)**: Tocá el ícono de candado / ajustes del sitio a la izquierda de la barra de direcciones > *Permisos* > activá **Cámara**.
+  - **iPhone (Safari)**: Andá a *Ajustes* de iOS > *Safari* > *Cámara* > seleccionar **Permitir** o **Preguntar**.
+
+---
+
+## 🔒 9. Probar con la Cámara en el Celular (Desarrollo y Demo)
+
+Los navegadores móviles modernos (`getUserMedia`) **solo permiten activar la cámara en contextos seguros (HTTPS)** o `localhost`. Para realizar pruebas desde el teléfono conectado a tu computadora en la red local disponés de dos métodos:
+
+### Método A: Túnel HTTPS Temporal (El más rápido y recomendado para demos)
+Utiliza Cloudflare Tunnel para generar una URL pública segura con certificado SSL válido y de confianza universal inmediata, sin necesidad de instalar certificados adicionales en el teléfono:
+1. Ejecutá en la terminal de la computadora:
+   ```powershell
+   .\tunnel.ps1
+   ```
+   (o directamente `& "C:\Program Files (x86)\cloudflared\cloudflared.exe" tunnel --url http://localhost:3000`)
+2. Copiá la URL temporal `https://xxxx.trycloudflare.com` y abrila en el celular.
+3. **Pros y Contras**:
+   - ✅ *Pros*: No requiere configurar certificados CA ni tocar ajustes de seguridad en el teléfono. Funciona en cualquier dispositivo con conexión a internet.
+   - ⚠️ *Contras*: Requiere salida a internet y la URL es pública mientras dure la sesión (no utilizar con bases de datos que contengan información confidencial no sanitizada).
+
+---
+
+### Método B: HTTPS Local con `mkcert` (Dentro de la Red LAN)
+
+Genera una Autoridad Certificadora (CA) local en tu computadora y emite certificados válidos para la IP de tu red local:
+
+#### 1. Instalación de mkcert (en Windows):
+Si aún no tenés instalado `mkcert`, instalalo ejecutando:
+```powershell
+winget install FiloSottile.mkcert
+# o mediante Chocolatey:
+choco install mkcert
+```
+
+#### 2. Generación automática de certificados:
+Ejecutá el script de automatización provisto en el proyecto:
+```powershell
+.\certs\setup-https.ps1
+```
+El script detectará tu IP LAN (ej: `192.168.1.50`), generará los certificados en `./certs/dev-cert.pem` y `./certs/dev-key.pem` y mostrará la ruta de tu `rootCA.pem`.
+
+#### 3. Habilitar puertos en el Firewall de Windows:
+Para permitir que el celular se conecte a la PC por la red Wi-Fi, abrí una consola de PowerShell como Administrador y ejecutá:
+```powershell
+New-NetFirewallRule -DisplayName "Milicic Matafuegos Dev" -Direction Inbound -LocalPort 5173,3000 -Protocol TCP -Action Allow
+```
+
+#### 4. Instalar el certificado raíz (`rootCA.pem`) en el celular:
+Obtené la ruta del archivo ejecutando `mkcert -CAROOT` en la computadora. Enviate ese archivo `rootCA.pem` al teléfono (por WhatsApp, email o cable):
+
+- **En Android**:
+  1. Andá a **Ajustes** > **Seguridad** (o *Seguridad y privacidad*).
+  2. Buscá **Cifrado y credenciales** (o *Ajustes avanzados de seguridad*).
+  3. Tocá **Instalar un certificado** > **Certificado de CA**.
+  4. Seleccioná el archivo `rootCA.pem` descargado y aceptá la advertencia.
+
+- **En iPhone (iOS)**:
+  1. Abrí el archivo `rootCA.pem` (Safari descargará el perfil de configuración).
+  2. Andá a **Ajustes** > **Perfil descargado** (o *General* > *VPN y administración de dispositivos*) e instalá el perfil de mkcert.
+  3. **PASO CRÍTICO**: Andá a **Ajustes** > **General** > **Información** > **Ajustes de confianza de certificados** (al final de todo) y ACTIVÁ el interruptor de confianza total para la CA de mkcert. Sin este paso, Safari rechazará la conexión HTTPS.
+
+#### 5. Iniciar la aplicación en modo HTTPS:
+- En modo desarrollo (Vite):
+  ```bash
+  npm run dev:https
+  ```
+  Abrí en tu celular: `https://[TU-IP-LAN]:5173`
+- En modo servidor Express compilado:
+  ```powershell
+  $env:HTTPS="true"; node server/index.js
+  ```
+  Abrí en tu celular: `https://[TU-IP-LAN]:3000`
+
+> ⚠️ **Nota de Red**: La computadora y el teléfono deben estar conectados a la misma red Wi-Fi. Asegurate de que la red no tenga activa la opción de "aislamiento de clientes" (AP Isolation), común en redes públicas o de invitados corporativas.
+

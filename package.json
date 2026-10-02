@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite",
+    "dev:https": "vite --host --https",
     "build": "vite build",
     "start": "node server/index.js",
     "server": "node server/index.js"

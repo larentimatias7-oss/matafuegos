@@ -206,7 +206,8 @@ export default function CasesList() {
       {/* Edit Case Modal */}
       {editingCase && (
         <div className="modal-overlay" onClick={() => setEditingCase(null)}>
-          <div className="card" onClick={e => e.stopPropagation()} style={{ maxWidth: '550px', width: '100%' }}>
+          <div className="bottom-sheet" onClick={e => e.stopPropagation()}>
+            <div className="drag-handle" />
             <h3 className="card-title">
               Gestionar Caso: {editingCase.extinguisher_code}
             </h3>

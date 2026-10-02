@@ -110,7 +110,8 @@ export default function ExtinguisherModal({ extinguisher, mode, onClose, onSave 
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="card" onClick={e => e.stopPropagation()} style={{ maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+      <div className="bottom-sheet" onClick={e => e.stopPropagation()}>
+        <div className="drag-handle" />
         
         {/* Header */}
         <div style={{

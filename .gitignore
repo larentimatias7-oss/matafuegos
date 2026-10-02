@@ -21,3 +21,11 @@ yarn-debug.log*
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local SSL / Dev Certs (NEVER commit keys or dev certs)
+certs/*.pem
+certs/*.key
+*.pem
+*.key
+!certs/setup-https.ps1
+

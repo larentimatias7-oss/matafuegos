@@ -130,10 +130,30 @@ if (fs.existsSync(distPath)) {
   });
 }
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`===============================================`);
-  console.log(`🧯 Milicic FireControl 365 Server corriendo en puerto ${PORT}`);
-  console.log(`📡 URL local: http://localhost:${PORT}`);
-  console.log(`🏥 Healthcheck: http://localhost:${PORT}/api/health`);
-  console.log(`===============================================`);
-});
+const isHttps = process.env.HTTPS === 'true';
+const sslCertFile = process.env.SSL_CERT_FILE || path.join(__dirname, '../certs/dev-cert.pem');
+const sslKeyFile = process.env.SSL_KEY_FILE || path.join(__dirname, '../certs/dev-key.pem');
+
+if (isHttps && fs.existsSync(sslCertFile) && fs.existsSync(sslKeyFile)) {
+  const https = require('https');
+  const sslOptions = {
+    key: fs.readFileSync(sslKeyFile),
+    cert: fs.readFileSync(sslCertFile)
+  };
+  https.createServer(sslOptions, app).listen(PORT, '0.0.0.0', () => {
+    console.log(`===============================================`);
+    console.log(`🧯 Milicic FireControl 365 Server (HTTPS Seguro)`);
+    console.log(`📡 URL LAN: https://localhost:${PORT}`);
+    console.log(`🏥 Healthcheck: https://localhost:${PORT}/api/health`);
+    console.log(`🔒 Certificado: ${sslCertFile}`);
+    console.log(`===============================================`);
+  });
+} else {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`===============================================`);
+    console.log(`🧯 Milicic FireControl 365 Server corriendo en puerto ${PORT}`);
+    console.log(`📡 URL local: http://localhost:${PORT}`);
+    console.log(`🏥 Healthcheck: http://localhost:${PORT}/api/health`);
+    console.log(`===============================================`);
+  });
+}

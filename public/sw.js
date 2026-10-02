@@ -2,6 +2,7 @@
 // Milicic S.A. - Service Worker con Network First para navegación
 const CACHE_NAME = 'milicic-firecontrol-v3';
 const STATIC_ASSETS = [
+  '/manifest.webmanifest',
   '/manifest.json',
   '/logo-milicic.svg',
   '/logo-milicic.png'

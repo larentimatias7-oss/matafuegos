@@ -5,3 +5,7 @@ dist
 .gemini
 *.log
 .env
+certs/*.pem
+certs/*.key
+*.pem
+*.key

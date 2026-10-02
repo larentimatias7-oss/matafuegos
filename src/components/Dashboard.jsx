@@ -109,11 +109,7 @@ export default function Dashboard({ stats, onNavigate, onExportExcel, onResetSee
       </div>
 
       {/* 4 Core KPIs */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-        gap: '1rem'
-      }}>
+      <div className="dashboard-kpi-grid">
         {/* KPI 1: Cobertura de la Ronda */}
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
@@ -227,11 +223,7 @@ export default function Dashboard({ stats, onNavigate, onExportExcel, onResetSee
       </div>
 
       {/* Middle Layout: Semáforo & Actividad Reciente */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
-        gap: '1.25rem'
-      }}>
+      <div className="dashboard-two-col">
         {/* Semáforo de Ronda */}
         <div className="card">
           <h2 className="card-title">

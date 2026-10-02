@@ -7,8 +7,13 @@ import {
   Calendar, 
   User, 
   FileSpreadsheet,
-  CloudCheck,
-  Filter
+  Clock,
+  Filter,
+  Eye,
+  X,
+  MapPin,
+  ShieldCheck,
+  ShieldAlert
 } from 'lucide-react';
 
 export default function InspectionHistory({ onExportExcel }) {
@@ -16,6 +21,7 @@ export default function InspectionHistory({ onExportExcel }) {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterResult, setFilterResult] = useState('');
+  const [selectedInspection, setSelectedInspection] = useState(null);
 
   const loadInspections = () => {
     setLoading(true);
@@ -49,41 +55,41 @@ export default function InspectionHistory({ onExportExcel }) {
   });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       
       {/* Top Header Card */}
-      <div className="glass-card">
+      <div className="card" style={{ padding: '1rem' }}>
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
-          gap: '1rem',
-          marginBottom: '1rem'
+          gap: '0.75rem',
+          marginBottom: '0.85rem'
         }}>
           <div>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <History size={22} color="#38bdf8" />
-              <span>Historial y Auditoría de Inspecciones</span>
+            <h2 className="card-title" style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+              <History size={20} color="var(--milicic-orange)" />
+              <span>Historial de Inspecciones</span>
             </h2>
-            <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
-              Registro cronológico inmutable de todos los controles mensuales realizados, listo para auditorías de ART y bomberos.
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+              Registro cronológico inmutable de auditorías periódicas (IRAM 3517-2).
             </p>
           </div>
 
-          <button onClick={onExportExcel} className="btn btn-m365">
-            <FileSpreadsheet size={16} />
-            <span>Exportar Registro a Excel 365</span>
+          <button onClick={onExportExcel} className="btn btn-secondary btn-sm" style={{ fontWeight: 700 }}>
+            <FileSpreadsheet size={16} color="#16a34a" />
+            <span>Excel 365</span>
           </button>
         </div>
 
         {/* Filters */}
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative', flex: '1', minWidth: '220px' }}>
-            <Search size={16} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
+            <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
             <input 
               type="text"
-              placeholder="Buscar por código, inspector, observación o puesto..."
+              placeholder="Buscar por código, inspector u observación..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="input"
@@ -95,17 +101,114 @@ export default function InspectionHistory({ onExportExcel }) {
             value={filterResult}
             onChange={(e) => setFilterResult(e.target.value)}
             className="select"
-            style={{ maxWidth: '200px' }}
+            style={{ maxWidth: '170px' }}
           >
             <option value="">Resultado: Todos</option>
-            <option value="OK">🟢 Solo Aprobados</option>
-            <option value="FAIL">🔴 Con Anomalías</option>
+            <option value="OK">Conforme OK</option>
+            <option value="FAIL">Con Anomalías</option>
           </select>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="table-container">
+      {/* =========================================================================
+          1. VISTA MÓVIL: TARJETAS TOUCH-FRIENDLY (< 1025px)
+          ========================================================================= */}
+      <div className="mobile-cards-view">
+        {loading ? (
+          <div className="card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+            Cargando historial de inspecciones...
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+            No se encontraron inspecciones registradas.
+          </div>
+        ) : (
+          filtered.map((item) => (
+            <div key={item.id} className="touch-card" onClick={() => setSelectedInspection(item)} style={{ cursor: 'pointer' }}>
+              {/* Header: Código + Resultado */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <span className="font-mono" style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--milicic-orange)' }}>
+                    {item.extinguisher_code}
+                  </span>
+                  {item.is_reinspection === 1 && (
+                    <span className="status-badge info" style={{ fontSize: '0.62rem', padding: '0.1rem 0.35rem' }}>
+                      Reinspección
+                    </span>
+                  )}
+                  {item.is_suspicious === 1 && (
+                    <span className="status-badge fault" style={{ fontSize: '0.62rem', padding: '0.1rem 0.35rem' }}>
+                      &lt;5s
+                    </span>
+                  )}
+                </div>
+
+                <div>
+                  {item.passed === 1 ? (
+                    <span className="status-badge ok">
+                      <CheckCircle2 size={13} /> Conforme OK
+                    </span>
+                  ) : (
+                    <span className="status-badge fault">
+                      <AlertTriangle size={13} /> Con Falla
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Ubicación */}
+              <div style={{ fontSize: '0.86rem', color: 'var(--text-main)', fontWeight: 600 }}>
+                {item.location || 'Ubicación no especificada'}
+              </div>
+
+              {/* Inspector y Fecha */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border-color)', paddingTop: '0.45rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <User size={13} />
+                  <span>{item.inspector_name}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <Clock size={13} />
+                  <span>{item.inspection_date?.substring(0, 16)}</span>
+                </div>
+              </div>
+
+              {/* Observación breve si existe */}
+              {item.observations && (
+                <div style={{
+                  fontSize: '0.78rem',
+                  color: item.passed === 1 ? 'var(--text-body)' : 'var(--status-fault-text)',
+                  background: item.passed === 1 ? 'var(--bg-app)' : 'var(--status-fault-bg)',
+                  padding: '0.35rem 0.6rem',
+                  borderRadius: 'var(--radius-sm)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}>
+                  {item.observations}
+                </div>
+              )}
+
+              {/* Botón ver detalle */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.15rem' }}>
+                <button 
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{ width: '100%', minHeight: '38px', fontSize: '0.82rem' }}
+                >
+                  <Eye size={15} />
+                  <span>Ver Detalle del Control</span>
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* =========================================================================
+          2. VISTA ESCRITORIO: TABLA COMPLETA (>= 1025px)
+          ========================================================================= */}
+      <div className="desktop-table-view table-container">
         <table className="table">
           <thead>
             <tr>
@@ -113,88 +216,59 @@ export default function InspectionHistory({ onExportExcel }) {
               <th>Código</th>
               <th>Fecha y Hora</th>
               <th>Inspector</th>
-              <th>Ubicación</th>
               <th>Resultado</th>
-              <th>Detalle de Chequeos</th>
+              <th>Duración</th>
               <th>Observaciones</th>
-              <th style={{ textAlign: 'center' }}>M365</th>
+              <th style={{ textAlign: 'right' }}>Acción</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr>
-                <td colSpan="9" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
-                  Cargando historial...
-                </td>
-              </tr>
+              <tr><td colSpan="8" style={{ textAlign: 'center', padding: '2rem' }}>Cargando registros...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr>
-                <td colSpan="9" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
-                  No se encontraron inspecciones con los filtros seleccionados.
-                </td>
-              </tr>
+              <tr><td colSpan="8" style={{ textAlign: 'center', padding: '2rem' }}>No hay registros coincidentes.</td></tr>
             ) : (
               filtered.map((item) => (
                 <tr key={item.id}>
-                  <td className="font-mono" style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                  <td className="font-mono" style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                     #{item.id}
                   </td>
                   <td>
-                    <span className="font-mono" style={{ fontWeight: 800, color: '#38bdf8' }}>
+                    <span className="font-mono" style={{ fontWeight: 800, color: 'var(--milicic-orange)' }}>
                       {item.extinguisher_code}
                     </span>
                   </td>
-                  <td>
-                    <div style={{ fontSize: '0.85rem', color: '#f1f5f9' }}>
-                      {item.inspection_date.substring(0, 10)}
-                    </div>
-                    <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                      {item.inspection_date.substring(11, 16)} hs
-                    </div>
-                  </td>
-                  <td>
-                    <span style={{ fontWeight: 600, color: '#cbd5e1' }}>
-                      {item.inspector_name}
-                    </span>
-                  </td>
-                  <td>
-                    <div style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.location}>
-                      {item.location}
-                    </div>
-                  </td>
+                  <td>{item.inspection_date}</td>
+                  <td>{item.inspector_name}</td>
                   <td>
                     {item.passed === 1 ? (
-                      <span className="badge badge-green">
+                      <span className="status-badge ok">
                         <CheckCircle2 size={12} /> Aprobado
                       </span>
                     ) : (
-                      <span className="badge badge-red">
+                      <span className="status-badge fault">
                         <AlertTriangle size={12} /> Falla
                       </span>
                     )}
                   </td>
                   <td>
-                    <div style={{ display: 'flex', gap: '0.25rem', fontSize: '0.7rem' }}>
-                      <span title="Acceso despejado" style={{ color: item.check_location ? '#10b981' : '#ef4444' }}>● Acc</span>
-                      <span title="Presión en verde" style={{ color: item.check_pressure ? '#10b981' : '#ef4444' }}>● Pres</span>
-                      <span title="Precinto inviolado" style={{ color: item.check_seal ? '#10b981' : '#ef4444' }}>● Prec</span>
-                      <span title="Manguera y cilindro" style={{ color: item.check_physical ? '#10b981' : '#ef4444' }}>● Fís</span>
-                      <span title="Señalización" style={{ color: item.check_signage ? '#10b981' : '#ef4444' }}>● Bal</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span style={{ fontSize: '0.8rem', color: item.observations ? '#f87171' : '#64748b' }}>
-                      {item.observations || 'Sin observaciones'}
+                    <span style={{ fontSize: '0.82rem', color: item.is_suspicious === 1 ? 'var(--status-fault-text)' : 'inherit' }}>
+                      {item.duration_seconds ? `${item.duration_seconds}s` : 'N/D'}
+                      {item.is_suspicious === 1 && ' (Sospechoso)'}
                     </span>
                   </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <span title={item.synced_m365 ? 'Sincronizado con Excel 365' : 'Guardado localmente'}>
-                      {item.synced_m365 ? (
-                        <CloudCheck size={16} color="#38bdf8" />
-                      ) : (
-                        <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Local</span>
-                      )}
-                    </span>
+                  <td style={{ maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.observations}>
+                    {item.observations || <span style={{ color: 'var(--text-muted)' }}>Sin observaciones</span>}
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    <button 
+                      onClick={() => setSelectedInspection(item)}
+                      className="btn btn-secondary btn-sm"
+                      style={{ padding: '0.25rem 0.5rem' }}
+                      title="Ver Detalle"
+                    >
+                      <Eye size={15} />
+                    </button>
                   </td>
                 </tr>
               ))
@@ -202,6 +276,139 @@ export default function InspectionHistory({ onExportExcel }) {
           </tbody>
         </table>
       </div>
+
+      {/* =========================================================================
+          3. BOTTOM SHEET / MODAL DE DETALLE DE INSPECCIÓN
+          ========================================================================= */}
+      {selectedInspection && (
+        <div className="modal-overlay" onClick={() => setSelectedInspection(null)}>
+          <div className="bottom-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="drag-handle" />
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+                  Detalle de Inspección #{selectedInspection.id}
+                </div>
+                <div className="font-mono" style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--milicic-orange)' }}>
+                  {selectedInspection.extinguisher_code}
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setSelectedInspection(null)}
+                className="btn btn-secondary btn-sm"
+                style={{ minHeight: '34px', padding: '0.2rem 0.5rem' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {/* Resultado Banner */}
+              <div style={{
+                padding: '0.85rem',
+                borderRadius: 'var(--radius-sm)',
+                background: selectedInspection.passed === 1 ? 'var(--status-ok-bg)' : 'var(--status-fault-bg)',
+                border: `1px solid ${selectedInspection.passed === 1 ? 'var(--status-ok-border)' : 'var(--status-fault-border)'}`,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.65rem'
+              }}>
+                {selectedInspection.passed === 1 ? (
+                  <CheckCircle2 size={24} color="var(--status-ok-text)" />
+                ) : (
+                  <AlertTriangle size={24} color="var(--status-fault-text)" />
+                )}
+                <div>
+                  <div style={{ fontWeight: 800, color: selectedInspection.passed === 1 ? 'var(--status-ok-text)' : 'var(--status-fault-text)', fontSize: '1rem' }}>
+                    {selectedInspection.passed === 1 ? 'CONTROL MENSUAL CONFORME (OK)' : 'NO CONFORMIDAD REGISTRADA'}
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-body)' }}>
+                    Ronda: {selectedInspection.year_month || 'Octubre 2026'} • Inspector: {selectedInspection.inspector_name}
+                  </div>
+                </div>
+              </div>
+
+              {/* Metadatos */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.65rem', fontSize: '0.85rem' }}>
+                <div style={{ background: 'var(--bg-app)', padding: '0.65rem', borderRadius: 'var(--radius-sm)' }}>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 700 }}>Fecha y Hora</div>
+                  <strong>{selectedInspection.inspection_date}</strong>
+                </div>
+                <div style={{ background: 'var(--bg-app)', padding: '0.65rem', borderRadius: 'var(--radius-sm)' }}>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 700 }}>Duración Control</div>
+                  <strong>{selectedInspection.duration_seconds || 'N/D'} segundos</strong>
+                </div>
+              </div>
+
+              {/* Checklist de 6 puntos evaluados */}
+              <div>
+                <label className="label">Checklist Reglamentario IRAM 3517-2</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                  {[
+                    { label: 'Ubicación y acceso despejado', val: selectedInspection.check_location },
+                    { label: 'Presión en verde o peso conforme', val: selectedInspection.check_pressure },
+                    { label: 'Precinto y traba de seguridad intactos', val: selectedInspection.check_seal },
+                    { label: 'Estado físico del cilindro y manguera', val: selectedInspection.check_physical },
+                    { label: 'Señalización y chapa baliza reglamentaria', val: selectedInspection.check_signage },
+                    { label: 'Marbete/collarín y tarjeta vigente', val: selectedInspection.check_card }
+                  ].map((chk, i) => (
+                    <div key={i} style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '0.5rem 0.75rem',
+                      background: 'var(--bg-app)',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '0.85rem'
+                    }}>
+                      <span>{chk.label}</span>
+                      <span className={`status-badge ${chk.val === 1 ? 'ok' : 'fault'}`} style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem' }}>
+                        {chk.val === 1 ? 'OK' : 'FALLA'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Observaciones */}
+              {selectedInspection.observations && (
+                <div>
+                  <label className="label">Observaciones del Inspector</label>
+                  <div style={{
+                    padding: '0.75rem',
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'var(--bg-app)',
+                    border: '1px solid var(--border-color)',
+                    fontSize: '0.88rem'
+                  }}>
+                    {selectedInspection.observations}
+                  </div>
+                </div>
+              )}
+
+              {/* Fotografía de Evidencia si existe */}
+              {selectedInspection.photo_url && (
+                <div>
+                  <label className="label">Fotografía de Evidencia Adjunta</label>
+                  <div style={{ borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--border-color)', maxHeight: '220px' }}>
+                    <img src={selectedInspection.photo_url} alt="Evidencia" style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }} />
+                  </div>
+                </div>
+              )}
+
+              <button 
+                onClick={() => setSelectedInspection(null)}
+                className="btn btn-secondary btn-full"
+                style={{ marginTop: '0.5rem', minHeight: '48px' }}
+              >
+                Cerrar Detalle
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

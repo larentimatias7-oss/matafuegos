@@ -22,7 +22,8 @@ export default function LoginModal({ onLogin }) {
 
   return (
     <div className="modal-overlay" style={{ background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)' }}>
-      <div className="card" style={{ maxWidth: '440px', width: '100%', padding: '2rem 1.5rem', textAlign: 'center' }}>
+      <div className="bottom-sheet" style={{ maxWidth: '440px', width: '100%', padding: '1.75rem 1.25rem', textAlign: 'center' }}>
+        <div className="drag-handle" />
         
         {/* Milicic Logo */}
         <div style={{

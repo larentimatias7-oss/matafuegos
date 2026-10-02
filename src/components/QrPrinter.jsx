@@ -88,6 +88,23 @@ export default function QrPrinter() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       
+      {/* Mobile Friendly Notice */}
+      <div className="mobile-only no-print" style={{
+        background: 'var(--milicic-orange-soft)',
+        border: '1.5px solid var(--milicic-orange-border)',
+        borderRadius: 'var(--radius-md)',
+        padding: '0.85rem 1rem',
+        color: 'var(--milicic-slate-dark)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800, fontSize: '0.9rem', color: 'var(--milicic-orange-dark)', marginBottom: '0.25rem' }}>
+          <Printer size={18} />
+          <span>Aviso sobre Impresión de Etiquetas</span>
+        </div>
+        <p style={{ fontSize: '0.82rem', margin: 0, lineHeight: 1.4, color: 'var(--text-body)' }}>
+          Esta función está pensada para usar desde una computadora conectada a una impresora láser para hojas A4. Podés previsualizar las etiquetas desde tu celular, pero te recomendamos imprimir desde el escritorio.
+        </p>
+      </div>
+
       {/* Controls & Configuration */}
       <div className="card no-print">
         <div style={{

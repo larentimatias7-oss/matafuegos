@@ -1,0 +1,30 @@
+{
+  "name": "Milicic S.A. - Control de Extintores",
+  "short_name": "Milicic Matafuegos",
+  "description": "Sistema corporativo de inspección mensual y seguimiento de extintores bajo norma IRAM 3517-2",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#ea580c",
+  "background_color": "#0f172a",
+  "icons": [
+    {
+      "src": "/logo-milicic.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-milicic.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-milicic.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
