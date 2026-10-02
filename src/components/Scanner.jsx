@@ -12,7 +12,8 @@ import {
   Keyboard,
   ShieldAlert,
   ArrowRight,
-  Info
+  Info,
+  RotateCcw
 } from 'lucide-react';
 
 export default function Scanner({ extinguishers = [], onSelectCode }) {
@@ -23,9 +24,11 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
   const [torchOn, setTorchOn] = useState(false);
   const [hasTorch, setHasTorch] = useState(false);
   const [isSecure, setIsSecure] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
 
   const scannerInstanceRef = useRef(null);
   const videoTrackRef = useRef(null);
+  const isStartingRef = useRef(false);
 
   useEffect(() => {
     // Check if secure context (HTTPS or localhost)
@@ -86,81 +89,140 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
   };
 
   useEffect(() => {
-    if (mode === 'camera' && isSecure) {
-      let isMounted = true;
+    if (mode !== 'camera' || !isSecure) return;
 
-      const startScanner = async () => {
-        try {
-          setCameraError(null);
-          const html5QrCode = new Html5Qrcode('qr-reader-container');
-          scannerInstanceRef.current = html5QrCode;
+    let isMounted = true;
 
-          const config = {
-            fps: 15,
-            qrbox: { width: 240, height: 240 },
-            aspectRatio: 1.0
-          };
+    const startScanner = async () => {
+      // Small pause to guarantee DOM is rendered
+      await new Promise(resolve => setTimeout(resolve, 80));
+      if (!isMounted) return;
 
-          await html5QrCode.start(
-            { facingMode: { ideal: 'environment' } },
-            config,
-            (decodedText) => {
-              if (isMounted) {
-                html5QrCode.stop().then(() => {
-                  handleDecodedText(decodedText);
-                }).catch(() => {
-                  handleDecodedText(decodedText);
-                });
-              }
-            },
-            () => {}
-          );
+      const container = document.getElementById('qr-reader-container');
+      if (!container) {
+        console.warn('qr-reader-container not found in DOM');
+        return;
+      }
 
-          if (isMounted) {
-            setIsScanning(true);
+      if (isStartingRef.current) return;
+      isStartingRef.current = true;
 
-            // Detect torch support
-            try {
-              const videoElement = document.querySelector('#qr-reader-container video');
-              if (videoElement && videoElement.srcObject) {
-                const track = videoElement.srcObject.getVideoTracks()[0];
-                videoTrackRef.current = track;
-                const capabilities = track.getCapabilities ? track.getCapabilities() : {};
-                if (capabilities.torch) {
-                  setHasTorch(true);
-                }
-              }
-            } catch (torchErr) {
-              console.warn('Torch detection error:', torchErr);
-            }
-          }
-        } catch (err) {
-          console.warn('Camera start error:', err);
-          if (isMounted) {
-            setIsScanning(false);
-            if (err.name === 'NotAllowedError' || err.toString().includes('Permission denied')) {
-              setCameraError('Permiso de cámara denegado. Para habilitarlo: tocá el candado en la barra del navegador, seleccioná "Permisos del sitio" y activá la Cámara.');
-            } else if (!window.isSecureContext) {
-              setCameraError('La cámara requiere un contexto seguro (HTTPS). Abrí la aplicación desde una dirección HTTPS.');
-            } else {
-              setCameraError('No se pudo iniciar la cámara trasera. Asegurate de que no esté en uso por otra app o utilizá la selección manual abajo.');
-            }
-          }
-        }
-      };
+      try {
+        setCameraError(null);
 
-      startScanner();
-
-      return () => {
-        isMounted = false;
+        // Clean up previous instance if any
         if (scannerInstanceRef.current) {
-          scannerInstanceRef.current.stop().catch(() => {}).finally(() => {
+          try {
+            if (scannerInstanceRef.current.isScanning) {
+              await scannerInstanceRef.current.stop();
+            }
             scannerInstanceRef.current.clear();
-          });
+          } catch (cleanErr) {
+            console.warn('Previous scanner cleanup:', cleanErr);
+          }
+          scannerInstanceRef.current = null;
         }
-      };
-    }
-  }, [mode, isSecure]);
+
+        const html5QrCode = new Html5Qrcode('qr-reader-container');
+        scannerInstanceRef.current = html5QrCode;
+
+        const config = {
+          fps: 15,
+          qrbox: (viewfinderWidth, viewfinderHeight) => {
+            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+            const qrboxSize = Math.max(180, Math.floor(minEdge * 0.72));
+            return { width: qrboxSize, height: qrboxSize };
+          }
+        };
+
+        const onScanSuccess = (decodedText) => {
+          if (isMounted) {
+            html5QrCode.stop().then(() => {
+              handleDecodedText(decodedText);
+            }).catch(() => {
+              handleDecodedText(decodedText);
+            });
+          }
+        };
+
+        const onScanError = () => {};
+
+        // Step 1: Detect available cameras
+        let cameraParam = { facingMode: "environment" };
+        try {
+          const devices = await Html5Qrcode.getCameras();
+          if (devices && devices.length > 0) {
+            // Find rear/back camera
+            const rearCam = devices.find(d => /back|rear|trasera|trasero|environment|exterior/i.test(d.label)) || devices[devices.length - 1];
+            if (rearCam && rearCam.id) {
+              cameraParam = rearCam.id;
+            }
+          }
+        } catch (deviceErr) {
+          console.warn('getCameras error, using default facingMode:', deviceErr);
+          cameraParam = { facingMode: "environment" };
+        }
+
+        // Step 2: Attempt camera start with fallback
+        try {
+          await html5QrCode.start(cameraParam, config, onScanSuccess, onScanError);
+        } catch (firstErr) {
+          console.warn('Primary camera start failed, attempting user-facing/generic fallback:', firstErr);
+          // Fallback to any camera or facingMode user
+          await html5QrCode.start({ facingMode: "user" }, config, onScanSuccess, onScanError);
+        }
+
+        if (isMounted) {
+          setIsScanning(true);
+
+          // Detect torch support
+          try {
+            const videoElement = document.querySelector('#qr-reader-container video');
+            if (videoElement && videoElement.srcObject) {
+              const track = videoElement.srcObject.getVideoTracks()[0];
+              videoTrackRef.current = track;
+              const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+              if (capabilities.torch) {
+                setHasTorch(true);
+              }
+            }
+          } catch (torchErr) {
+            console.warn('Torch detection error:', torchErr);
+          }
+        }
+      } catch (err) {
+        console.warn('Camera start error:', err);
+        if (isMounted) {
+          setIsScanning(false);
+          const rawMsg = err?.message || String(err);
+          if (err.name === 'NotAllowedError' || /permission|denied|allowed/i.test(rawMsg)) {
+            setCameraError('Permiso de cámara denegado. Tocá el candado en la barra de direcciones de tu navegador y permití el acceso a la Cámara.');
+          } else if (/not found|notfound|no camera/i.test(rawMsg) || err.name === 'NotFoundError') {
+            setCameraError('No se encontró ninguna cámara disponible en este dispositivo.');
+          } else if (/notreadable|trackstart|in use/i.test(rawMsg) || err.name === 'NotReadableError') {
+            setCameraError('La cámara está siendo utilizada por otra aplicación o pestaña. Por favor cerrala e intentá nuevamente.');
+          } else if (!window.isSecureContext) {
+            setCameraError('La cámara requiere un contexto seguro (HTTPS). Abrí la aplicación desde una dirección HTTPS.');
+          } else {
+            setCameraError(`No se pudo iniciar la cámara trasera (${rawMsg}). Podés reintentar o usar la selección manual.`);
+          }
+        }
+      } finally {
+        isStartingRef.current = false;
+      }
+    };
+
+    startScanner();
+
+    return () => {
+      isMounted = false;
+      if (scannerInstanceRef.current) {
+        scannerInstanceRef.current.stop().catch(() => {}).finally(() => {
+          scannerInstanceRef.current?.clear();
+        });
+      }
+    };
+  }, [mode, isSecure, retryCount]);
 
   const handleManualSubmit = (e) => {
     if (e) e.preventDefault();
@@ -235,93 +297,116 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
       {mode === 'camera' && isSecure && (
         <div className="card" style={{ padding: '0.5rem', position: 'relative', overflow: 'hidden' }}>
           
-          {cameraError ? (
+          {/* Always mounted container to prevent element not found errors */}
+          <div 
+            className="scanner-fullscreen-wrapper" 
+            style={{ display: cameraError ? 'none' : 'flex' }}
+          >
+            {/* HTML5 QrCode Target */}
+            <div 
+              id="qr-reader-container" 
+              style={{ 
+                width: '100%', 
+                height: '100%', 
+                minHeight: '340px',
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center' 
+              }} 
+            />
+
+            {/* Reticle Overlay */}
+            <div className="scanner-reticle-overlay">
+              <div className="scanner-frame">
+                <div className="scanner-scan-line" />
+              </div>
+            </div>
+
+            {/* Torch Button if available */}
+            {hasTorch && (
+              <button
+                type="button"
+                onClick={toggleTorch}
+                style={{
+                  position: 'absolute',
+                  top: '12px',
+                  right: '12px',
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '50%',
+                  background: torchOn ? 'var(--milicic-orange)' : 'rgba(0,0,0,0.6)',
+                  color: '#ffffff',
+                  border: '1.5px solid rgba(255,255,255,0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  zIndex: 10
+                }}
+                title={torchOn ? 'Apagar linterna' : 'Encender linterna'}
+              >
+                {torchOn ? <Zap size={20} /> : <ZapOff size={20} />}
+              </button>
+            )}
+
+            {/* Footer instruction overlay */}
             <div style={{
-              padding: '1.5rem 1rem',
+              position: 'absolute',
+              bottom: '12px',
+              left: '12px',
+              right: '12px',
+              background: 'rgba(15, 23, 42, 0.8)',
+              color: '#ffffff',
+              padding: '0.5rem 0.85rem',
+              borderRadius: '8px',
+              fontSize: '0.78rem',
+              textAlign: 'center',
+              backdropFilter: 'blur(4px)',
+              zIndex: 10
+            }}>
+              Encuadre el código QR del extintor dentro del recuadro naranja
+            </div>
+          </div>
+
+          {/* Camera Error Message Box */}
+          {cameraError && (
+            <div style={{
+              padding: '1.75rem 1.25rem',
               textAlign: 'center',
               color: 'var(--status-fault-text)',
               background: 'var(--status-fault-bg)',
               borderRadius: 'var(--radius-sm)',
               border: '1px solid var(--status-fault-border)'
             }}>
-              <AlertCircle size={32} style={{ margin: '0 auto 0.65rem auto' }} />
-              <p style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.5rem' }}>
+              <AlertCircle size={36} style={{ margin: '0 auto 0.65rem auto' }} />
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--status-fault-text)' }}>
+                No se pudo activar la cámara
+              </h3>
+              <p style={{ fontSize: '0.88rem', fontWeight: 600, marginBottom: '1.25rem', lineHeight: 1.4 }}>
                 {cameraError}
               </p>
-              <button 
-                onClick={() => setMode('manual')} 
-                className="btn btn-primary btn-sm"
-                style={{ marginTop: '0.5rem' }}
-              >
-                <Keyboard size={15} />
-                <span>Ingresar Código Manualmente</span>
-              </button>
-            </div>
-          ) : (
-            <div className="scanner-fullscreen-wrapper">
-              {/* HTML5 QrCode Target */}
-              <div 
-                id="qr-reader-container" 
-                style={{ 
-                  width: '100%', 
-                  height: '100%', 
-                  minHeight: '340px',
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center' 
-                }} 
-              />
-
-              {/* Reticle Overlay */}
-              <div className="scanner-reticle-overlay">
-                <div className="scanner-frame">
-                  <div className="scanner-scan-line" />
-                </div>
-              </div>
-
-              {/* Torch Button if available */}
-              {hasTorch && (
-                <button
+              <div style={{ display: 'flex', gap: '0.65rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <button 
                   type="button"
-                  onClick={toggleTorch}
-                  style={{
-                    position: 'absolute',
-                    top: '12px',
-                    right: '12px',
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '50%',
-                    background: torchOn ? 'var(--milicic-orange)' : 'rgba(0,0,0,0.6)',
-                    color: '#ffffff',
-                    border: '1.5px solid rgba(255,255,255,0.4)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    zIndex: 10
-                  }}
-                  title={torchOn ? 'Apagar linterna' : 'Encender linterna'}
+                  onClick={() => {
+                    setCameraError(null);
+                    setRetryCount(c => c + 1);
+                  }} 
+                  className="btn btn-secondary"
+                  style={{ minHeight: '44px', fontWeight: 800 }}
                 >
-                  {torchOn ? <Zap size={20} /> : <ZapOff size={20} />}
+                  <RotateCcw size={16} />
+                  <span>Reintentar Cámara</span>
                 </button>
-              )}
-
-              {/* Footer instruction overlay */}
-              <div style={{
-                position: 'absolute',
-                bottom: '12px',
-                left: '12px',
-                right: '12px',
-                background: 'rgba(15, 23, 42, 0.8)',
-                color: '#ffffff',
-                padding: '0.5rem 0.85rem',
-                borderRadius: '8px',
-                fontSize: '0.78rem',
-                textAlign: 'center',
-                backdropFilter: 'blur(4px)',
-                zIndex: 10
-              }}>
-                Encuadre el código QR del extintor dentro del recuadro naranja
+                <button 
+                  type="button"
+                  onClick={() => setMode('manual')} 
+                  className="btn btn-primary"
+                  style={{ minHeight: '44px', fontWeight: 800 }}
+                >
+                  <Keyboard size={16} />
+                  <span>Ingresar Código</span>
+                </button>
               </div>
             </div>
           )}
