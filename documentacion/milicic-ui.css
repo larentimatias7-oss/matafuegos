@@ -4,10 +4,10 @@
  */
 
 :root {
-  /* Marca Primaria Milicic */
-  --primary: #ea580c;
-  --primary-hover: #c2410c;
-  --primary-active: #9a3412;
+  /* Marca Primaria Milicic - WCAG 2.1 AA Compliant */
+  --primary: #c2410c;
+  --primary-hover: #9a3412;
+  --primary-active: #7c2d12;
   --primary-light: #fff7ed;
   --primary-border: #fdba74;
 
@@ -46,7 +46,8 @@
   --info-dark: #0e7490;
 
   /* Tipografía y Geometría */
-  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --radius-xs: 4px;
   --radius-sm: 6px;
   --radius: 10px;
@@ -164,7 +165,9 @@ body {
   border-radius: var(--radius);
   padding: 18px 20px;
   box-shadow: var(--shadow-sm);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
   position: relative;
   overflow: hidden;
 }
@@ -176,7 +179,7 @@ body {
 }
 
 .kpi-card::before {
-  content: "";
+  content: '';
   position: absolute;
   top: 0;
   left: 0;
@@ -185,11 +188,21 @@ body {
   background: var(--border-color);
 }
 
-.kpi-card.kpi-primary::before { background: var(--primary); }
-.kpi-card.kpi-success::before { background: var(--success); }
-.kpi-card.kpi-warning::before { background: var(--warning); }
-.kpi-card.kpi-danger::before { background: var(--danger); }
-.kpi-card.kpi-info::before { background: var(--info); }
+.kpi-card.kpi-primary::before {
+  background: var(--primary);
+}
+.kpi-card.kpi-success::before {
+  background: var(--success);
+}
+.kpi-card.kpi-warning::before {
+  background: var(--warning);
+}
+.kpi-card.kpi-danger::before {
+  background: var(--danger);
+}
+.kpi-card.kpi-info::before {
+  background: var(--info);
+}
 
 .kpi-header {
   display: flex;
@@ -244,33 +257,47 @@ body {
   border-radius: 50%;
 }
 
-.badge-online, .badge-success {
+.badge-online,
+.badge-success {
   background-color: var(--success-bg);
   color: var(--success-dark);
   border-color: var(--success-border);
 }
-.badge-online .badge-dot, .badge-success .badge-dot { background-color: var(--success); }
+.badge-online .badge-dot,
+.badge-success .badge-dot {
+  background-color: var(--success);
+}
 
-.badge-warning, .badge-island {
+.badge-warning,
+.badge-island {
   background-color: var(--warning-bg);
   color: var(--warning-dark);
   border-color: var(--warning-border);
 }
-.badge-warning .badge-dot, .badge-island .badge-dot { background-color: var(--warning); }
+.badge-warning .badge-dot,
+.badge-island .badge-dot {
+  background-color: var(--warning);
+}
 
-.badge-danger, .badge-offline {
+.badge-danger,
+.badge-offline {
   background-color: var(--danger-bg);
   color: var(--danger-dark);
   border-color: var(--danger-border);
 }
-.badge-danger .badge-dot, .badge-offline .badge-dot { background-color: var(--danger); }
+.badge-danger .badge-dot,
+.badge-offline .badge-dot {
+  background-color: var(--danger);
+}
 
 .badge-info {
   background-color: var(--info-bg);
   color: var(--info-dark);
   border-color: var(--info-border);
 }
-.badge-info .badge-dot { background-color: var(--info); }
+.badge-info .badge-dot {
+  background-color: var(--info);
+}
 
 .badge-orange {
   background-color: var(--primary-light);
@@ -459,7 +486,8 @@ body {
   margin-bottom: 6px;
 }
 
-.form-control, .form-select {
+.form-control,
+.form-select {
   width: 100%;
   padding: 9px 12px;
   border: 1px solid var(--border-color);
@@ -467,10 +495,13 @@ body {
   font-size: 0.88rem;
   color: var(--slate-text);
   background-color: #ffffff;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
-.form-control:focus, .form-select:focus {
+.form-control:focus,
+.form-select:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.15);
@@ -499,19 +530,25 @@ body {
   border-left-color: var(--info);
   background-color: var(--info-bg);
 }
-.callout-blue .callout-title { color: var(--info-dark); }
+.callout-blue .callout-title {
+  color: var(--info-dark);
+}
 
 .callout-amber {
   border-left-color: var(--warning);
   background-color: var(--warning-bg);
 }
-.callout-amber .callout-title { color: var(--warning-dark); }
+.callout-amber .callout-title {
+  color: var(--warning-dark);
+}
 
 .callout-green {
   border-left-color: var(--success);
   background-color: var(--success-bg);
 }
-.callout-green .callout-title { color: var(--success-dark); }
+.callout-green .callout-title {
+  color: var(--success-dark);
+}
 
 /* ==========================================================================
    Modal Dialog

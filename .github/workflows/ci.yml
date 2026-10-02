@@ -1,0 +1,123 @@
+name: CI/CD Pipeline - Milicic FireControl 365
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-and-tests:
+    name: Lint, Test & Security Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Instalar Dependencias
+        run: npm ci
+
+      - name: Auditoría de Seguridad (npm audit)
+        run: npm audit --audit-level=critical
+
+      - name: Verificación de Formato (Prettier)
+        run: npx prettier --check "src/**/*.{js,jsx,css}" "server/**/*.js"
+
+      - name: Análisis Estático de Código (ESLint)
+        run: npm run lint
+
+      - name: Pruebas Unitarias y de Integración con Cobertura (Vitest)
+        run: npm run test:coverage
+        env:
+          NODE_ENV: test
+          PORT: 3001
+          RATE_LIMIT_DISABLED: 'true'
+
+      - name: Compilación de Frontend y Activos (Vite)
+        run: npm run build
+
+      - name: Instalar Navegadores de Playwright
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Iniciar Servidor en Background para E2E
+        run: |
+          node server/index.js &
+          npx wait-on http://localhost:3000/api/health --timeout 30000
+        env:
+          PORT: 3000
+          NODE_ENV: production
+          RATE_LIMIT_MAX: '50000'
+
+      - name: Pruebas End-to-End Headless (Playwright)
+        run: npm run test:e2e
+        env:
+          BASE_URL: http://localhost:3000
+          CI: true
+
+      - name: Auditoría de Accesibilidad Automatizada (Axe-Core)
+        run: npm run test:a11y
+        env:
+          BASE_URL: http://localhost:3000
+
+      - name: Subir Reportes de Prueba en caso de fallo
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-artifacts
+          path: |
+            test-results/
+            playwright-report/
+            coverage/
+          retention-days: 7
+
+  docker-build:
+    name: Build Docker Image
+    needs: quality-and-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Código
+        uses: actions/checkout@v4
+
+      - name: Configurar Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Compilar Imagen de Producción (Dockerfile)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: milicic-firecontrol:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-dokploy:
+    name: Despliegue Automático a Dokploy
+    needs: [quality-and-tests, docker-build]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Disparar Webhook de Despliegue Dokploy
+        run: |
+          if [ -n "${{ secrets.DOKPLOY_WEBHOOK_URL }}" ]; then
+            echo "Notificando a Dokploy para auto-despliegue..."
+            curl -f -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}"
+            echo "Webhook Dokploy ejecutado exitosamente."
+          else
+            echo "Aviso: DOKPLOY_WEBHOOK_URL no configurado en los secretos de GitHub. Omitiendo auto-deploy."
+          fi

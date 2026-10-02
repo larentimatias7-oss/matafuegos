@@ -3,18 +3,24 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 
-// Ensure data directory exists
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '../data');
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
+const { config } = require('./config');
 
-const DB_PATH = path.join(DATA_DIR, 'matafuegos.db');
+const DATA_DIR = config.DATA_DIR;
+const DB_PATH = config.DB_PATH;
 const db = new DatabaseSync(DB_PATH);
 
-// Helper to generate a clean, unguessable public ID (nanoid-like, 10 chars)
+// SQLite WAL Mode and Concurrency Pragmas
+try {
+  db.exec('PRAGMA journal_mode = WAL;');
+  db.exec('PRAGMA busy_timeout = 5000;');
+  db.exec('PRAGMA synchronous = NORMAL;');
+} catch (pragmaErr) {
+  console.warn('SQLite pragmas notice:', pragmaErr.message);
+}
+
+// Helper to generate a clean, unguessable public ID (12 bytes / 24 hex characters)
 function generatePublicId() {
-  return crypto.randomBytes(6).toString('hex').toLowerCase();
+  return crypto.randomBytes(12).toString('hex').toLowerCase();
 }
 
 // Check if column exists in SQLite table
@@ -258,6 +264,11 @@ function initSchema() {
 
 // Function to generate 130 realistic extinguishers with enriched fields
 function seed130Extinguishers() {
+  if (config.IS_PROD && process.env.ALLOW_SEED !== 'true') {
+    console.log('[DB] Modo producción detectado: seed automático desactivado por seguridad.');
+    return;
+  }
+
   const countRow = db.prepare("SELECT COUNT(*) as count FROM extinguishers").get();
   if (countRow.count > 0) return;
 

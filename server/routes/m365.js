@@ -3,11 +3,25 @@ const router = express.Router();
 const ExcelJS = require('exceljs');
 const multer = require('multer');
 const { db } = require('../db');
+const { authenticate, requireRole, ROLES } = require('../middleware/auth');
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10 MB max
+  },
+  fileFilter: (_req, file, cb) => {
+    const isXlsx = file.originalname.toLowerCase().endsWith('.xlsx') || file.originalname.toLowerCase().endsWith('.xls');
+    if (isXlsx) {
+      cb(null, true);
+    } else {
+      cb(new Error('Solo se permiten archivos de planilla Excel (.xlsx, .xls)'));
+    }
+  }
+});
 
 // GET export full workbook formatted for Microsoft 365 Excel
-router.get('/export-excel', async (req, res) => {
+router.get('/export-excel', authenticate, async (req, res) => {
   try {
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Milicic S.A. - Control de Extintores';
@@ -512,10 +526,20 @@ router.get('/report-html', (req, res) => {
 });
 
 // POST import extinguishers from Excel
-router.post('/import-excel', upload.single('file'), async (req, res) => {
+router.post('/import-excel', authenticate, requireRole([ROLES.ADMIN, ROLES.INSPECTOR]), upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, error: 'No se envió ningún archivo Excel' });
+    }
+
+    // Validar firma binaria real (magic bytes) para prevenir subida de scripts o ejecutables disfrazados
+    const isZip = req.file.buffer.length >= 4 && req.file.buffer[0] === 0x50 && req.file.buffer[1] === 0x4B; // PK (ZIP / XLSX)
+    const isOle = req.file.buffer.length >= 8 && req.file.buffer[0] === 0xD0 && req.file.buffer[1] === 0xCF; // OLE2 (XLS)
+    if (!isZip && !isOle) {
+      return res.status(400).json({
+        success: false,
+        error: 'El archivo subido no es una planilla Excel válida (firma de archivo binaria no autorizada).'
+      });
     }
 
     const workbook = new ExcelJS.Workbook();
@@ -612,8 +636,8 @@ router.get('/settings', (req, res) => {
   }
 });
 
-// POST save settings
-router.post('/settings', (req, res) => {
+// POST save settings (Admin only)
+router.post('/settings', authenticate, requireRole([ROLES.ADMIN]), (req, res) => {
   try {
     const { m365_webhook_url, base_url, company_name } = req.body;
     const upsert = db.prepare(`

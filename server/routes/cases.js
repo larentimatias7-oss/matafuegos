@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../db');
+const { authenticate, requireRole, ROLES } = require('../middleware/auth');
+const { validateCaseTransition } = require('../services/anomalyService');
 
 // GET all cases with days open calculation
-router.get('/', (req, res) => {
+router.get('/', authenticate, (req, res) => {
   try {
     const { status } = req.query;
     let query = `
@@ -30,13 +32,32 @@ router.get('/', (req, res) => {
 });
 
 // PUT update case status / replacement
-router.put('/:id', (req, res) => {
+router.put('/:id', authenticate, requireRole([ROLES.ADMIN, ROLES.INSPECTOR]), (req, res) => {
   try {
     const { id } = req.params;
+    const existingCase = db.prepare('SELECT * FROM cases WHERE id = ?').get(id);
+
+    if (!existingCase) {
+      return res.status(404).json({ success: false, error: 'Caso no encontrado' });
+    }
+
     const { status, resolution_notes, assigned_to, temp_replacement_code, priority } = req.body;
 
+    if (status) {
+      const transitionValidation = validateCaseTransition(existingCase.status, status, {
+        resolution_notes,
+        temp_replacement_code
+      });
+
+      if (!transitionValidation.valid) {
+        return res.status(400).json({
+          success: false,
+          error: transitionValidation.error
+        });
+      }
+    }
+
     const isClosing = status === 'RESUELTO';
-    const closedAtValue = isClosing ? "datetime('now', 'localtime')" : "NULL";
 
     const update = db.prepare(`
       UPDATE cases SET
@@ -49,7 +70,14 @@ router.put('/:id', (req, res) => {
       WHERE id = ?
     `);
 
-    update.run(status, resolution_notes, assigned_to, temp_replacement_code, priority, id);
+    update.run(
+      status ?? null,
+      resolution_notes ?? null,
+      assigned_to ?? null,
+      temp_replacement_code ?? null,
+      priority ?? null,
+      id
+    );
 
     // If replacement was registered, update extinguisher notes
     if (temp_replacement_code) {

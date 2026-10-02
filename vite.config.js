@@ -36,6 +36,25 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: 'dist'
+    outDir: 'dist',
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'vendor-react';
+          }
+          if (id.includes('node_modules/@phosphor-icons/react')) {
+            return 'vendor-icons';
+          }
+          if (id.includes('node_modules/@tanstack')) {
+            return 'vendor-table';
+          }
+          if (id.includes('node_modules/exceljs')) {
+            return 'vendor-excel';
+          }
+        }
+      }
+    }
   }
 });

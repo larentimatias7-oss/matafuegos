@@ -1,6 +1,21 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../db');
+const { authenticate, requireRole, ROLES } = require('../middleware/auth');
+const { evaluateInspectionFraud } = require('../services/antifraudService');
+const { validateInspectionInRound } = require('../services/roundService');
+const { getBuenosAiresDateString } = require('../services/expirationService');
+
+// Immutability: inspections cannot be modified or deleted by regulation IRAM 3517-2
+router.use((req, res, next) => {
+  if (['PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    return res.status(405).json({
+      success: false,
+      error: 'Las inspecciones de seguridad son inmutables por normativa IRAM 3517-2 y no pueden ser modificadas ni eliminadas.'
+    });
+  }
+  next();
+});
 
 // Helper to notify M365 Power Automate Webhook if configured
 async function notifyM365Webhook(payload) {
@@ -169,7 +184,7 @@ router.get('/stats', (req, res) => {
 });
 
 // POST register new inspection with antifraud, case creation and next pending finder
-router.post('/', async (req, res) => {
+router.post('/', authenticate, requireRole([ROLES.ADMIN, ROLES.INSPECTOR]), async (req, res) => {
   try {
     const {
       extinguisher_id,
@@ -203,6 +218,31 @@ router.post('/', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Matafuego no encontrado' });
     }
 
+    const now = new Date();
+    const todayBA = getBuenosAiresDateString(now);
+    const year_month = todayBA.slice(0, 7);
+    const inspection_date = now.toISOString().replace('T', ' ').substring(0, 19);
+    const inspector = (inspector_name || (req.user ? req.user.name : 'Inspector')).trim();
+
+    // Regla de una inspección por ronda o reinspección motivada
+    const existingCount = db.prepare(`
+      SELECT COUNT(*) as count FROM inspections 
+      WHERE extinguisher_id = ? AND year_month = ?
+    `).get(ext.id, year_month).count;
+
+    const roundValidation = validateInspectionInRound(
+      existingCount,
+      Boolean(is_reinspection),
+      reinspection_reason
+    );
+
+    if (!roundValidation.allowed) {
+      return res.status(409).json({
+        success: false,
+        error: roundValidation.error
+      });
+    }
+
     // Determine if all checks passed
     const passed = (
       Number(check_location) === 1 &&
@@ -213,26 +253,15 @@ router.post('/', async (req, res) => {
       Number(check_card) === 1
     ) ? 1 : 0;
 
-    const now = new Date();
-    const inspection_date = now.toISOString().replace('T', ' ').substring(0, 19);
-    const year_month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const inspector = (inspector_name || 'Inspector').trim();
-
     // Active Round
     let round = db.prepare("SELECT id FROM rounds WHERE year_month = ?").get(year_month);
     const round_id = round ? round.id : null;
 
     // --- ANTIFRAUD VERIFICATION ---
     const durSec = Math.max(0, Number(duration_seconds) || 0);
-    let is_suspicious = 0;
-    const fraudFlagsList = [];
-
-    if (durSec > 0 && durSec < 5) {
-      is_suspicious = 1;
-      fraudFlagsList.push('TIEMPO_INSPECCION_MENOR_5S');
-    }
-
-    const fraud_flags = fraudFlagsList.join(';') || null;
+    const fraudEval = evaluateInspectionFraud({ durationSeconds: durSec });
+    const is_suspicious = fraudEval.isSuspicious ? 1 : 0;
+    const fraud_flags = fraudEval.fraudFlags.join(';') || null;
 
     // Insert immutable inspection record
     const insert = db.prepare(`

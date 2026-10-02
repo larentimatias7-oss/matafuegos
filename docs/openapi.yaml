@@ -1,0 +1,315 @@
+openapi: 3.0.3
+info:
+  title: Milicic FireControl 365 API
+  description: API REST corporativa para la gestión de inspecciones periódicas de extintores contra incendio, trazabilidad bajo norma IRAM 3517-2 y exportación a Microsoft 365.
+  version: 2.5.0
+  contact:
+    name: Departamento de Higiene y Seguridad Laboral - Milicic S.A.
+servers:
+  - url: http://localhost:3000
+    description: Servidor Local de Desarrollo
+  - url: https://matafuegos.milicic.com.ar
+    description: Servidor de Producción (Dokploy / Docker)
+
+paths:
+  /api/health:
+    get:
+      summary: Verificación de salud y estado operativo
+      description: Retorna el estado del servicio, integridad de base de datos SQLite, espacio libre en disco y métricas de memoria.
+      responses:
+        '200':
+          description: Sistema completamente saludable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Servicio degradado o no disponible
+
+  /api/metrics:
+    get:
+      summary: Métricas en formato estándar Prometheus
+      description: Expone contadores y gauges para recolección periódica por Prometheus y visualización en Grafana.
+      responses:
+        '200':
+          description: Métricas en formato de texto plano OpenMetrics
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /api/auth/login:
+    post:
+      summary: Autenticación de usuarios
+      description: Inicia sesión en la plataforma y retorna la información de usuario y rol RBAC.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                  example: admin
+                password:
+                  type: string
+                  format: password
+                  example: Milicic2026!
+      responses:
+        '200':
+          description: Sesión iniciada exitosamente
+        '401':
+          description: Credenciales inválidas
+        '429':
+          description: Demasiados intentos fallidos (Rate limit activo)
+
+  /api/extinguishers:
+    get:
+      summary: Listar extintores del inventario
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Búsqueda por código, tipo o sector
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [OPERATIVO, EN_TALLER, FUERA_DE_SERVICIO]
+      responses:
+        '200':
+          description: Listado de extintores
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Extinguisher'
+
+    post:
+      summary: Crear nuevo extintor (Requiere rol ADMIN)
+      security:
+        - roleAuth: [ADMIN]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExtinguisherInput'
+      responses:
+        '201':
+          description: Extintor creado exitosamente
+        '400':
+          description: Datos de entrada inválidos
+        '409':
+          description: Código de extintor duplicado
+
+  /api/inspections:
+    get:
+      summary: Consultar historial de inspecciones
+      parameters:
+        - name: round_id
+          in: query
+          schema:
+            type: integer
+        - name: extinguisher_code
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Historial de inspecciones auditables
+
+    post:
+      summary: Registrar control mensual de extintor (IRAM 3517-2)
+      description: Registra una inspección inmutable. En caso de fallas, genera automáticamente el caso de anomalía.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InspectionInput'
+      responses:
+        '201':
+          description: Inspección guardada con éxito
+
+    put:
+      summary: Intento de edición de inspección (Inmutable)
+      responses:
+        '405':
+          description: Las inspecciones normativas son inmutables y no admiten modificación
+
+    delete:
+      summary: Intento de eliminación de inspección (Inmutable)
+      responses:
+        '405':
+          description: Las inspecciones normativas son inmutables y no admiten eliminación
+
+  /api/rounds:
+    get:
+      summary: Listar rondas mensuales
+      responses:
+        '200':
+          description: Rondas registradas
+
+  /api/cases:
+    get:
+      summary: Listar casos de anomalías abiertas o en taller
+      responses:
+        '200':
+          description: Listado de casos técnicos
+
+  /api/m365/export-excel:
+    get:
+      summary: Exportar informe corporativo Microsoft 365 (.xlsx)
+      description: Genera un libro Excel con 5 hojas detallando resumen ejecutivo, inventario, inspecciones, casos y alertas preventivas.
+      responses:
+        '200':
+          description: Archivo binario Excel (.xlsx)
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: healthy
+        system:
+          type: string
+          example: Milicic FireControl 365
+        timestamp:
+          type: string
+          format: date-time
+        uptimeSeconds:
+          type: integer
+          example: 1845
+        checks:
+          type: object
+          properties:
+            database:
+              type: object
+              properties:
+                status:
+                  type: string
+                  example: healthy
+                integrity:
+                  type: string
+                  example: ok
+            storage:
+              type: object
+              properties:
+                status:
+                  type: string
+                  example: healthy
+                freeMb:
+                  type: integer
+                  example: 15420
+                freePercent:
+                  type: number
+                  example: 35.4
+
+    Extinguisher:
+      type: object
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+          example: MF-001
+        public_id:
+          type: string
+          example: 8a4c1f9b3e028d7165a4c90e
+        type:
+          type: string
+          example: Polvo ABC
+        capacity:
+          type: string
+          example: 5 kg
+        location:
+          type: string
+          example: Cochera Subsuelo - Puesto #1
+        status:
+          type: string
+          example: OPERATIVO
+
+    CreateExtinguisherInput:
+      type: object
+      required:
+        - code
+        - type
+        - capacity
+        - location
+        - expiration_charge
+        - expiration_ph
+      properties:
+        code:
+          type: string
+          example: MF-131
+        type:
+          type: string
+          example: Polvo ABC
+        capacity:
+          type: string
+          example: 5 kg
+        location:
+          type: string
+          example: Obrador Central - Sala Compresores
+        expiration_charge:
+          type: string
+          format: date
+          example: 2027-04-15
+        expiration_ph:
+          type: string
+          format: date
+          example: 2030-04-15
+
+    InspectionInput:
+      type: object
+      required:
+        - extinguisher_code
+        - inspector_name
+        - passed
+      properties:
+        extinguisher_code:
+          type: string
+          example: MF-001
+        inspector_name:
+          type: string
+          example: Santiago Amaya
+        passed:
+          type: integer
+          enum: [0, 1]
+          example: 1
+        check_location:
+          type: integer
+          enum: [0, 1]
+        check_pressure:
+          type: integer
+          enum: [0, 1]
+        check_seal:
+          type: integer
+          enum: [0, 1]
+        check_physical:
+          type: integer
+          enum: [0, 1]
+        check_signage:
+          type: integer
+          enum: [0, 1]
+        check_card:
+          type: integer
+          enum: [0, 1]
+        observations:
+          type: string
+        photo_url:
+          type: string

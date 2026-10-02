@@ -45,7 +45,7 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
   const [reinspectionReason, setReinspectionReason] = useState('');
 
   // Antifraud duration timer
-  const startTimeRef = useRef(Date.now());
+  const startTimeRef = useRef(null);
   const [geoCoords, setGeoCoords] = useState(null);
 
   useEffect(() => {

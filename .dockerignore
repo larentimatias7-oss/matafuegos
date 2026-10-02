@@ -9,3 +9,7 @@ certs/*.pem
 certs/*.key
 *.pem
 *.key
+coverage
+test-results
+playwright-report
+backup

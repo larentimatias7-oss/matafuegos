@@ -380,7 +380,7 @@ export default function Dashboard({
                             }
                           }}
                         >
-                          <span style={{ fontSize: '0.65rem', opacity: 0.75, lineHeight: 1 }}>MF</span>
+                          <span style={{ fontSize: '0.65rem', fontWeight: 700, lineHeight: 1 }}>MF</span>
                           <span style={{ fontSize: '0.85rem', fontWeight: 900, lineHeight: 1 }}>{displayCode}</span>
                         </button>
                       );

@@ -35,7 +35,9 @@ export default function App() {
           localStorage.setItem('firecontrol_user', JSON.stringify(parsed));
         }
         return parsed;
-      } catch (e) {}
+      } catch (_e) {
+        // Fallback to default user if parse fails
+      }
     }
     return { name: 'Santiago Amaya (Inspector HyS)', role: 'INSPECTOR' };
   });
@@ -50,6 +52,51 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('firecontrol_theme', theme);
   }, [theme]);
+
+  // Inspection flow
+  const [inspectingExtinguisher, setInspectingExtinguisher] = useState(null);
+
+  // Modal flow (create, edit, view QR)
+  const [modalState, setModalState] = useState({
+    open: false,
+    mode: 'create',
+    extinguisher: null
+  });
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [extRes, statsRes] = await Promise.all([
+        fetch('/api/extinguishers'),
+        fetch('/api/inspections/stats')
+      ]);
+
+      const extData = await extRes.json();
+      const statsData = await statsRes.json();
+
+      if (extData.success) setExtinguishers(extData.data);
+      if (statsData.success) setStats(statsData);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSelectCode = async (codeOrPublicId) => {
+    try {
+      const res = await fetch(`/api/extinguishers/${encodeURIComponent(codeOrPublicId)}`);
+      const data = await res.json();
+      if (data.success && data.data) {
+        setInspectingExtinguisher(data.data);
+        setActiveTab('scan');
+      } else {
+        alert(`No se encontró ningún matafuego con el código "${codeOrPublicId}".`);
+      }
+    } catch (e) {
+      alert(`Error al buscar extintor: ${e.message}`);
+    }
+  };
 
   const checkOfflineQueue = async () => {
     try {
@@ -107,36 +154,6 @@ export default function App() {
     };
   }, [pendingOfflineCount]);
 
-  // Inspection flow
-  const [inspectingExtinguisher, setInspectingExtinguisher] = useState(null);
-
-  // Modal flow (create, edit, view QR)
-  const [modalState, setModalState] = useState({
-    open: false,
-    mode: 'create',
-    extinguisher: null
-  });
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const [extRes, statsRes] = await Promise.all([
-        fetch('/api/extinguishers'),
-        fetch('/api/inspections/stats')
-      ]);
-
-      const extData = await extRes.json();
-      const statsData = await statsRes.json();
-
-      if (extData.success) setExtinguishers(extData.data);
-      if (statsData.success) setStats(statsData);
-    } catch (err) {
-      console.error('Error fetching data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
     fetchData();
 
@@ -147,21 +164,6 @@ export default function App() {
       handleSelectCode(codeParam.toUpperCase());
     }
   }, []);
-
-  const handleSelectCode = async (codeOrPublicId) => {
-    try {
-      const res = await fetch(`/api/extinguishers/${encodeURIComponent(codeOrPublicId)}`);
-      const data = await res.json();
-      if (data.success && data.data) {
-        setInspectingExtinguisher(data.data);
-        setActiveTab('scan');
-      } else {
-        alert(`No se encontró ningún matafuego con el código "${codeOrPublicId}".`);
-      }
-    } catch (e) {
-      alert(`Error al buscar extintor: ${e.message}`);
-    }
-  };
 
   const handleExportExcel = () => {
     window.location.href = '/api/m365/export-excel';

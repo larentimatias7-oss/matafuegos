@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   WarningCircle, 
   CheckCircle, 
@@ -19,6 +19,11 @@ export default function CasesList() {
   const [filterStatus, setFilterStatus] = useState('');
   const [editingCase, setEditingCase] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+
+  useEffect(() => {
+    setCurrentTime(Date.now());
+  }, [cases]);
 
   const loadCases = () => {
     setLoading(true);
@@ -149,7 +154,7 @@ export default function CasesList() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           {cases.map((c) => {
             const isResolved = c.status === 'RESUELTO';
-            const daysOpen = Math.round((Date.now() - new Date(c.created_at).getTime()) / (1000 * 60 * 60 * 24));
+            const daysOpen = Math.round((currentTime - new Date(c.created_at).getTime()) / (1000 * 60 * 60 * 24));
 
             return (
               <div 

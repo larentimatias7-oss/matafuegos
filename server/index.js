@@ -3,28 +3,74 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 
-// Initialize database & migrations
+// Initialize configuration, database & migrations
+const { config } = require('./config');
 const { initSchema, db } = require('./db');
 initSchema();
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+const helmet = require('helmet');
+const { requestLogger } = require('./middleware/logger');
 
-// Security headers middleware
-app.use((req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+const app = express();
+const PORT = config.PORT;
+
+// Structured JSON request logger & metrics collector
+app.use(requestLogger);
+
+// Security headers with Helmet (configured for QR scanning, PWA, camera video & photos)
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'blob:', 'http:', 'https:'],
+        mediaSrc: ["'self'", 'blob:'],
+        connectSrc: ["'self'", 'https:', 'wss:', 'http:'],
+        fontSrc: ["'self'", 'data:'],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: null
+      }
+    },
+    crossOriginEmbedderPolicy: false
+  })
+);
+
+// Strict rate limiter for authentication/login (10 attempts per 15 min)
+const loginAttemptsMap = new Map();
+app.use('/api/auth/login', (req, res, next) => {
+  if (req.method !== 'POST' || process.env.NODE_ENV === 'test') return next();
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+  const now = Date.now();
+  const entry = loginAttemptsMap.get(ip) || { count: 0, resetAt: now + 15 * 60 * 1000 };
+  if (now > entry.resetAt) {
+    entry.count = 1;
+    entry.resetAt = now + 15 * 60 * 1000;
+  } else {
+    entry.count++;
+  }
+  loginAttemptsMap.set(ip, entry);
+  if (entry.count > 10) {
+    return res.status(429).json({
+      success: false,
+      error: 'Demasiados intentos fallidos de autenticación. Intente nuevamente en 15 minutos.'
+    });
+  }
   next();
 });
 
-// Lightweight in-memory rate limiter for /api routes
+// Lightweight in-memory rate limiter for general /api routes
 const rateLimitMap = new Map();
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const MAX_REQUESTS_PER_WINDOW = 300;
+const MAX_REQUESTS_PER_WINDOW = process.env.RATE_LIMIT_MAX 
+  ? parseInt(process.env.RATE_LIMIT_MAX, 10) 
+  : (process.env.NODE_ENV === 'test' ? 100000 : 300);
 
 app.use('/api', (req, res, next) => {
+  if (process.env.RATE_LIMIT_DISABLED === 'true') {
+    return next();
+  }
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
   const now = Date.now();
   
@@ -81,16 +127,9 @@ app.get('/m/:publicId', (req, res) => {
   }
 });
 
-// Healthcheck endpoint for Dokploy / Docker healthchecks
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    system: 'Milicic FireControl 365',
-    time: new Date().toISOString(),
-    uptime: process.uptime(),
-    node: process.version
-  });
-});
+// Healthcheck and Metrics endpoints
+app.use('/api/health', require('./routes/health'));
+app.use('/api/metrics', require('./routes/metrics'));
 
 // Serve documentation portal
 const docsPath = path.join(__dirname, '../documentacion');
@@ -130,30 +169,39 @@ if (fs.existsSync(distPath)) {
   });
 }
 
+// Centralized error handling and API 404
+const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
+app.use('/api', notFoundHandler);
+app.use(errorHandler);
+
 const isHttps = process.env.HTTPS === 'true';
 const sslCertFile = process.env.SSL_CERT_FILE || path.join(__dirname, '../certs/dev-cert.pem');
 const sslKeyFile = process.env.SSL_KEY_FILE || path.join(__dirname, '../certs/dev-key.pem');
 
-if (isHttps && fs.existsSync(sslCertFile) && fs.existsSync(sslKeyFile)) {
-  const https = require('https');
-  const sslOptions = {
-    key: fs.readFileSync(sslKeyFile),
-    cert: fs.readFileSync(sslCertFile)
-  };
-  https.createServer(sslOptions, app).listen(PORT, '0.0.0.0', () => {
-    console.log(`===============================================`);
-    console.log(`🧯 Milicic FireControl 365 Server (HTTPS Seguro)`);
-    console.log(`📡 URL LAN: https://localhost:${PORT}`);
-    console.log(`🏥 Healthcheck: https://localhost:${PORT}/api/health`);
-    console.log(`🔒 Certificado: ${sslCertFile}`);
-    console.log(`===============================================`);
-  });
-} else {
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`===============================================`);
-    console.log(`🧯 Milicic FireControl 365 Server corriendo en puerto ${PORT}`);
-    console.log(`📡 URL local: http://localhost:${PORT}`);
-    console.log(`🏥 Healthcheck: http://localhost:${PORT}/api/health`);
-    console.log(`===============================================`);
-  });
+if (require.main === module) {
+  if (isHttps && fs.existsSync(sslCertFile) && fs.existsSync(sslKeyFile)) {
+    const https = require('https');
+    const sslOptions = {
+      key: fs.readFileSync(sslKeyFile),
+      cert: fs.readFileSync(sslCertFile)
+    };
+    https.createServer(sslOptions, app).listen(PORT, '0.0.0.0', () => {
+      console.log(`===============================================`);
+      console.log(`🧯 Milicic FireControl 365 Server (HTTPS Seguro)`);
+      console.log(`📡 URL LAN: https://localhost:${PORT}`);
+      console.log(`🏥 Healthcheck: https://localhost:${PORT}/api/health`);
+      console.log(`🔒 Certificado: ${sslCertFile}`);
+      console.log(`===============================================`);
+    });
+  } else {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`===============================================`);
+      console.log(`🧯 Milicic FireControl 365 Server corriendo en puerto ${PORT}`);
+      console.log(`📡 URL local: http://localhost:${PORT}`);
+      console.log(`🏥 Healthcheck: http://localhost:${PORT}/api/health`);
+      console.log(`===============================================`);
+    });
+  }
 }
+
+module.exports = { app };

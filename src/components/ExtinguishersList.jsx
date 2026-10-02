@@ -363,6 +363,7 @@ export default function ExtinguishersList({
             value={selectedFloor} 
             onChange={(e) => setSelectedFloor(e.target.value)} 
             className="input" 
+            aria-label="Filtrar por piso"
             style={{ width: 'auto', minWidth: '150px' }}
           >
             <option value="">Todos los Pisos</option>
@@ -373,6 +374,7 @@ export default function ExtinguishersList({
             value={selectedType} 
             onChange={(e) => setSelectedType(e.target.value)} 
             className="input" 
+            aria-label="Filtrar por tipo de agente"
             style={{ width: 'auto', minWidth: '160px' }}
           >
             <option value="">Todos los Tipos</option>
@@ -383,6 +385,7 @@ export default function ExtinguishersList({
             value={selectedStatus} 
             onChange={(e) => setSelectedStatus(e.target.value)} 
             className="input" 
+            aria-label="Filtrar por estado de inspección"
             style={{ width: 'auto', minWidth: '170px' }}
           >
             <option value="">Todos los Estados</option>
@@ -614,6 +617,7 @@ export default function ExtinguishersList({
             value={table.getState().pagination.pageSize}
             onChange={e => table.setPageSize(Number(e.target.value))}
             className="input"
+            aria-label="Cantidad de extintores por página"
             style={{ width: 'auto', padding: '0.3rem 0.6rem', fontSize: '0.82rem', minHeight: '36px' }}
           >
             {[10, 25, 50, 100].map(size => (
@@ -675,6 +679,7 @@ export default function ExtinguishersList({
                   value={selectedFloor} 
                   onChange={(e) => setSelectedFloor(e.target.value)} 
                   className="input"
+                  aria-label="Filtrar por piso"
                 >
                   <option value="">Todos los Pisos</option>
                   {floors.map(f => <option key={f} value={f}>{f}</option>)}
@@ -687,6 +692,7 @@ export default function ExtinguishersList({
                   value={selectedType} 
                   onChange={(e) => setSelectedType(e.target.value)} 
                   className="input"
+                  aria-label="Filtrar por tipo de agente"
                 >
                   <option value="">Todos los Tipos</option>
                   {types.map(t => <option key={t} value={t}>{t}</option>)}
@@ -699,6 +705,7 @@ export default function ExtinguishersList({
                   value={selectedStatus} 
                   onChange={(e) => setSelectedStatus(e.target.value)} 
                   className="input"
+                  aria-label="Filtrar por estado de inspección"
                 >
                   <option value="">Todos los Estados</option>
                   <option value="OK">Controlados OK</option>

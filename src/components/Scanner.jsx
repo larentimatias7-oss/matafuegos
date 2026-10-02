@@ -18,24 +18,26 @@ import {
 export default function Scanner({ extinguishers = [], onSelectCode }) {
   const [mode, setMode] = useState('camera'); // 'camera' | 'manual'
   const [manualCode, setManualCode] = useState('');
-  const [cameraError, setCameraError] = useState(null);
+  const [isSecure, setIsSecure] = useState(() => {
+    if (typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      return false;
+    }
+    return true;
+  });
+  const [cameraError, setCameraError] = useState(() => {
+    if (typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      return 'La cámara requiere HTTPS. Por favor abrí la app desde una dirección segura (https://...)';
+    }
+    return null;
+  });
   const [isScanning, setIsScanning] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
   const [hasTorch, setHasTorch] = useState(false);
-  const [isSecure, setIsSecure] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
 
   const scannerInstanceRef = useRef(null);
   const videoTrackRef = useRef(null);
   const isStartingRef = useRef(false);
-
-  useEffect(() => {
-    // Check if secure context (HTTPS or localhost)
-    if (typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      setIsSecure(false);
-      setCameraError('La cámara requiere HTTPS. Por favor abrí la app desde una dirección segura (https://...)');
-    }
-  }, []);
 
   // Parse QR content
   const handleDecodedText = (decodedText) => {

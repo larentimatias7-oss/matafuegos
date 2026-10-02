@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { db, generatePublicId } = require('../db');
+const { authenticate, requireRole, ROLES } = require('../middleware/auth');
+const { validateExtinguisherInput } = require('../validators/dataValidators');
+const { resolveSemaphoreStatus } = require('../services/semaphoreService');
 
-// Helper to determine monthly inspection status
+// Helper to determine monthly inspection status using unified semaphore service
 function getMonthlyStatus(extinguisher, currentMonth) {
-  const isChargeExpired = extinguisher.expiration_charge < new Date().toISOString().split('T')[0];
-
   const stmt = db.prepare(`
     SELECT * FROM inspections 
     WHERE extinguisher_id = ? AND year_month = ?
@@ -13,46 +14,17 @@ function getMonthlyStatus(extinguisher, currentMonth) {
   `);
   const lastInspectionThisMonth = stmt.get(extinguisher.id, currentMonth);
 
-  if (isChargeExpired) {
-    return {
-      statusKey: 'EXPIRED',
-      badgeColor: 'expired',
-      label: 'Carga Anual Vencida',
-      inspectedThisMonth: !!lastInspectionThisMonth,
-      passed: lastInspectionThisMonth ? Boolean(lastInspectionThisMonth.passed) : null
-    };
-  }
-
-  if (!lastInspectionThisMonth) {
-    return {
-      statusKey: 'PENDING',
-      badgeColor: 'pending',
-      label: 'Pendiente Mes',
-      inspectedThisMonth: false,
-      passed: null
-    };
-  }
-
-  if (lastInspectionThisMonth.passed === 1) {
-    return {
-      statusKey: 'OK',
-      badgeColor: 'ok',
-      label: 'Controlado OK',
-      inspectedThisMonth: true,
-      passed: true,
-      date: lastInspectionThisMonth.inspection_date
-    };
-  } else {
-    return {
-      statusKey: 'FAULT',
-      badgeColor: 'fault',
-      label: 'Con Anomalías',
-      inspectedThisMonth: true,
-      passed: false,
-      date: lastInspectionThisMonth.inspection_date,
-      observations: lastInspectionThisMonth.observations
-    };
-  }
+  const res = resolveSemaphoreStatus(extinguisher, lastInspectionThisMonth);
+  return {
+    statusKey: res.statusKey,
+    badgeColor: res.badgeColor,
+    label: res.label,
+    inspectedThisMonth: !!lastInspectionThisMonth,
+    passed: lastInspectionThisMonth ? Boolean(lastInspectionThisMonth.passed) : null,
+    date: lastInspectionThisMonth ? lastInspectionThisMonth.inspection_date : null,
+    observations: lastInspectionThisMonth ? lastInspectionThisMonth.observations : null,
+    reasons: res.reasons
+  };
 }
 
 // Helper to log changes to audit_logs
@@ -75,7 +47,7 @@ function logAudit(entityType, entityId, action, changedBy, oldValues, newValues)
 }
 
 // GET all extinguishers with current month status
-router.get('/', (req, res) => {
+router.get('/', authenticate, (req, res) => {
   try {
     const { search, type, floor, status, month } = req.query;
     const now = new Date();
@@ -128,7 +100,7 @@ router.get('/', (req, res) => {
 });
 
 // GET single extinguisher by id, code or public_id
-router.get('/:idOrCode', (req, res) => {
+router.get('/:idOrCode', authenticate, (req, res) => {
   try {
     const { idOrCode } = req.params;
     let ext;
@@ -188,19 +160,24 @@ router.get('/:idOrCode', (req, res) => {
 });
 
 // POST create new extinguisher
-router.post('/', (req, res) => {
+router.post('/', authenticate, requireRole([ROLES.ADMIN, ROLES.INSPECTOR]), (req, res) => {
   try {
+    const validation = validateExtinguisherInput(req.body);
+    if (!validation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: 'Errores de validación en los datos del extintor',
+        details: validation.errors
+      });
+    }
+
     const { 
       code, type, capacity, location, area, floor, building = 'Edificio Central',
       location_ref = '', manufacturer = '', fab_year = null, lifespan_limit = '',
       collar_year_color = '', last_charge_date = '', expiration_charge,
       last_ph_date = '', expiration_ph, supplier = '', certificate_number = '',
-      status = 'OPERATIVO', notes = '', changed_by = 'Admin'
+      status = 'OPERATIVO', notes = '', changed_by = (req.user ? req.user.name : 'Admin')
     } = req.body;
-
-    if (!code || !type || !capacity || !location || !expiration_charge || !expiration_ph) {
-      return res.status(400).json({ success: false, error: 'Campos obligatorios incompletos' });
-    }
 
     const cleanCode = code.trim().toUpperCase();
     const publicId = generatePublicId();
@@ -262,7 +239,7 @@ router.post('/', (req, res) => {
 });
 
 // PUT update extinguisher with full audit logging
-router.put('/:id', (req, res) => {
+router.put('/:id', authenticate, requireRole([ROLES.ADMIN, ROLES.INSPECTOR]), (req, res) => {
   try {
     const { id } = req.params;
     const oldExt = db.prepare('SELECT * FROM extinguishers WHERE id = ?').get(id);
@@ -275,7 +252,7 @@ router.put('/:id', (req, res) => {
       code, type, capacity, location, area, floor, building,
       location_ref, manufacturer, fab_year, lifespan_limit, collar_year_color,
       last_charge_date, expiration_charge, last_ph_date, expiration_ph,
-      supplier, certificate_number, status, notes, changed_by = 'Operario / Admin'
+      supplier, certificate_number, status, notes, changed_by = (req.user ? req.user.name : 'Operario / Admin')
     } = req.body;
 
     const update = db.prepare(`
@@ -306,25 +283,25 @@ router.put('/:id', (req, res) => {
 
     update.run(
       code ? code.trim().toUpperCase() : null,
-      type,
-      capacity,
-      location,
-      area,
-      floor,
-      building,
-      location_ref,
-      manufacturer,
-      fab_year ? Number(fab_year) : null,
-      lifespan_limit,
-      collar_year_color,
-      last_charge_date,
-      expiration_charge,
-      last_ph_date,
-      expiration_ph,
-      supplier,
-      certificate_number,
-      status,
-      notes,
+      type ?? null,
+      capacity ?? null,
+      location ?? null,
+      area ?? null,
+      floor ?? null,
+      building ?? null,
+      location_ref ?? null,
+      manufacturer ?? null,
+      fab_year !== undefined && fab_year !== null ? Number(fab_year) : null,
+      lifespan_limit ?? null,
+      collar_year_color ?? null,
+      last_charge_date ?? null,
+      expiration_charge ?? null,
+      last_ph_date ?? null,
+      expiration_ph ?? null,
+      supplier ?? null,
+      certificate_number ?? null,
+      status ?? null,
+      notes ?? null,
       id
     );
 
@@ -342,21 +319,26 @@ router.put('/:id', (req, res) => {
   }
 });
 
-// DELETE extinguisher
-router.delete('/:id', (req, res) => {
+// DELETE extinguisher (Admin only)
+router.delete('/:id', authenticate, requireRole([ROLES.ADMIN]), (req, res) => {
   try {
     const { id } = req.params;
     const oldExt = db.prepare('SELECT * FROM extinguishers WHERE id = ?').get(id);
+
+    if (!oldExt) {
+      return res.status(404).json({ success: false, error: 'Matafuego no encontrado' });
+    }
+
     db.prepare('DELETE FROM extinguishers WHERE id = ?').run(id);
-    logAudit('EXTINGUISHER', id, 'DELETE', 'Admin', oldExt, null);
+    logAudit('EXTINGUISHER', id, 'DELETE', (req.user ? req.user.name : 'Admin'), oldExt, null);
     res.json({ success: true, message: 'Matafuego eliminado correctamente' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// POST reset to 130 sample extinguishers
-router.post('/reset-seed', (req, res) => {
+// POST reset to 130 sample extinguishers (Admin only)
+router.post('/reset-seed', authenticate, requireRole([ROLES.ADMIN]), (req, res) => {
   try {
     db.exec('DELETE FROM cases');
     db.exec('DELETE FROM inspections');

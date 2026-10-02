@@ -27,5 +27,8 @@ certs/*.pem
 certs/*.key
 *.pem
 *.key
-!certs/setup-https.ps1
-
+# Test reports and coverage
+coverage/
+test-results/
+playwright-report/
+backup/

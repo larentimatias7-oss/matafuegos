@@ -31,8 +31,10 @@ COPY documentacion/ ./documentacion/
 RUN chmod +x ./scripts/*.sh 2>/dev/null || true
 COPY --from=builder /app/dist ./dist
 
-# Create persistent data directory
-RUN mkdir -p /data/backups
+# Create persistent data directory and grant permissions to non-root node user
+RUN mkdir -p /data/backups && chown -R node:node /data /app
+
+USER node
 
 VOLUME ["/data"]
 EXPOSE 3000

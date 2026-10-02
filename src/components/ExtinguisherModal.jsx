@@ -5,25 +5,52 @@ export default function ExtinguisherModal({ extinguisher, mode, onClose, onSave 
   const isQrMode = mode === 'qr';
   const isEditing = Boolean(extinguisher && extinguisher.id);
 
-  const [form, setForm] = useState({
-    code: '',
-    type: 'Polvo ABC',
-    capacity: '5 kg',
-    location: '',
-    floor: 'Planta Baja',
-    area: 'Oficinas',
-    building: 'Base Central Rosario',
-    location_ref: '',
-    manufacturer: 'Georgia / Melisam S.A.',
-    fab_year: '2021',
-    lifespan_limit: '2041-12-31',
-    collar_year_color: '2026 - Marbete Naranja Oficial',
-    expiration_charge: '',
-    expiration_ph: '',
-    supplier: 'Taller Certificado IRAM #1042',
-    certificate_number: '',
-    status: 'OPERATIVO',
-    notes: ''
+  const [form, setForm] = useState(() => {
+    if (extinguisher) {
+      return {
+        code: extinguisher.code || '',
+        type: extinguisher.type || 'Polvo ABC',
+        capacity: extinguisher.capacity || '5 kg',
+        location: extinguisher.location || '',
+        floor: extinguisher.floor || 'Planta Baja',
+        area: extinguisher.area || '',
+        building: extinguisher.building || 'Base Central Rosario',
+        location_ref: extinguisher.location_ref || '',
+        manufacturer: extinguisher.manufacturer || 'Georgia / Melisam S.A.',
+        fab_year: extinguisher.fab_year || '2021',
+        lifespan_limit: extinguisher.lifespan_limit || '',
+        collar_year_color: extinguisher.collar_year_color || '2026 - Marbete Naranja Oficial',
+        expiration_charge: extinguisher.expiration_charge || '',
+        expiration_ph: extinguisher.expiration_ph || '',
+        supplier: extinguisher.supplier || 'Taller Certificado IRAM #1042',
+        certificate_number: extinguisher.certificate_number || '',
+        status: extinguisher.status || 'OPERATIVO',
+        notes: extinguisher.notes || ''
+      };
+    }
+    const now = new Date();
+    const nextYear = new Date(now.getTime() + 365 * 86400000).toISOString().split('T')[0];
+    const next5Years = new Date(now.getTime() + 5 * 365 * 86400000).toISOString().split('T')[0];
+    return {
+      code: '',
+      type: 'Polvo ABC',
+      capacity: '5 kg',
+      location: '',
+      floor: 'Planta Baja',
+      area: 'Oficinas',
+      building: 'Base Central Rosario',
+      location_ref: '',
+      manufacturer: 'Georgia / Melisam S.A.',
+      fab_year: '2021',
+      lifespan_limit: `${now.getFullYear() + 20}-12-31`,
+      collar_year_color: '2026 - Marbete Naranja Oficial',
+      expiration_charge: nextYear,
+      expiration_ph: next5Years,
+      supplier: 'Taller Certificado IRAM #1042',
+      certificate_number: '',
+      status: 'OPERATIVO',
+      notes: ''
+    };
   });
 
   const [qrDataUrl, setQrDataUrl] = useState(null);
