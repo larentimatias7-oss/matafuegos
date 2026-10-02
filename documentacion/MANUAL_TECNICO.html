@@ -335,6 +335,18 @@ app.use((req, res, next) => {
   next();
 });</code></pre>
 
+      <h3 class="subsection-title">3.4. Motor de Escaneo QR, Redirección y Tolerancia a Fallos</h3>
+      <p style="margin-bottom: 8px;">
+        Para garantizar cero bloqueos en obra tanto en celulares iOS como Android:
+      </p>
+      <ul style="padding-left: 20px; line-height: 1.8; color: var(--slate-body); margin-bottom: 16px;">
+        <li><strong>Redirección 302 Corta:</strong> Los códigos QR contienen enlaces a <code>/m/:publicId</code> que transfieren de inmediato a <code>/?code=MF-XXX#check</code>.</li>
+        <li><strong>Base URL Dinámica:</strong> El backend detecta encabezados de proxy inverso (<code>x-forwarded-host</code>, <code>x-forwarded-proto</code>) resolviendo automáticamente el dominio activo sin depender de valores estáticos en base de datos.</li>
+        <li><strong>Tolerancia en Búsqueda:</strong> <code>GET /api/extinguishers/:idOrCode</code> soporta URLs completas, códigos sin prefijo (auto-padding a 3 dígitos), minúsculas y mayúsculas.</li>
+        <li><strong>React Error Boundary:</strong> Envuelve la interfaz completa para aislar errores imprevistos y ofrecer recarga inmediata sin pantalla en blanco.</li>
+        <li><strong>Depuración de Cola 409:</strong> Los registros offline con respuesta <code>409 Conflict</code> (ya controlados en la ronda) se purgan automáticamente de IndexedDB.</li>
+      </ul>
+
       <!-- Sección 4: Despliegue en Dokploy -->
       <h2 class="section-title">4. Despliegue en Dokploy (Docker & Traefik)</h2>
       <p style="margin-bottom: 8px;">Variables requeridas en el archivo <code>.env</code> para producción:</p>

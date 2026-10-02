@@ -1,4 +1,5 @@
 # MILICIC S.A. | MANUAL TÉCNICO Y DE ARQUITECTURA
+
 ## Sistema de Control Mensual de Extintores (IRAM 3517-2)
 
 ```text
@@ -53,105 +54,111 @@ El sistema implementa una arquitectura monolítica moderna, modular y ligera, di
 El almacenamiento se realiza en SQLite mediante el driver nativo integrado `node:sqlite`, garantizando portabilidad absoluta entre Windows y Linux sin necesidad de compiladores nativos (`node-gyp`).
 
 ### 2.1. Tabla: `extinguishers` (Parque de Equipos)
+
 Contiene la ficha técnica reglamentaria de cada extintor según IRAM 3517-2.
 
-| Campo | Tipo | Restricción | Descripción |
-| :--- | :--- | :--- | :--- |
-| `id` | INTEGER | PRIMARY KEY AUTOINCREMENT | Identificador numérico interno. |
-| `public_id` | TEXT | UNIQUE NOT NULL | Identificador público no adivinable (UUID) para enlace físico del QR. |
-| `code` | TEXT | UNIQUE NOT NULL | Código interno visible de la empresa (ej: `MF-014`). |
-| `type` | TEXT | NOT NULL | Agente extintor (`Polvo ABC`, `CO2`, `Agua`, `Clase K`, etc.). |
-| `capacity` | TEXT | NOT NULL | Capacidad nominal (ej: `5 kg`, `10 kg`, `50 L`). |
-| `location` | TEXT | NOT NULL | Descripción de ubicación detallada. |
-| `floor` | TEXT | NOT NULL | Nivel o piso (`Subsuelo`, `Planta Baja`, `Piso 1`, etc.). |
-| `area` | TEXT | NOT NULL | Sector o dependencia (`Pañol`, `Taller`, `Oficinas`). |
-| `building` | TEXT | DEFAULT 'Edificio Central' | Identificador del predio u obrador. |
-| `location_ref` | TEXT | | Referencia visual adicional (ej: *"Junto a salida de emergencia"*). |
-| `manufacturer` | TEXT | | Fabricante homologado (ej: *Melisam*, *Georgia*, *Matafuegos DR*). |
-| `fab_year` | INTEGER | | Año de fabricación del cilindro metálico. |
-| `lifespan_limit` | TEXT | | Fecha límite de vida útil del cilindro (20 años según IRAM). |
-| `expiration_charge` | TEXT | NOT NULL | Fecha de vencimiento de la recarga anual (`YYYY-MM-DD`). |
-| `expiration_ph` | TEXT | NOT NULL | Fecha de vencimiento de la Prueba Hidráulica (`YYYY-MM-DD`, cada 5 años). |
-| `collar_year_color` | TEXT | | Año y color reglamentario del marbete o collarín plástico. |
-| `supplier` | TEXT | | Taller habilitado que certificó la última carga. |
-| `certificate_number`| TEXT | | Número de certificado IRAM o remito de recarga. |
-| `status` | TEXT | DEFAULT 'OPERATIVO' | Estado operativo: `OPERATIVO`, `EN_TALLER`, `FUERA_DE_SERVICIO`, `REEMPLAZADO`. |
-| `notes` | TEXT | | Observaciones históricas o técnicas. |
-| `created_at` | TEXT | DEFAULT CURRENT_TIMESTAMP | Fecha de alta en el sistema. |
-| `updated_at` | TEXT | DEFAULT CURRENT_TIMESTAMP | Fecha de última modificación técnica. |
+| Campo                | Tipo    | Restricción                | Descripción                                                                     |
+| :------------------- | :------ | :------------------------- | :------------------------------------------------------------------------------ |
+| `id`                 | INTEGER | PRIMARY KEY AUTOINCREMENT  | Identificador numérico interno.                                                 |
+| `public_id`          | TEXT    | UNIQUE NOT NULL            | Identificador público no adivinable (UUID) para enlace físico del QR.           |
+| `code`               | TEXT    | UNIQUE NOT NULL            | Código interno visible de la empresa (ej: `MF-014`).                            |
+| `type`               | TEXT    | NOT NULL                   | Agente extintor (`Polvo ABC`, `CO2`, `Agua`, `Clase K`, etc.).                  |
+| `capacity`           | TEXT    | NOT NULL                   | Capacidad nominal (ej: `5 kg`, `10 kg`, `50 L`).                                |
+| `location`           | TEXT    | NOT NULL                   | Descripción de ubicación detallada.                                             |
+| `floor`              | TEXT    | NOT NULL                   | Nivel o piso (`Subsuelo`, `Planta Baja`, `Piso 1`, etc.).                       |
+| `area`               | TEXT    | NOT NULL                   | Sector o dependencia (`Pañol`, `Taller`, `Oficinas`).                           |
+| `building`           | TEXT    | DEFAULT 'Edificio Central' | Identificador del predio u obrador.                                             |
+| `location_ref`       | TEXT    |                            | Referencia visual adicional (ej: _"Junto a salida de emergencia"_).             |
+| `manufacturer`       | TEXT    |                            | Fabricante homologado (ej: _Melisam_, _Georgia_, _Matafuegos DR_).              |
+| `fab_year`           | INTEGER |                            | Año de fabricación del cilindro metálico.                                       |
+| `lifespan_limit`     | TEXT    |                            | Fecha límite de vida útil del cilindro (20 años según IRAM).                    |
+| `expiration_charge`  | TEXT    | NOT NULL                   | Fecha de vencimiento de la recarga anual (`YYYY-MM-DD`).                        |
+| `expiration_ph`      | TEXT    | NOT NULL                   | Fecha de vencimiento de la Prueba Hidráulica (`YYYY-MM-DD`, cada 5 años).       |
+| `collar_year_color`  | TEXT    |                            | Año y color reglamentario del marbete o collarín plástico.                      |
+| `supplier`           | TEXT    |                            | Taller habilitado que certificó la última carga.                                |
+| `certificate_number` | TEXT    |                            | Número de certificado IRAM o remito de recarga.                                 |
+| `status`             | TEXT    | DEFAULT 'OPERATIVO'        | Estado operativo: `OPERATIVO`, `EN_TALLER`, `FUERA_DE_SERVICIO`, `REEMPLAZADO`. |
+| `notes`              | TEXT    |                            | Observaciones históricas o técnicas.                                            |
+| `created_at`         | TEXT    | DEFAULT CURRENT_TIMESTAMP  | Fecha de alta en el sistema.                                                    |
+| `updated_at`         | TEXT    | DEFAULT CURRENT_TIMESTAMP  | Fecha de última modificación técnica.                                           |
 
 ---
 
 ### 2.2. Tabla: `rounds` (Rondas de Inspección Mensual)
+
 Controla el ciclo de inspecciones periódicas de la empresa.
 
-| Campo | Tipo | Restricción | Descripción |
-| :--- | :--- | :--- | :--- |
-| `id` | INTEGER | PRIMARY KEY AUTOINCREMENT | Identificador de ronda. |
-| `name` | TEXT | UNIQUE NOT NULL | Identificador de período (ej: `2026-10`). |
-| `title` | TEXT | NOT NULL | Título legible (ej: `Ronda Octubre 2026`). |
-| `start_date` | TEXT | NOT NULL | Fecha de inicio del ciclo. |
-| `end_date` | TEXT | | Fecha de cierre efectivo. |
-| `status` | TEXT | DEFAULT 'OPEN' | Estado del ciclo: `OPEN` (activa) o `CLOSED` (cerrada). |
-| `notes` | TEXT | | Observaciones de la ronda. |
+| Campo        | Tipo    | Restricción               | Descripción                                             |
+| :----------- | :------ | :------------------------ | :------------------------------------------------------ |
+| `id`         | INTEGER | PRIMARY KEY AUTOINCREMENT | Identificador de ronda.                                 |
+| `name`       | TEXT    | UNIQUE NOT NULL           | Identificador de período (ej: `2026-10`).               |
+| `title`      | TEXT    | NOT NULL                  | Título legible (ej: `Ronda Octubre 2026`).              |
+| `start_date` | TEXT    | NOT NULL                  | Fecha de inicio del ciclo.                              |
+| `end_date`   | TEXT    |                           | Fecha de cierre efectivo.                               |
+| `status`     | TEXT    | DEFAULT 'OPEN'            | Estado del ciclo: `OPEN` (activa) o `CLOSED` (cerrada). |
+| `notes`      | TEXT    |                           | Observaciones de la ronda.                              |
 
 ---
 
 ### 2.3. Tabla: `inspections` (Registro Inmutable de Controles)
+
 Almacena cada control periódico realizado por los inspectores. **Esta tabla no admite borrado ni modificaciones (auditoría legal).**
 
-| Campo | Tipo | Restricción | Descripción |
-| :--- | :--- | :--- | :--- |
-| `id` | INTEGER | PRIMARY KEY AUTOINCREMENT | Identificador de la inspección. |
-| `extinguisher_id` | INTEGER | REFERENCES extinguishers(id) | Llave foránea al extintor. |
-| `extinguisher_code`| TEXT | NOT NULL | Código redundante para preservación histórica. |
-| `round_id` | INTEGER | REFERENCES rounds(id) | Ronda a la que pertenece el control. |
-| `year_month` | TEXT | NOT NULL | Período de auditoría (`YYYY-MM`). |
-| `inspection_date` | TEXT | NOT NULL | Marca temporal exacta de realización. |
-| `inspector_name` | TEXT | NOT NULL | Nombre y cargo del inspector interviniente. |
-| `passed` | INTEGER | NOT NULL (1 o 0) | `1` si aprobó todos los controles; `0` si presentó alguna falla. |
-| `check_location` | INTEGER | DEFAULT 1 | 1=OK / 0=Falla: Ubicación y acceso libre. |
-| `check_pressure` | INTEGER | DEFAULT 1 | 1=OK / 0=Falla: Presión en verde o peso conforme. |
-| `check_seal` | INTEGER | DEFAULT 1 | 1=OK / 0=Falla: Precinto y pasador intactos. |
-| `check_physical` | INTEGER | DEFAULT 1 | 1=OK / 0=Falla: Cilindro y manguera en buen estado. |
-| `check_signage` | INTEGER | DEFAULT 1 | 1=OK / 0=Falla: Cartel baliza visible. |
-| `check_card` | INTEGER | DEFAULT 1 | 1=OK / 0=Falla: Tarjeta y collarín vigentes. |
-| `checklist_results` | TEXT | | Detalle en formato JSON con la respuesta a cada punto del checklist. |
-| `observations` | TEXT | | Justificación técnica de la falla o comentarios. |
-| `photo_url` | TEXT | | Fotografía de evidencia en Base64 o URL. |
-| `duration_seconds` | INTEGER | | Tiempo cronometrado entre la apertura y el guardado. |
-| `is_suspicious` | INTEGER | DEFAULT 0 | Flag antifraude: `1` si la duración fue inferior a 5 segundos. |
-| `fraud_flags` | TEXT | | Códigos de advertencia antifraude detectados. |
-| `latitude` / `longitude` | REAL | | Coordenadas GPS opcionales capturadas en campo. |
-| `geo_accuracy` | REAL | | Margen de precisión del GPS en metros. |
-| `is_reinspection` | INTEGER | DEFAULT 0 | `1` si es una segunda inspección en el mismo mes. |
-| `reinspection_reason` | TEXT | | Motivo obligatorio que justificó la reinspección. |
+| Campo                    | Tipo    | Restricción                  | Descripción                                                          |
+| :----------------------- | :------ | :--------------------------- | :------------------------------------------------------------------- |
+| `id`                     | INTEGER | PRIMARY KEY AUTOINCREMENT    | Identificador de la inspección.                                      |
+| `extinguisher_id`        | INTEGER | REFERENCES extinguishers(id) | Llave foránea al extintor.                                           |
+| `extinguisher_code`      | TEXT    | NOT NULL                     | Código redundante para preservación histórica.                       |
+| `round_id`               | INTEGER | REFERENCES rounds(id)        | Ronda a la que pertenece el control.                                 |
+| `year_month`             | TEXT    | NOT NULL                     | Período de auditoría (`YYYY-MM`).                                    |
+| `inspection_date`        | TEXT    | NOT NULL                     | Marca temporal exacta de realización.                                |
+| `inspector_name`         | TEXT    | NOT NULL                     | Nombre y cargo del inspector interviniente.                          |
+| `passed`                 | INTEGER | NOT NULL (1 o 0)             | `1` si aprobó todos los controles; `0` si presentó alguna falla.     |
+| `check_location`         | INTEGER | DEFAULT 1                    | 1=OK / 0=Falla: Ubicación y acceso libre.                            |
+| `check_pressure`         | INTEGER | DEFAULT 1                    | 1=OK / 0=Falla: Presión en verde o peso conforme.                    |
+| `check_seal`             | INTEGER | DEFAULT 1                    | 1=OK / 0=Falla: Precinto y pasador intactos.                         |
+| `check_physical`         | INTEGER | DEFAULT 1                    | 1=OK / 0=Falla: Cilindro y manguera en buen estado.                  |
+| `check_signage`          | INTEGER | DEFAULT 1                    | 1=OK / 0=Falla: Cartel baliza visible.                               |
+| `check_card`             | INTEGER | DEFAULT 1                    | 1=OK / 0=Falla: Tarjeta y collarín vigentes.                         |
+| `checklist_results`      | TEXT    |                              | Detalle en formato JSON con la respuesta a cada punto del checklist. |
+| `observations`           | TEXT    |                              | Justificación técnica de la falla o comentarios.                     |
+| `photo_url`              | TEXT    |                              | Fotografía de evidencia en Base64 o URL.                             |
+| `duration_seconds`       | INTEGER |                              | Tiempo cronometrado entre la apertura y el guardado.                 |
+| `is_suspicious`          | INTEGER | DEFAULT 0                    | Flag antifraude: `1` si la duración fue inferior a 5 segundos.       |
+| `fraud_flags`            | TEXT    |                              | Códigos de advertencia antifraude detectados.                        |
+| `latitude` / `longitude` | REAL    |                              | Coordenadas GPS opcionales capturadas en campo.                      |
+| `geo_accuracy`           | REAL    |                              | Margen de precisión del GPS en metros.                               |
+| `is_reinspection`        | INTEGER | DEFAULT 0                    | `1` si es una segunda inspección en el mismo mes.                    |
+| `reinspection_reason`    | TEXT    |                              | Motivo obligatorio que justificó la reinspección.                    |
 
 ---
 
 ### 2.4. Tabla: `cases` (Casos de Falla y Anomalías)
+
 Gestiona la resolución técnica de extintores no conformes.
 
-| Campo | Tipo | Restricción | Descripción |
-| :--- | :--- | :--- | :--- |
-| `id` | INTEGER | PRIMARY KEY AUTOINCREMENT | Número de caso (`#CASO-X`). |
-| `extinguisher_id` | INTEGER | REFERENCES extinguishers(id) | Extintor afectado. |
-| `extinguisher_code`| TEXT | NOT NULL | Código del extintor. |
-| `inspection_id` | INTEGER | REFERENCES inspections(id) | Inspección que originó el caso. |
-| `title` | TEXT | NOT NULL | Resumen del problema (ej: *"Baja Presión"*). |
-| `description` | TEXT | | Explicación detallada de la anomalía. |
-| `status` | TEXT | DEFAULT 'OPEN' | `OPEN`, `IN_WORKSHOP`, `TEMP_REPLACED`, `RESOLVED`. |
-| `temp_replacement_code` | TEXT | | Código del extintor provisorio instalado. |
-| `responsible` | TEXT | | Responsable de la gestión del caso. |
-| `created_at` | TEXT | DEFAULT CURRENT_TIMESTAMP | Fecha de apertura (usada para calcular antigüedad). |
-| `resolved_at` | TEXT | | Fecha de cierre definitivo del caso. |
+| Campo                   | Tipo    | Restricción                  | Descripción                                         |
+| :---------------------- | :------ | :--------------------------- | :-------------------------------------------------- |
+| `id`                    | INTEGER | PRIMARY KEY AUTOINCREMENT    | Número de caso (`#CASO-X`).                         |
+| `extinguisher_id`       | INTEGER | REFERENCES extinguishers(id) | Extintor afectado.                                  |
+| `extinguisher_code`     | TEXT    | NOT NULL                     | Código del extintor.                                |
+| `inspection_id`         | INTEGER | REFERENCES inspections(id)   | Inspección que originó el caso.                     |
+| `title`                 | TEXT    | NOT NULL                     | Resumen del problema (ej: _"Baja Presión"_).        |
+| `description`           | TEXT    |                              | Explicación detallada de la anomalía.               |
+| `status`                | TEXT    | DEFAULT 'OPEN'               | `OPEN`, `IN_WORKSHOP`, `TEMP_REPLACED`, `RESOLVED`. |
+| `temp_replacement_code` | TEXT    |                              | Código del extintor provisorio instalado.           |
+| `responsible`           | TEXT    |                              | Responsable de la gestión del caso.                 |
+| `created_at`            | TEXT    | DEFAULT CURRENT_TIMESTAMP    | Fecha de apertura (usada para calcular antigüedad). |
+| `resolved_at`           | TEXT    |                              | Fecha de cierre definitivo del caso.                |
 
 ---
 
 ## 3. Seguridad, Antifraude y Resiliencia
 
 ### 3.1. Protección de Cabeceras HTTP y Rate Limiting
+
 En `server/index.js`, se implementa una capa de seguridad para entornos de producción:
+
 - `X-Content-Type-Options: nosniff`: Previene ataques de interpretación errónea de tipos MIME.
 - `X-Frame-Options: SAMEORIGIN`: Impide ataques de clickjacking mediante incrustación en iframes no autorizados.
 - `X-XSS-Protection: 1; mode=block`: Filtro activo contra inyecciones XSS en navegadores heredados.
@@ -159,16 +166,28 @@ En `server/index.js`, se implementa una capa de seguridad para entornos de produ
 - **In-Memory Rate Limiting**: Limitador de tasa por IP que restringe a 300 peticiones por minuto en rutas `/api/`, bloqueando intentos de scraping o ataques de denegación de servicio.
 
 ### 3.2. Mecanismo de Control Antifraude
+
 Para asegurar la validez pericial de los controles ante la ART o la justicia laboral:
+
 1. **Medición de Tiempo Real**: Al cargarse la ficha del extintor en el celular del operario, se inicia un cronómetro interno inalterable (`startTimeRef`).
 2. **Detección de Inspección Apresurada**: Si el tiempo de control es inferior a **5 segundos**, la inspección es clasificada automáticamente como `is_suspicious = 1`.
 3. **No Bloqueo Operativo**: El sistema **no interrumpe ni bloquea** la tarea del operario para mantener la agilidad del trabajo en obra, pero resalta el evento con una pastilla roja en los paneles gerenciales y en las planillas de auditoría de Excel.
 4. **Geolocalización Asistida**: Captura latitud, longitud y radio de precisión si el dispositivo tiene habilitado el GPS y el operario concede el permiso.
 
 ### 3.3. Arquitectura Offline y Sincronización (IndexedDB + PWA)
+
 - **IndexedDB (`src/utils/offlineQueue.js`)**: Base de datos local transaccional `milicic_matafuegos_offline` con el almacén `pending_inspections`.
-- **Estrategia Service Worker**: El archivo `public/sw.js` opera bajo la política **Network-First para navegación**, asegurando que el cliente siempre descargue la última versión de código y recursos visuales, utilizando la caché local exclusivamente cuando no existe conectividad a internet.
+- **Estrategia Service Worker**: El archivo `public/sw.js` opera bajo la política **Network-First para navegación** con versión de caché `milicic-firecontrol-v4`, asegurando que el cliente siempre descargue la última versión de código y recursos visuales, utilizando la caché local exclusivamente cuando no existe conectividad a internet.
 - **Compresión Client-Side de Fotografías**: Antes de subir o almacenar una foto en IndexedDB, la función `compressImageFile` la procesa en un elemento `<canvas>` HTML5 reduciendo su dimensión máxima a 1024 píxeles y codificándola en JPEG al 70% de calidad. Esto reduce el peso de una imagen típica de 8 MB a menos de 150 KB.
+- **Depuración de Conflictos 409**: Las inspecciones encoladas que reciben código `409 Conflict` (ya registradas en la ronda) son purgadas de IndexedDB para no saturar al backend con reintentos innecesarios.
+
+### 3.4. Motor de Escaneo QR, Redirección y Tolerancia a Fallos
+
+- **Redirección de URL Corta (`/m/:publicId`)**: El servidor expone un endpoint HTTP 302 que recibe el identificador criptográfico (`public_id`) de 24 caracteres embebido en los rótulos físicos y transfiere de forma transparente a la vista de inspección `/?code=MF-XXX#check`.
+- **Detección Dinámica de Dominio (`getBaseUrl`)**: En `server/routes/qrs.js`, la URL base resuelve dinámicamente el protocolo y host (`x-forwarded-proto`, `x-forwarded-host`, `host`), permitiendo que las etiquetas impresas o visualizadas en pantalla funcionen sin fricción tanto en túneles de desarrollo como bajo el dominio corporativo en Dokploy.
+- **Normalización Tolerante de Código (`GET /api/extinguishers/:idOrCode`)**: La API limpia cualquier entrada (URLs completas, rutas relativas, parámetros `code=...`, hashes `#check` y números simples con auto-padding `MF-XXX`), con consulta `COLLATE NOCASE` / `UPPER()`.
+- **Ciclo de Vida Blindado de Cámara (`Scanner.jsx`)**: Gestión asíncrona de `Html5Qrcode` con banderas de detención (`hasStoppedRef`), verificación de `isScanning` previa a `.stop()` y `.clear()`, y protección en `try/catch` para evitar excepciones sincrónicas que desmonten React al escanear.
+- **React Error Boundary Corporativo (`ErrorBoundary.jsx`)**: Envuelve la aplicación completa para atrapar cualquier excepción visual o de ciclo de vida imprevista, previniendo pantallas en blanco y ofreciendo recuperación con un toque.
 
 ---
 
@@ -177,7 +196,9 @@ Para asegurar la validez pericial de los controles ante la ART o la justicia lab
 Dokploy gestiona el ciclo de vida del contenedor, certificados SSL automáticos con Let's Encrypt y enrutamiento inverso mediante Traefik.
 
 ### 4.1. Archivo `Dockerfile` Multi-Stage Optimizado
+
 El build está desacoplado en dos etapas para minimizar el tamaño de la imagen final:
+
 ```dockerfile
 # Etapa 1: Compilación de Vite
 FROM node:22-alpine AS builder
@@ -210,6 +231,7 @@ CMD ["node", "server/index.js"]
 ```
 
 ### 4.2. Pasos de Configuración en el Panel de Dokploy
+
 1. Iniciar sesión en el panel web de Dokploy.
 2. Crear un nuevo servicio de tipo **Application**.
 3. Seleccionar origen **GitHub Repository**:
@@ -218,7 +240,7 @@ CMD ["node", "server/index.js"]
    - Build Type: `Dockerfile` (o `Docker Compose`).
 4. **Almacenamiento Persistente (Volume)**:
    - Volume Name: `milicic_matafuegos_data`
-   - Mount Path en el contenedor: `/data` *(Crítico: aquí reside `matafuegos.db`)*.
+   - Mount Path en el contenedor: `/data` _(Crítico: aquí reside `matafuegos.db`)_.
 5. **Configuración de Dominio y SSL**:
    - Host: `matafuegos.milicic.com.ar` (o subdominio asignado).
    - Port: `3000`.
@@ -241,14 +263,18 @@ CMD ["node", "server/index.js"]
 ## 5. Procedimiento de Respaldo y Restauración (Disaster Recovery)
 
 ### 5.1. Script de Backup en Caliente (`scripts/backup.sh`)
+
 El script ejecuta un backup online sin interrumpir el funcionamiento de la aplicación:
+
 ```bash
 # Ejecución manual o programada por crontab del host
 docker exec -it <CONTAINER_ID> /app/scripts/backup.sh
 ```
+
 El script genera un archivo `matafuegos_backup_YYYYMMDD_HHMMSS.db.gz` en `/data/backups/` y purga automáticamente los archivos con más de 14 días de antigüedad.
 
 ### 5.2. Procedimiento de Restauración Paso a Paso:
+
 1. Detener el contenedor de la aplicación:
    ```bash
    docker stop milicic-matafuegos

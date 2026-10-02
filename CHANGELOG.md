@@ -4,6 +4,29 @@ Todas las modificaciones notables de este proyecto están documentadas en este a
 
 ---
 
+## [2.5.1] - 2026-10-02 (Mobile Scanner Resiliency, Dynamic Routing & Fault Tolerance)
+
+### Corregido & Mejorado
+
+- **Blindaje del Ciclo de Vida de la Cámara (`Scanner.jsx`)**:
+  - Resuelto error crítico de pantalla en blanco (`Cannot stop, scanner is not running or paused.`) al desmontar el componente tras un escaneo exitoso en dispositivos móviles.
+  - Implementación de `hasStoppedRef` y envoltorios `try/catch` asíncronos para garantizar que `Html5Qrcode.stop()` y `.clear()` solo se ejecuten de forma segura una única vez.
+  - Envoltorio de seguridad para la vibración háptica (`navigator.vibrate`) ante restricciones de políticas del navegador móvil sin gesto previo de usuario.
+  - Temporizador de desbloqueo automático (2s) en `isProcessingRef` para evitar congelamiento de lecturas.
+- **Resolución Flexible de Extintores en Backend y Frontend (`extinguishers.js` & `App.jsx`)**:
+  - `GET /api/extinguishers/:idOrCode` ahora limpia y normaliza cualquier formato de entrada: URLs completas (incluyendo dominios previos o actuales), rutas relativas `/m/<public_id>`, parámetros `code=...`, hashes `#check` y números puros con auto-padding (`1` -> `MF-001`).
+  - `handleSelectCode` en `App.jsx` extrae el código previo a la petición y cuenta con respaldo offline directo sobre la lista en memoria de extintores.
+- **Detección Dinámica de Dominio Base (`qrs.js`)**:
+  - `getBaseUrl(req)` resuelve dinámicamente el protocolo y dominio activo utilizando encabezados de proxy inverso (`x-forwarded-proto`, `x-forwarded-host`, `host`), asegurando que las etiquetas QR generadas en pantalla o impresas siempre apunten al dominio en uso.
+- **Manejo de Errores Global con React Error Boundary (`ErrorBoundary.jsx`)**:
+  - Integración de componente de barrera de errores corporativo Milicic que atrapa cualquier excepción imprevista de renderizado o ciclo de vida, previniendo pantallas en blanco y ofreciendo botón de recuperación con un toque.
+- **Depuración de Cola de Sincronización Offline (`offlineQueue.js`)**:
+  - Los registros locales que reciben respuesta `409 Conflict` (extintor ya inspeccionado en la ronda) se eliminan automáticamente de IndexedDB para evitar tormentas de peticiones repetitivas cada 15 segundos.
+- **Invalidación de Caché PWA (`sw.js`)**:
+  - Incremento de versión de caché a `milicic-firecontrol-v4` forzando la purga y reemplazo inmediato de bundles JS obsoletos en teléfonos móviles.
+
+---
+
 ## [2.5.0] - 2026-10-02 (Production Ready & Enterprise Hardening)
 
 ### Agregado
