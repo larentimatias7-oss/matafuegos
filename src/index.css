@@ -356,7 +356,8 @@ body {
   right: 0;
   background: var(--milicic-slate-dark);
   border-top: 1.5px solid rgba(255, 255, 255, 0.12);
-  padding: 0.35rem 0.5rem calc(0.35rem + var(--safe-bottom)) 0.5rem;
+  padding: 6px 8px calc(8px + var(--safe-bottom)) 8px;
+  min-height: 60px;
   display: flex;
   justify-content: space-around;
   align-items: center;
@@ -375,19 +376,21 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 60px;
-  min-height: 50px;
+  flex: 1;
+  max-width: 68px;
+  min-height: 46px;
   background: transparent;
   border: none;
   color: #94a3b8;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 600;
   cursor: pointer;
-  padding: 0.2rem 0.4rem;
+  padding: 3px 2px;
   border-radius: var(--radius-sm);
   transition: all 0.15s ease;
   user-select: none;
-  gap: 0.2rem;
+  gap: 2px;
+  line-height: 1.1;
 }
 
 .mobile-nav-btn:active {
@@ -402,9 +405,9 @@ body {
 /* Central Featured Scan Button */
 .mobile-nav-scan {
   position: relative;
-  top: -14px;
-  width: 56px;
-  height: 56px;
+  top: -12px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--milicic-orange) 0%, var(--milicic-orange-hover) 100%);
   color: #ffffff !important;
@@ -416,6 +419,7 @@ body {
   border: 3px solid var(--milicic-slate-dark);
   cursor: pointer;
   transition: transform 0.15s ease;
+  flex-shrink: 0;
 }
 
 .mobile-nav-scan:active {
@@ -426,7 +430,8 @@ body {
 .mobile-header {
   background: var(--milicic-slate-dark);
   color: #ffffff;
-  padding: calc(0.6rem + var(--safe-top)) 0.85rem 0.6rem 0.85rem;
+  padding: calc(0.45rem + var(--safe-top)) 0.75rem 0.45rem 0.75rem;
+  min-height: 52px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -434,6 +439,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 85;
+  gap: 0.5rem;
 }
 
 @media (min-width: 1025px) {

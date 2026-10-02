@@ -40,6 +40,7 @@ export default function Dashboard({ stats, onNavigate, onExportExcel, onResetSee
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       
       {/* Top Banner with Milicic Branding & Quick Navigation */}
+      {/* Top Banner with Milicic Branding & Quick Navigation */}
       <div className="card" style={{
         background: 'linear-gradient(135deg, var(--milicic-slate-dark) 0%, var(--milicic-slate-lead) 100%)',
         color: '#ffffff',
@@ -48,24 +49,26 @@ export default function Dashboard({ stats, onNavigate, onExportExcel, onResetSee
         alignItems: 'center',
         justifyContent: 'space-between',
         flexWrap: 'wrap',
-        gap: '1.2rem'
+        gap: '0.85rem',
+        padding: '0.9rem 1rem'
       }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--milicic-orange)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+        <div style={{ flex: '1 1 280px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--milicic-orange)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Milicic S.A. • Seguridad e Higiene
             </span>
           </div>
-          <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.35rem' }}>
-            Panel Ejecutivo de Extintores • {activeRound?.name || 'Ronda Mensual'}
+          <h1 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', margin: 0, lineHeight: 1.25 }}>
+            Panel Ejecutivo • {activeRound?.name || 'Ronda Mensual'}
           </h1>
-          <p style={{ color: '#94a3b8', fontSize: '0.88rem', maxWidth: '750px' }}>
+          <p className="desktop-only" style={{ color: '#94a3b8', fontSize: '0.88rem', maxWidth: '750px', marginTop: '0.35rem', marginBottom: 0 }}>
             Auditoría periódica de {metrics.totalOperative} extintores operativos bajo norma <strong>IRAM 3517-2</strong>. 
             El personal de campo realiza el relevamiento mediante escaneo QR y checklist en celular.
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+        {/* Desktop Buttons (All 4) */}
+        <div className="desktop-only" style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
           <button 
             onClick={() => onNavigate('route')}
             className="btn btn-primary"
@@ -105,6 +108,29 @@ export default function Dashboard({ stats, onNavigate, onExportExcel, onResetSee
             <FileSpreadsheet size={18} />
             <span>Excel 365</span>
           </button>
+        </div>
+
+        {/* Mobile Quick Action Pill (Compact 1-row) */}
+        <div className="mobile-only" style={{ width: '100%', display: 'flex', gap: '0.5rem', marginTop: '0.2rem' }}>
+          <button 
+            onClick={() => onNavigate('route')}
+            className="btn btn-primary btn-sm"
+            style={{ flex: 1, minHeight: '38px', fontWeight: 800, fontSize: '0.8rem' }}
+          >
+            <Navigation size={15} />
+            <span>Mi Ruta ({metrics.pendingThisMonth} pend.)</span>
+          </button>
+
+          <a 
+            href="/api/m365/report-html" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="btn btn-secondary btn-sm" 
+            style={{ flex: 1, minHeight: '38px', fontWeight: 700, fontSize: '0.8rem', textDecoration: 'none' }}
+          >
+            <Printer size={15} />
+            <span>Informe PDF</span>
+          </a>
         </div>
       </div>
 

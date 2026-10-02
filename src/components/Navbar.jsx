@@ -69,24 +69,25 @@ export default function Navbar({
           1. COMPACT MOBILE HEADER (< 1025px)
           ========================================================================= */}
       <header className="mobile-header no-print">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
           <div style={{
             background: '#ffffff',
             padding: '3px 6px',
             borderRadius: '5px',
             display: 'flex',
             alignItems: 'center',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+            boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+            flexShrink: 0
           }}>
             <img 
               src="/logo-milicic.svg" 
               alt="Milicic S.A." 
-              style={{ height: '22px', width: 'auto' }} 
+              style={{ height: '20px', width: 'auto' }} 
               onError={(e) => { e.target.src = '/logo-milicic.png'; }} 
             />
           </div>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#ffffff', lineHeight: 1.15 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#ffffff', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {getTabTitle(activeTab)}
             </div>
             <div style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
@@ -100,25 +101,25 @@ export default function Navbar({
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
           <button
             onClick={onToggleTheme}
             className="btn btn-secondary btn-sm"
-            style={{ minHeight: '34px', padding: '0.2rem 0.5rem', background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.2)' }}
+            style={{ width: '36px', height: '36px', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.2)' }}
             title={theme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}
             aria-label="Cambiar tema"
           >
-            {theme === 'dark' ? <Sun size={15} color="#fbbf24" /> : <Moon size={15} color="#cbd5e1" />}
+            {theme === 'dark' ? <Sun size={16} color="#fbbf24" /> : <Moon size={16} color="#cbd5e1" />}
           </button>
 
           <button
             onClick={onNewExtinguisher}
             className="btn btn-primary btn-sm"
-            style={{ minHeight: '34px', padding: '0.2rem 0.6rem', fontSize: '0.8rem' }}
+            style={{ width: '36px', height: '36px', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
             title="Nuevo Extintor"
+            aria-label="Nuevo Extintor"
           >
-            <Plus size={15} />
-            <span>Nuevo</span>
+            <Plus size={18} />
           </button>
         </div>
       </header>
