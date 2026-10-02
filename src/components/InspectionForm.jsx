@@ -74,11 +74,12 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
       try {
         const res = await fetch('/api/checklist');
         const data = await res.json();
-        setChecklistItems(data);
+        const items = Array.isArray(data) ? data : (data.items || []);
+        setChecklistItems(items);
 
         // Pre-fill all with OK (1) by default for fast thumb inspection
         const initial = {};
-        data.forEach(item => {
+        items.forEach(item => {
           initial[item.code] = 1;
         });
         setChecks(initial);

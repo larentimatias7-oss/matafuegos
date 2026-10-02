@@ -38,23 +38,32 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
   const scannerInstanceRef = useRef(null);
   const videoTrackRef = useRef(null);
   const isStartingRef = useRef(false);
+  const isProcessingRef = useRef(false);
 
   // Parse QR content
   const handleDecodedText = (decodedText) => {
-    const raw = decodedText.trim();
+    if (isProcessingRef.current) return;
+    const raw = (decodedText || '').trim();
+    if (!raw) return;
+
+    isProcessingRef.current = true;
+    setTimeout(() => {
+      isProcessingRef.current = false;
+    }, 2000);
 
     // Haptic feedback upon scan
     if (navigator.vibrate) {
       navigator.vibrate([60]);
     }
 
-    // Check for short public URL /m/<publicId>
-    const mMatch = raw.match(/\/m\/([a-zA-Z0-9_-]+)/);
+    // 1. Check for short public URL /m/<publicId>
+    const mMatch = raw.match(/\/m\/([a-zA-Z0-9_-]+)/i);
     if (mMatch) {
       onSelectCode(mMatch[1]);
       return;
     }
 
+    // 2. Check for code= parameter
     if (raw.includes('code=')) {
       try {
         const url = new URL(raw);
@@ -63,8 +72,8 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
           onSelectCode(codeParam.toUpperCase());
           return;
         }
-      } catch (e) {
-        const match = raw.match(/code=([A-Za-z0-9_-]+)/);
+      } catch (_e) {
+        const match = raw.match(/code=([A-Za-z0-9_-]+)/i);
         if (match) {
           onSelectCode(match[1].toUpperCase());
           return;
@@ -72,6 +81,21 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
       }
     }
 
+    // 3. Check for standalone or embedded MF-XXX pattern
+    const mfMatch = raw.match(/(MF-\d{3,})/i);
+    if (mfMatch) {
+      onSelectCode(mfMatch[1].toUpperCase());
+      return;
+    }
+
+    // 4. Check for hexadecimal public_id (12 to 24 chars)
+    const hexMatch = raw.match(/\b([a-fA-F0-9]{12,24})\b/);
+    if (hexMatch) {
+      onSelectCode(hexMatch[1].toLowerCase());
+      return;
+    }
+
+    // 5. Fallback clean string
     onSelectCode(raw.toUpperCase());
   };
 

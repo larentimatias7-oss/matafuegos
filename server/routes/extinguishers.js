@@ -102,17 +102,40 @@ router.get('/', authenticate, (req, res) => {
 // GET single extinguisher by id, code or public_id
 router.get('/:idOrCode', authenticate, (req, res) => {
   try {
-    const { idOrCode } = req.params;
+    const rawParam = req.params.idOrCode || '';
+    let clean = decodeURIComponent(rawParam).trim();
+
+    // 1. If a full or relative URL is passed, extract /m/:publicId
+    if (clean.includes('/m/')) {
+      const mMatch = clean.match(/\/m\/([a-zA-Z0-9_-]+)/i);
+      if (mMatch) clean = mMatch[1];
+    } else if (clean.includes('code=')) {
+      const codeMatch = clean.match(/code=([A-Za-z0-9_-]+)/i);
+      if (codeMatch) clean = codeMatch[1];
+    }
+
+    // 2. Strip any query parameters, hash fragments, or trailing slashes
+    clean = clean.split('#')[0].split('?')[0].replace(/\/+$/, '').trim();
+
     let ext;
 
-    if (!isNaN(idOrCode)) {
-      ext = db.prepare('SELECT * FROM extinguishers WHERE id = ?').get(Number(idOrCode));
-    }
+    // 3. Search by exact code (case-insensitive) e.g. MF-001
+    ext = db.prepare('SELECT * FROM extinguishers WHERE UPPER(code) = ?').get(clean.toUpperCase());
+
+    // 4. Search by public_id (case-insensitive) e.g. bb03f46d028d
     if (!ext) {
-      ext = db.prepare('SELECT * FROM extinguishers WHERE code = ?').get(idOrCode.toUpperCase());
+      ext = db.prepare('SELECT * FROM extinguishers WHERE LOWER(public_id) = ?').get(clean.toLowerCase());
     }
-    if (!ext) {
-      ext = db.prepare('SELECT * FROM extinguishers WHERE public_id = ?').get(idOrCode.toLowerCase());
+
+    // 5. If purely digits, try numeric ID
+    if (!ext && /^\d+$/.test(clean)) {
+      ext = db.prepare('SELECT * FROM extinguishers WHERE id = ?').get(Number(clean));
+    }
+
+    // 6. If purely digits, try standard padded MF code (e.g. 1 -> MF-001)
+    if (!ext && /^\d+$/.test(clean)) {
+      const padded = `MF-${clean.padStart(3, '0')}`;
+      ext = db.prepare('SELECT * FROM extinguishers WHERE UPPER(code) = ?').get(padded);
     }
 
     if (!ext) {

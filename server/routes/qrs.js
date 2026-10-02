@@ -3,10 +3,33 @@ const router = express.Router();
 const QRCode = require('qrcode');
 const { db } = require('../db');
 
-// Helper to get base URL
-function getBaseUrl() {
+// Helper to get base URL dynamically from request, env, or settings
+function getBaseUrl(req) {
+  if (req) {
+    const forwardedHost = req.get('x-forwarded-host');
+    const host = forwardedHost || req.get('host');
+    const proto = req.get('x-forwarded-proto') || req.protocol || 'http';
+    if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
+      return `${proto}://${host}`;
+    }
+  }
+
+  if (process.env.BASE_URL) {
+    return process.env.BASE_URL.replace(/\/$/, '');
+  }
+
   const row = db.prepare("SELECT value FROM settings WHERE key = 'base_url'").get();
-  return row ? row.value : 'http://localhost:3000';
+  if (row && row.value && row.value.startsWith('http')) {
+    return row.value.replace(/\/$/, '');
+  }
+
+  if (req) {
+    const host = req.get('x-forwarded-host') || req.get('host');
+    const proto = req.get('x-forwarded-proto') || req.protocol || 'http';
+    return `${proto}://${host}`;
+  }
+
+  return 'http://localhost:3000';
 }
 
 // GET single QR data URL
@@ -22,7 +45,7 @@ router.get('/single/:codeOrPublicId', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Matafuego no encontrado' });
     }
 
-    const baseUrl = getBaseUrl();
+    const baseUrl = getBaseUrl(req);
     const qrTargetUrl = `${baseUrl}/m/${ext.public_id}`;
 
     // Level H error correction (30% damage resistance)
@@ -78,7 +101,7 @@ router.get('/batch', async (req, res) => {
     query += ' ORDER BY code ASC';
     const extinguishers = db.prepare(query).all(...params);
 
-    const baseUrl = getBaseUrl();
+    const baseUrl = getBaseUrl(req);
 
     // Generate QRs with Error Correction Level H
     const results = await Promise.all(

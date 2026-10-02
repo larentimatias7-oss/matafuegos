@@ -84,17 +84,53 @@ export default function App() {
   };
 
   const handleSelectCode = async (codeOrPublicId) => {
+    if (!codeOrPublicId) return;
     try {
-      const res = await fetch(`/api/extinguishers/${encodeURIComponent(codeOrPublicId)}`);
+      let target = String(codeOrPublicId).trim();
+      if (target.includes('/m/')) {
+        const m = target.match(/\/m\/([a-zA-Z0-9_-]+)/i);
+        if (m) target = m[1];
+      } else if (target.includes('code=')) {
+        const m = target.match(/code=([A-Za-z0-9_-]+)/i);
+        if (m) target = m[1];
+      }
+      target = target.split('#')[0].split('?')[0].replace(/\/+$/, '').trim();
+
+      const res = await fetch(`/api/extinguishers/${encodeURIComponent(target)}`);
       const data = await res.json();
       if (data.success && data.data) {
         setInspectingExtinguisher(data.data);
+        setActiveTab('scan');
+        return;
+      }
+
+      // Fallback: check in local state extinguishers array
+      const localFound = extinguishers.find(e => 
+        (e.code && e.code.toUpperCase() === target.toUpperCase()) ||
+        (e.public_id && e.public_id.toLowerCase() === target.toLowerCase()) ||
+        String(e.id) === target
+      );
+
+      if (localFound) {
+        setInspectingExtinguisher(localFound);
         setActiveTab('scan');
       } else {
         alert(`No se encontró ningún matafuego con el código "${codeOrPublicId}".`);
       }
     } catch (e) {
-      alert(`Error al buscar extintor: ${e.message}`);
+      // Offline fallback: check local extinguishers array
+      const target = String(codeOrPublicId).trim().toUpperCase();
+      const localFound = extinguishers.find(e => 
+        (e.code && e.code.toUpperCase() === target) ||
+        (e.public_id && e.public_id.toLowerCase() === target.toLowerCase()) ||
+        String(e.id) === target
+      );
+      if (localFound) {
+        setInspectingExtinguisher(localFound);
+        setActiveTab('scan');
+      } else {
+        alert(`Error al buscar extintor: ${e.message}`);
+      }
     }
   };
 

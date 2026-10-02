@@ -92,7 +92,7 @@ export async function syncOfflineInspections(onItemSynced) {
         body: JSON.stringify(payload)
       });
 
-      if (res.ok) {
+      if (res.ok || res.status === 409) {
         await removeOfflineInspection(id);
         synced++;
         if (onItemSynced) onItemSynced(item);
