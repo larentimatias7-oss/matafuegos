@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  History, 
-  Search, 
-  CheckCircle2, 
-  AlertTriangle, 
-  Calendar, 
+  ClockCounterClockwise, 
+  MagnifyingGlass, 
+  CheckCircle, 
+  WarningCircle, 
+  CalendarCheck, 
   User, 
-  FileSpreadsheet,
-  Clock,
-  Filter,
-  Eye,
-  X,
-  MapPin,
-  ShieldCheck,
-  ShieldAlert
-} from 'lucide-react';
+  FileXls, 
+  Clock, 
+  Funnel, 
+  Eye, 
+  X, 
+  MapPin, 
+  ShieldCheck, 
+  ShieldWarning 
+} from '@phosphor-icons/react';
 
 export default function InspectionHistory({ onExportExcel }) {
   const [inspections, setInspections] = useState([]);
@@ -68,17 +68,17 @@ export default function InspectionHistory({ onExportExcel }) {
           marginBottom: '0.85rem'
         }}>
           <div>
-            <h2 className="card-title" style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-              <History size={20} color="var(--milicic-orange)" />
+            <h2 className="card-title" style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.45rem', margin: 0 }}>
+              <ClockCounterClockwise size={22} weight="bold" color="var(--milicic-orange)" aria-hidden="true" />
               <span>Historial de Inspecciones</span>
             </h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: '0.2rem', marginBottom: 0 }}>
               Registro cronológico inmutable de auditorías periódicas (IRAM 3517-2).
             </p>
           </div>
 
           <button onClick={onExportExcel} className="btn btn-secondary btn-sm" style={{ fontWeight: 700 }}>
-            <FileSpreadsheet size={16} color="#16a34a" />
+            <FileXls size={16} weight="bold" color="#16a34a" aria-hidden="true" />
             <span>Excel 365</span>
           </button>
         </div>
@@ -86,7 +86,7 @@ export default function InspectionHistory({ onExportExcel }) {
         {/* Filters */}
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
-            <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+            <MagnifyingGlass size={16} weight="bold" color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} aria-hidden="true" />
             <input 
               type="text"
               placeholder="Buscar por código, inspector u observación..."
@@ -102,6 +102,7 @@ export default function InspectionHistory({ onExportExcel }) {
             onChange={(e) => setFilterResult(e.target.value)}
             className="select"
             style={{ maxWidth: '170px' }}
+            aria-label="Filtrar por resultado"
           >
             <option value="">Resultado: Todos</option>
             <option value="OK">Conforme OK</option>
@@ -128,8 +129,8 @@ export default function InspectionHistory({ onExportExcel }) {
               {/* Header: Código + Resultado */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <span className="font-mono" style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--milicic-orange)' }}>
-                    {item.extinguisher_code}
+                  <span className="milicic-id-plate">
+                    <span className="plate-code">{item.extinguisher_code}</span>
                   </span>
                   {item.is_reinspection === 1 && (
                     <span className="status-badge info" style={{ fontSize: '0.62rem', padding: '0.1rem 0.35rem' }}>
@@ -146,29 +147,29 @@ export default function InspectionHistory({ onExportExcel }) {
                 <div>
                   {item.passed === 1 ? (
                     <span className="status-badge ok">
-                      <CheckCircle2 size={13} /> Conforme OK
+                      <CheckCircle size={13} weight="bold" aria-hidden="true" /> Conforme OK
                     </span>
                   ) : (
                     <span className="status-badge fault">
-                      <AlertTriangle size={13} /> Con Falla
+                      <WarningCircle size={13} weight="bold" aria-hidden="true" /> Con Falla
                     </span>
                   )}
                 </div>
               </div>
 
               {/* Ubicación */}
-              <div style={{ fontSize: '0.86rem', color: 'var(--text-main)', fontWeight: 600 }}>
+              <div style={{ fontSize: '0.86rem', color: 'var(--text-main)', fontWeight: 600, marginTop: '0.25rem' }}>
                 {item.location || 'Ubicación no especificada'}
               </div>
 
               {/* Inspector y Fecha */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border-color)', paddingTop: '0.45rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <User size={13} />
+                  <User size={13} weight="bold" aria-hidden="true" />
                   <span>{item.inspector_name}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <Clock size={13} />
+                  <Clock size={13} weight="bold" aria-hidden="true" />
                   <span>{item.inspection_date?.substring(0, 16)}</span>
                 </div>
               </div>
@@ -196,7 +197,7 @@ export default function InspectionHistory({ onExportExcel }) {
                   className="btn btn-secondary btn-sm"
                   style={{ width: '100%', minHeight: '38px', fontSize: '0.82rem' }}
                 >
-                  <Eye size={15} />
+                  <Eye size={15} weight="bold" aria-hidden="true" />
                   <span>Ver Detalle del Control</span>
                 </button>
               </div>
@@ -234,8 +235,8 @@ export default function InspectionHistory({ onExportExcel }) {
                     #{item.id}
                   </td>
                   <td>
-                    <span className="font-mono" style={{ fontWeight: 800, color: 'var(--milicic-orange)' }}>
-                      {item.extinguisher_code}
+                    <span className="milicic-id-plate">
+                      <span className="plate-code">{item.extinguisher_code}</span>
                     </span>
                   </td>
                   <td>{item.inspection_date}</td>
@@ -243,11 +244,11 @@ export default function InspectionHistory({ onExportExcel }) {
                   <td>
                     {item.passed === 1 ? (
                       <span className="status-badge ok">
-                        <CheckCircle2 size={12} /> Aprobado
+                        <CheckCircle size={13} weight="bold" aria-hidden="true" /> Aprobado
                       </span>
                     ) : (
                       <span className="status-badge fault">
-                        <AlertTriangle size={12} /> Falla
+                        <WarningCircle size={13} weight="bold" aria-hidden="true" /> Falla
                       </span>
                     )}
                   </td>
@@ -266,8 +267,9 @@ export default function InspectionHistory({ onExportExcel }) {
                       className="btn btn-secondary btn-sm"
                       style={{ padding: '0.25rem 0.5rem' }}
                       title="Ver Detalle"
+                      aria-label={`Ver detalle de inspección ${item.id}`}
                     >
-                      <Eye size={15} />
+                      <Eye size={15} weight="bold" aria-hidden="true" />
                     </button>
                   </td>
                 </tr>
@@ -290,8 +292,10 @@ export default function InspectionHistory({ onExportExcel }) {
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
                   Detalle de Inspección #{selectedInspection.id}
                 </div>
-                <div className="font-mono" style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--milicic-orange)' }}>
-                  {selectedInspection.extinguisher_code}
+                <div style={{ marginTop: '0.25rem' }}>
+                  <span className="milicic-id-plate milicic-id-plate-lg">
+                    <span className="plate-code">{selectedInspection.extinguisher_code}</span>
+                  </span>
                 </div>
               </div>
 
@@ -299,8 +303,9 @@ export default function InspectionHistory({ onExportExcel }) {
                 onClick={() => setSelectedInspection(null)}
                 className="btn btn-secondary btn-sm"
                 style={{ minHeight: '34px', padding: '0.2rem 0.5rem' }}
+                aria-label="Cerrar detalle"
               >
-                <X size={18} />
+                <X size={18} weight="bold" aria-hidden="true" />
               </button>
             </div>
 
@@ -316,9 +321,9 @@ export default function InspectionHistory({ onExportExcel }) {
                 gap: '0.65rem'
               }}>
                 {selectedInspection.passed === 1 ? (
-                  <CheckCircle2 size={24} color="var(--status-ok-text)" />
+                  <CheckCircle size={24} weight="bold" color="var(--status-ok-text)" aria-hidden="true" />
                 ) : (
-                  <AlertTriangle size={24} color="var(--status-fault-text)" />
+                  <WarningCircle size={24} weight="bold" color="var(--status-fault-text)" aria-hidden="true" />
                 )}
                 <div>
                   <div style={{ fontWeight: 800, color: selectedInspection.passed === 1 ? 'var(--status-ok-text)' : 'var(--status-fault-text)', fontSize: '1rem' }}>
@@ -338,7 +343,7 @@ export default function InspectionHistory({ onExportExcel }) {
                 </div>
                 <div style={{ background: 'var(--bg-app)', padding: '0.65rem', borderRadius: 'var(--radius-sm)' }}>
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 700 }}>Duración Control</div>
-                  <strong>{selectedInspection.duration_seconds || 'N/D'} segundos</strong>
+                  <strong>{selectedInspection.duration_seconds ? `${selectedInspection.duration_seconds} segundos` : 'N/D'}</strong>
                 </div>
               </div>
 

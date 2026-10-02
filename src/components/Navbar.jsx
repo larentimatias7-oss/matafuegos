@@ -1,25 +1,25 @@
 import React, { useState } from 'react';
 import { 
-  Flame, 
-  LayoutDashboard, 
-  ScanLine, 
-  History, 
-  FileSpreadsheet, 
+  FireExtinguisher, 
+  SquaresFour, 
+  QrCode, 
+  ClockCounterClockwise, 
+  FileXls, 
   Printer, 
   Plus, 
   MapPin, 
-  AlertTriangle, 
+  WarningCircle, 
   Sun, 
   Moon, 
   UserCheck, 
   CalendarCheck, 
   BookOpen,
-  Menu,
+  List,
   X,
-  ChevronRight,
-  Wifi,
-  WifiOff
-} from 'lucide-react';
+  CaretRight,
+  WifiHigh,
+  WifiSlash
+} from '@phosphor-icons/react';
 
 export default function Navbar({ 
   activeTab, 
@@ -34,14 +34,14 @@ export default function Navbar({
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   const tabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'dashboard', label: 'Dashboard', icon: SquaresFour },
     { id: 'route', label: 'Mi Ruta', icon: MapPin },
-    { id: 'scan', label: 'Control Rápido', icon: ScanLine, highlight: true },
-    { id: 'extinguishers', label: 'Inventario', icon: Flame },
-    { id: 'cases', label: 'Anomalías / Casos', icon: AlertTriangle },
+    { id: 'scan', label: 'Control Rápido', icon: QrCode, highlight: true },
+    { id: 'extinguishers', label: 'Inventario', icon: FireExtinguisher },
+    { id: 'cases', label: 'Anomalías / Casos', icon: WarningCircle },
     { id: 'qrs', label: 'Etiquetas QR', icon: Printer },
-    { id: 'history', label: 'Historial', icon: History },
-    { id: 'm365', label: 'Microsoft 365', icon: FileSpreadsheet },
+    { id: 'history', label: 'Historial', icon: ClockCounterClockwise },
+    { id: 'm365', label: 'Microsoft 365', icon: FileXls },
   ];
 
   const getTabTitle = (tabId) => {
@@ -94,7 +94,7 @@ export default function Navbar({
               <span>Milicic HSE</span>
               <span>•</span>
               <span style={{ color: isOnline ? '#4ade80' : '#fbbf24', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                {isOnline ? <Wifi size={10} /> : <WifiOff size={10} />}
+                {isOnline ? <WifiHigh size={12} weight="bold" aria-hidden="true" /> : <WifiSlash size={12} weight="bold" aria-hidden="true" />}
                 {isOnline ? 'En línea' : 'Offline'}
               </span>
             </div>
@@ -109,7 +109,7 @@ export default function Navbar({
             title={theme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}
             aria-label="Cambiar tema"
           >
-            {theme === 'dark' ? <Sun size={16} color="#fbbf24" /> : <Moon size={16} color="#cbd5e1" />}
+            {theme === 'dark' ? <Sun size={16} weight="bold" color="#fbbf24" aria-hidden="true" /> : <Moon size={16} weight="bold" color="#cbd5e1" aria-hidden="true" />}
           </button>
 
           <button
@@ -119,7 +119,7 @@ export default function Navbar({
             title="Nuevo Extintor"
             aria-label="Nuevo Extintor"
           >
-            <Plus size={18} />
+            <Plus size={18} weight="bold" aria-hidden="true" />
           </button>
         </div>
       </header>
@@ -177,7 +177,7 @@ export default function Navbar({
                 </span>
               </div>
               <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <CalendarCheck size={13} color="#fdba74" />
+                <CalendarCheck size={14} weight="bold" color="#fdba74" aria-hidden="true" />
                 <span>Ronda Activa: {currentRound?.name || 'Octubre 2026'}</span>
               </div>
             </div>
@@ -192,7 +192,7 @@ export default function Navbar({
               title={theme === 'dark' ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'}
               aria-label="Cambiar tema"
             >
-              {theme === 'dark' ? <Sun size={16} color="#fbbf24" /> : <Moon size={16} color="#475569" />}
+              {theme === 'dark' ? <Sun size={16} weight="bold" color="#fbbf24" aria-hidden="true" /> : <Moon size={16} weight="bold" color="#475569" aria-hidden="true" />}
             </button>
 
             {user && (
@@ -206,7 +206,7 @@ export default function Navbar({
                 color: '#f8fafc',
                 fontSize: '0.82rem'
               }}>
-                <UserCheck size={14} color="#34d399" />
+                <UserCheck size={14} weight="bold" color="#34d399" aria-hidden="true" />
                 <span style={{ fontWeight: 600 }}>{user.name}</span>
                 <span style={{ color: '#94a3b8', fontSize: '0.7rem' }}>({user.role})</span>
               </div>
@@ -217,7 +217,7 @@ export default function Navbar({
               className="btn btn-primary btn-sm"
               style={{ fontWeight: 700 }}
             >
-              <Plus size={16} />
+              <Plus size={16} weight="bold" aria-hidden="true" />
               <span>Nuevo Extintor</span>
             </button>
           </div>
@@ -259,7 +259,7 @@ export default function Navbar({
                   borderBottom: isActive ? '2px solid #ffffff' : '2px solid transparent'
                 }}
               >
-                <Icon size={16} />
+                <Icon size={16} weight={isActive ? 'bold' : 'regular'} aria-hidden="true" />
                 <span>{tab.label}</span>
               </button>
             );
@@ -287,7 +287,7 @@ export default function Navbar({
             }}
             title="Centro de Documentación Oficial de Milicic S.A."
           >
-            <BookOpen size={16} />
+            <BookOpen size={16} weight="bold" aria-hidden="true" />
             <span>Manuales & Docs</span>
           </a>
         </div>
@@ -302,7 +302,7 @@ export default function Navbar({
           onClick={() => handleSelectTab('dashboard')}
           className={`mobile-nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
         >
-          <LayoutDashboard size={20} />
+          <SquaresFour size={22} weight={activeTab === 'dashboard' ? 'bold' : 'regular'} aria-hidden="true" />
           <span>Inicio</span>
         </button>
 
@@ -311,7 +311,7 @@ export default function Navbar({
           onClick={() => handleSelectTab('extinguishers')}
           className={`mobile-nav-btn ${activeTab === 'extinguishers' ? 'active' : ''}`}
         >
-          <Flame size={20} />
+          <FireExtinguisher size={22} weight={activeTab === 'extinguishers' ? 'bold' : 'regular'} aria-hidden="true" />
           <span>Inventario</span>
         </button>
 
@@ -322,7 +322,7 @@ export default function Navbar({
           aria-label="Escanear Código QR"
           title="Escanear Código QR"
         >
-          <ScanLine size={26} strokeWidth={2.4} />
+          <QrCode size={28} weight="bold" aria-hidden="true" />
         </button>
 
         {/* Tab 4: Historial */}
@@ -330,7 +330,7 @@ export default function Navbar({
           onClick={() => handleSelectTab('history')}
           className={`mobile-nav-btn ${activeTab === 'history' ? 'active' : ''}`}
         >
-          <History size={20} />
+          <ClockCounterClockwise size={22} weight={activeTab === 'history' ? 'bold' : 'regular'} aria-hidden="true" />
           <span>Historial</span>
         </button>
 
@@ -339,7 +339,7 @@ export default function Navbar({
           onClick={() => setShowMoreMenu(true)}
           className={`mobile-nav-btn ${['route', 'cases', 'qrs', 'm365'].includes(activeTab) ? 'active' : ''}`}
         >
-          <Menu size={20} />
+          <List size={22} weight="regular" aria-hidden="true" />
           <span>Más</span>
         </button>
       </nav>
@@ -365,8 +365,9 @@ export default function Navbar({
                 onClick={() => setShowMoreMenu(false)}
                 className="btn btn-secondary btn-sm"
                 style={{ minHeight: '34px', padding: '0.2rem 0.5rem' }}
+                aria-label="Cerrar menú"
               >
-                <X size={18} />
+                <X size={18} weight="bold" aria-hidden="true" />
               </button>
             </div>
 
@@ -378,10 +379,10 @@ export default function Navbar({
                 style={{ justifyContent: 'space-between', minHeight: '50px', background: activeTab === 'route' ? 'var(--milicic-orange-soft)' : undefined }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <MapPin size={18} color="var(--milicic-orange)" />
+                  <MapPin size={18} weight="bold" color="var(--milicic-orange)" aria-hidden="true" />
                   <span style={{ fontWeight: 700 }}>Mi Ruta de Inspección</span>
                 </div>
-                <ChevronRight size={16} color="var(--text-muted)" />
+                <CaretRight size={16} weight="bold" color="var(--text-muted)" aria-hidden="true" />
               </button>
 
               {/* Opción: Casos y Anomalías */}
@@ -391,10 +392,10 @@ export default function Navbar({
                 style={{ justifyContent: 'space-between', minHeight: '50px', background: activeTab === 'cases' ? 'var(--milicic-orange-soft)' : undefined }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <AlertTriangle size={18} color="#dc2626" />
+                  <WarningCircle size={18} weight="bold" color="#dc2626" aria-hidden="true" />
                   <span style={{ fontWeight: 700 }}>Casos y Anomalías</span>
                 </div>
-                <ChevronRight size={16} color="var(--text-muted)" />
+                <CaretRight size={16} weight="bold" color="var(--text-muted)" aria-hidden="true" />
               </button>
 
               {/* Opción: Etiquetas QR */}
@@ -404,10 +405,10 @@ export default function Navbar({
                 style={{ justifyContent: 'space-between', minHeight: '50px', background: activeTab === 'qrs' ? 'var(--milicic-orange-soft)' : undefined }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <Printer size={18} color="var(--text-main)" />
+                  <Printer size={18} weight="bold" color="var(--text-main)" aria-hidden="true" />
                   <span style={{ fontWeight: 700 }}>Impresión de Etiquetas QR</span>
                 </div>
-                <ChevronRight size={16} color="var(--text-muted)" />
+                <CaretRight size={16} weight="bold" color="var(--text-muted)" aria-hidden="true" />
               </button>
 
               {/* Opción: Microsoft 365 */}
@@ -417,10 +418,10 @@ export default function Navbar({
                 style={{ justifyContent: 'space-between', minHeight: '50px', background: activeTab === 'm365' ? 'var(--milicic-orange-soft)' : undefined }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <FileSpreadsheet size={18} color="#16a34a" />
+                  <FileXls size={18} weight="bold" color="#16a34a" aria-hidden="true" />
                   <span style={{ fontWeight: 700 }}>Microsoft 365 & Excel</span>
                 </div>
-                <ChevronRight size={16} color="var(--text-muted)" />
+                <CaretRight size={16} weight="bold" color="var(--text-muted)" aria-hidden="true" />
               </button>
 
               {/* Opción: Documentación Oficial */}
@@ -432,10 +433,10 @@ export default function Navbar({
                 style={{ justifyContent: 'space-between', minHeight: '50px', textDecoration: 'none' }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <BookOpen size={18} color="var(--milicic-orange)" />
+                  <BookOpen size={18} weight="bold" color="var(--milicic-orange)" aria-hidden="true" />
                   <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>Centro de Documentación</span>
                 </div>
-                <ChevronRight size={16} color="var(--text-muted)" />
+                <CaretRight size={16} weight="bold" color="var(--text-muted)" aria-hidden="true" />
               </a>
             </div>
 

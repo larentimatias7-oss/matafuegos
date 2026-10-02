@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  FileSpreadsheet, 
-  Upload, 
-  Download, 
+  FileXls, 
+  UploadSimple, 
+  DownloadSimple, 
   Link, 
-  Send, 
-  CheckCircle2, 
-  AlertCircle, 
-  HelpCircle,
-  Share2,
-  Workflow
-} from 'lucide-react';
+  PaperPlaneTilt, 
+  CheckCircle, 
+  WarningCircle, 
+  Question,
+  ShareNetwork,
+  GitFork
+} from '@phosphor-icons/react';
 
 export default function M365SyncModal({ onExportExcel, onRefreshData }) {
   const [webhookUrl, setWebhookUrl] = useState('');
@@ -61,7 +61,7 @@ export default function M365SyncModal({ onExportExcel, onRefreshData }) {
       const data = await res.json();
       setTestResult(data);
     } catch (err) {
-      setTestResult({ success: false, error: err.message });
+      setTestResult({ success: false, message: err.message });
     } finally {
       setTestingWebhook(false);
     }
@@ -98,27 +98,29 @@ export default function M365SyncModal({ onExportExcel, onRefreshData }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', maxWidth: '900px', margin: '0 auto' }}>
       
       {/* Header */}
-      <div className="glass-card" style={{
-        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.9) 100%)',
-        borderLeft: '4px solid #0078d4'
+      <div className="card" style={{
+        background: 'linear-gradient(135deg, var(--milicic-slate-dark) 0%, var(--milicic-slate-lead) 100%)',
+        borderLeft: '4px solid #0078d4',
+        color: '#ffffff'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
           <div style={{
             background: '#0078d4',
-            width: '40px',
-            height: '40px',
+            width: '42px',
+            height: '42px',
             borderRadius: '8px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            flexShrink: 0
           }}>
-            <FileSpreadsheet size={22} color="#fff" />
+            <FileXls size={24} weight="bold" color="#fff" aria-hidden="true" />
           </div>
           <div>
-            <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#fff' }}>
+            <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#fff', margin: 0 }}>
               Integración con Microsoft 365 (Excel & SharePoint)
             </h2>
-            <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+            <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: 0 }}>
               Vinculá el control de matafuegos con el ecosistema de Microsoft de la empresa.
             </p>
           </div>
@@ -132,39 +134,39 @@ export default function M365SyncModal({ onExportExcel, onRefreshData }) {
       }}>
         
         {/* Card 1: Descargar / Exportar Planilla Excel 365 */}
-        <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-              <Download size={20} color="#34d399" />
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff' }}>
+              <DownloadSimple size={20} weight="bold" color="#16a34a" aria-hidden="true" />
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
                 1. Descargar Planilla Excel 365
               </h3>
             </div>
-            <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1rem', lineHeight: '1.4' }}>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem', lineHeight: '1.4' }}>
               Genera un archivo <strong>.xlsx</strong> nativo con estilos institucionales de Microsoft, pestañas independientes para los 130 matafuegos y el historial mensual, y semáforos de color.
             </p>
-            <ul style={{ fontSize: '0.8rem', color: '#cbd5e1', paddingLeft: '1.2rem', marginBottom: '1.25rem', lineHeight: '1.6' }}>
+            <ul style={{ fontSize: '0.8rem', color: 'var(--text-body)', paddingLeft: '1.2rem', marginBottom: '1.25rem', lineHeight: '1.6' }}>
               <li>Compatible al 100% con <strong>Excel Online 365</strong> y desktop.</li>
               <li>Pestaña 1: Inventario con vencimientos de carga y PH.</li>
               <li>Pestaña 2: Registro de inspecciones del mes actual.</li>
             </ul>
           </div>
 
-          <button onClick={onExportExcel} className="btn btn-m365 btn-lg" style={{ width: '100%' }}>
-            <FileSpreadsheet size={18} />
+          <button onClick={onExportExcel} className="btn btn-primary btn-lg" style={{ width: '100%', background: '#0078d4', borderColor: '#0078d4' }}>
+            <FileXls size={18} weight="bold" aria-hidden="true" />
             <span>Descargar Excel 365 Ahora</span>
           </button>
         </div>
 
         {/* Card 2: Importar Extintores desde Excel */}
-        <div className="glass-card">
+        <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-            <Upload size={20} color="#38bdf8" />
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff' }}>
+            <UploadSimple size={20} weight="bold" color="#0284c7" aria-hidden="true" />
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
               2. Importar o Actualizar desde Excel
             </h3>
           </div>
-          <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1rem' }}>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
             Si Santiago Amaya o la empresa ya tienen una lista de los 130 matafuegos en una planilla Excel, subila aquí para cargarla masivamente en 2 segundos.
           </p>
 
@@ -175,6 +177,7 @@ export default function M365SyncModal({ onExportExcel, onRefreshData }) {
               onChange={(e) => setSelectedFile(e.target.files[0])}
               className="input"
               style={{ fontSize: '0.85rem' }}
+              aria-label="Seleccionar archivo Excel"
             />
 
             <button 
@@ -182,7 +185,7 @@ export default function M365SyncModal({ onExportExcel, onRefreshData }) {
               disabled={!selectedFile || importing}
               className="btn btn-secondary"
             >
-              <Upload size={16} />
+              <UploadSimple size={16} weight="bold" aria-hidden="true" />
               <span>{importing ? 'Procesando archivo...' : 'Cargar Extintores'}</span>
             </button>
           </form>
@@ -193,9 +196,9 @@ export default function M365SyncModal({ onExportExcel, onRefreshData }) {
               padding: '0.65rem 0.85rem',
               borderRadius: '6px',
               fontSize: '0.8rem',
-              background: importResult.success ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-              color: importResult.success ? '#34d399' : '#f87171',
-              border: `1px solid ${importResult.success ? '#10b981' : '#ef4444'}`
+              background: importResult.success ? 'var(--status-ok-bg)' : 'var(--status-fault-bg)',
+              color: importResult.success ? 'var(--status-ok-text)' : 'var(--status-fault-text)',
+              border: `1px solid ${importResult.success ? 'var(--status-ok-border)' : 'var(--status-fault-border)'}`
             }}>
               {importResult.success ? importResult.message : `Error: ${importResult.error}`}
             </div>
@@ -205,15 +208,15 @@ export default function M365SyncModal({ onExportExcel, onRefreshData }) {
       </div>
 
       {/* Card 3: Sincronización en Vivo con Power Automate (M365 Webhook) */}
-      <div className="glass-card">
+      <div className="card">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-          <Workflow size={22} color="#0078d4" />
-          <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#fff' }}>
+          <GitFork size={22} weight="bold" color="#0078d4" aria-hidden="true" />
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
             3. Sincronización en Tiempo Real con Excel Online / SharePoint (Power Automate)
           </h3>
         </div>
 
-        <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1rem', lineHeight: '1.5' }}>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem', lineHeight: '1.5' }}>
           En empresas que usan Microsoft 365, la forma más rápida y sin código para conectar una app web con un archivo Excel en OneDrive/SharePoint es mediante <strong>Power Automate</strong> (incluido en las cuentas 365):
         </p>
 
@@ -224,21 +227,21 @@ export default function M365SyncModal({ onExportExcel, onRefreshData }) {
           gap: '0.75rem',
           marginBottom: '1.25rem'
         }}>
-          <div style={{ padding: '0.75rem', background: 'rgba(15, 23, 42, 0.6)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-            <span style={{ fontWeight: 800, color: '#38bdf8', fontSize: '0.8rem' }}>PASO 1</span>
-            <p style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '0.2rem' }}>
+          <div style={{ padding: '0.75rem', background: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+            <span style={{ fontWeight: 800, color: '#0078d4', fontSize: '0.8rem' }}>PASO 1</span>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-body)', marginTop: '0.2rem', marginBottom: 0 }}>
               En <strong>make.powerautomate.com</strong>, creá un flujo instantáneo con el desencadenador: <em>"Cuando se recibe una solicitud HTTP"</em>.
             </p>
           </div>
-          <div style={{ padding: '0.75rem', background: 'rgba(15, 23, 42, 0.6)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-            <span style={{ fontWeight: 800, color: '#38bdf8', fontSize: '0.8rem' }}>PASO 2</span>
-            <p style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '0.2rem' }}>
-              Agregá la acción: <em>"Excel Online (Business) ➔ Agregar una fila a una tabla"</em> y elegí el archivo en tu OneDrive o SharePoint.
+          <div style={{ padding: '0.75rem', background: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+            <span style={{ fontWeight: 800, color: '#0078d4', fontSize: '0.8rem' }}>PASO 2</span>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-body)', marginTop: '0.2rem', marginBottom: 0 }}>
+              Agregá la acción: <em>"Excel Online (Business) - Agregar una fila a una tabla"</em> y elegí el archivo en tu OneDrive o SharePoint.
             </p>
           </div>
-          <div style={{ padding: '0.75rem', background: 'rgba(15, 23, 42, 0.6)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-            <span style={{ fontWeight: 800, color: '#38bdf8', fontSize: '0.8rem' }}>PASO 3</span>
-            <p style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '0.2rem' }}>
+          <div style={{ padding: '0.75rem', background: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+            <span style={{ fontWeight: 800, color: '#0078d4', fontSize: '0.8rem' }}>PASO 3</span>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-body)', marginTop: '0.2rem', marginBottom: 0 }}>
               Copiá la <strong>URL de HTTP POST</strong> que te da Power Automate y pegala abajo. Cada inspección agregará una fila en vivo.
             </p>
           </div>
@@ -255,6 +258,7 @@ export default function M365SyncModal({ onExportExcel, onRefreshData }) {
               placeholder="https://prod-xx.westus.logic.azure.com/workflows/..."
               className="input"
               style={{ flex: 1, minWidth: '280px' }}
+              aria-label="URL del webhook"
             />
             <button type="submit" disabled={savingWebhook} className="btn btn-primary">
               <span>{savingWebhook ? 'Guardando...' : 'Guardar URL'}</span>
@@ -265,7 +269,7 @@ export default function M365SyncModal({ onExportExcel, onRefreshData }) {
               disabled={!webhookUrl || testingWebhook}
               className="btn btn-secondary"
             >
-              <Send size={15} />
+              <PaperPlaneTilt size={15} weight="bold" aria-hidden="true" />
               <span>{testingWebhook ? 'Probando...' : 'Probar Envío'}</span>
             </button>
           </div>
@@ -276,14 +280,14 @@ export default function M365SyncModal({ onExportExcel, onRefreshData }) {
             padding: '0.75rem 1rem',
             borderRadius: '8px',
             fontSize: '0.85rem',
-            background: testResult.success ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-            color: testResult.success ? '#34d399' : '#f87171',
-            border: `1px solid ${testResult.success ? '#10b981' : '#ef4444'}`,
+            background: testResult.success ? 'var(--status-ok-bg)' : 'var(--status-fault-bg)',
+            color: testResult.success ? 'var(--status-ok-text)' : 'var(--status-fault-text)',
+            border: `1px solid ${testResult.success ? 'var(--status-ok-border)' : 'var(--status-fault-border)'}`,
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem'
           }}>
-            {testResult.success ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+            {testResult.success ? <CheckCircle size={18} weight="bold" aria-hidden="true" /> : <WarningCircle size={18} weight="bold" aria-hidden="true" />}
             <span>{testResult.message || testResult.error}</span>
           </div>
         )}

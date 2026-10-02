@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  AlertTriangle, 
-  CheckCircle2, 
+  WarningCircle, 
+  CheckCircle, 
   Clock, 
   Wrench, 
-  RefreshCw, 
-  ShieldAlert, 
-  Filter, 
-  Save, 
+  ArrowsClockwise, 
+  ShieldWarning, 
+  Funnel, 
+  FloppyDisk, 
   Check, 
   ArrowRight,
   UserCheck
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 
 export default function CasesList() {
   const [cases, setCases] = useState([]);
@@ -64,75 +64,99 @@ export default function CasesList() {
         loadCases();
       }
     } catch (err) {
-      alert(err.message);
+      console.error('Error al actualizar caso:', err);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const getPriorityBadge = (priority) => {
+    switch (priority) {
+      case 'URGENTE':
+      case 'ALTA':
+        return <span className="status-badge fault" style={{ fontSize: '0.72rem' }}>Prioridad Alta</span>;
+      case 'MEDIA':
+        return <span className="status-badge pending" style={{ fontSize: '0.72rem' }}>Prioridad Media</span>;
+      default:
+        return <span className="status-badge info" style={{ fontSize: '0.72rem' }}>Prioridad Normal</span>;
     }
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       
-      {/* Header */}
-      <div className="card" style={{ borderLeft: '4px solid var(--status-fault-text)' }}>
+      {/* Header and Filter */}
+      <div className="card" style={{ padding: '1.25rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-              <AlertTriangle size={22} color="var(--status-fault-text)" />
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                Gestión de Anomalías y Casos ({cases.length})
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <WarningCircle size={24} weight="bold" color="var(--status-fault-text)" aria-hidden="true" />
+              <h2 className="card-title" style={{ margin: 0, fontSize: '1.25rem' }}>
+                Casos y Anomalías Detectadas
               </h2>
             </div>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-              Seguimiento de extintores con fallas detectadas en la inspección mensual (IRAM 3517-2).
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.25rem', marginBottom: 0 }}>
+              Seguimiento de extintores con manómetro despresurizado, precinto vulnerado o faltantes.
             </p>
           </div>
 
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <Filter size={16} color="var(--text-muted)" />
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="select"
-              style={{ minHeight: '38px', minWidth: '180px' }}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Funnel size={16} weight="bold" color="var(--text-muted)" aria-hidden="true" />
+              <select
+                value={filterStatus}
+                onChange={e => setFilterStatus(e.target.value)}
+                className="select"
+                style={{ width: 'auto', minWidth: '160px', padding: '0.35rem 0.65rem' }}
+                aria-label="Filtrar por estado del caso"
+              >
+                <option value="">Todos los Estados</option>
+                <option value="ABIERTO">Abiertos / Pendientes</option>
+                <option value="EN_TALLER">En Taller</option>
+                <option value="REEMPLAZADO_TEMPORAL">Reemplazo Temporal</option>
+                <option value="RESUELTO">Resueltos</option>
+              </select>
+            </div>
+
+            <button 
+              onClick={loadCases} 
+              className="btn btn-secondary btn-sm"
+              title="Refrescar lista"
+              aria-label="Refrescar lista de casos"
             >
-              <option value="">Todos los Estados</option>
-              <option value="ABIERTO">Abiertos</option>
-              <option value="EN_TALLER">En Taller</option>
-              <option value="REEMPLAZADO_TEMPORAL">Reemplazo Temporal</option>
-              <option value="RESUELTO">Resueltos</option>
-            </select>
+              <ArrowsClockwise size={16} weight="bold" aria-hidden="true" />
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Cases Grid */}
+      {/* Cases List */}
       {loading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          {[1, 2, 3].map(n => <div key={n} className="card skeleton" style={{ height: '110px' }} />)}
+        <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
+          <p style={{ color: 'var(--text-muted)' }}>Cargando casos...</p>
         </div>
       ) : cases.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-          <CheckCircle2 size={48} color="var(--status-ok-text)" style={{ margin: '0 auto 0.75rem auto' }} />
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)' }}>
-            No hay casos pendientes
+        <div className="card" style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
+          <CheckCircle size={44} weight="bold" color="var(--status-ok-text)" style={{ margin: '0 auto 0.75rem auto' }} aria-hidden="true" />
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.25rem' }}>
+            No hay casos abiertos
           </h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-            Todos los extintores inspeccionados se encuentran 100% operativos.
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+            Todos los extintores se encuentran operativos y conformes a norma IRAM 3517-2.
           </p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           {cases.map((c) => {
             const isResolved = c.status === 'RESUELTO';
-            const daysOpen = c.days_open || 0;
+            const daysOpen = Math.round((Date.now() - new Date(c.created_at).getTime()) / (1000 * 60 * 60 * 24));
 
             return (
               <div 
                 key={c.id} 
                 className="card"
                 style={{
-                  borderLeft: isResolved ? '4px solid var(--status-ok-text)' : '4px solid var(--status-fault-text)',
+                  borderLeft: `4px solid ${isResolved ? 'var(--status-ok-border)' : 'var(--status-fault-border)'}`,
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '0.75rem'
@@ -140,33 +164,31 @@ export default function CasesList() {
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                      <span className="font-mono" style={{ fontWeight: 800, color: 'var(--milicic-orange)', fontSize: '1.1rem' }}>
-                        {c.extinguisher_code}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                      <span className="milicic-id-plate">
+                        <span className="plate-code">{c.extinguisher_code}</span>
                       </span>
-                      <span className="status-badge fault" style={{ fontSize: '0.72rem' }}>
-                        {c.priority}
-                      </span>
+                      {getPriorityBadge(c.priority)}
                       <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <Clock size={13} />
+                        <Clock size={14} weight="bold" aria-hidden="true" />
                         <span>Abierto hace {daysOpen} día(s)</span>
                       </span>
                     </div>
 
-                    <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '0.25rem' }}>
+                    <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '0.45rem', marginBottom: '0.2rem' }}>
                       {c.title}
                     </h4>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-body)', marginTop: '0.15rem' }}>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-body)', margin: 0 }}>
                       {c.description}
                     </p>
-                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.3rem', marginBottom: 0 }}>
                       Puesto: {c.location} ({c.type} {c.capacity}) • Nivel: {c.floor}
                     </p>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <span className={`status-badge ${isResolved ? 'ok' : 'fault'}`}>
-                      {isResolved ? <CheckCircle2 size={13} /> : <AlertTriangle size={13} />}
+                      {isResolved ? <CheckCircle size={14} weight="bold" aria-hidden="true" /> : <WarningCircle size={14} weight="bold" aria-hidden="true" />}
                       <span>{c.status}</span>
                     </span>
 
@@ -208,9 +230,14 @@ export default function CasesList() {
         <div className="modal-overlay" onClick={() => setEditingCase(null)}>
           <div className="bottom-sheet" onClick={e => e.stopPropagation()}>
             <div className="drag-handle" />
-            <h3 className="card-title">
-              Gestionar Caso: {editingCase.extinguisher_code}
-            </h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              <h3 className="card-title" style={{ margin: 0 }}>
+                Gestionar Caso:
+              </h3>
+              <span className="milicic-id-plate">
+                <span className="plate-code">{editingCase.extinguisher_code}</span>
+              </span>
+            </div>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
               {editingCase.title}
             </p>
@@ -268,7 +295,7 @@ export default function CasesList() {
                   Cancelar
                 </button>
                 <button type="submit" disabled={saving} className="btn btn-primary">
-                  <Save size={16} />
+                  <FloppyDisk size={16} weight="bold" aria-hidden="true" />
                   <span>{saving ? 'Guardando...' : 'Guardar Cambios'}</span>
                 </button>
               </div>

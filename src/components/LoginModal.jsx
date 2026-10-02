@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, UserCheck, Key, Lock, ArrowRight, Building2 } from 'lucide-react';
+import { Shield, UserCheck, Key, Lock, ArrowRight, Buildings } from '@phosphor-icons/react';
 
 export default function LoginModal({ onLogin }) {
   const [localRole, setLocalRole] = useState('INSPECTOR');
@@ -60,7 +60,7 @@ export default function LoginModal({ onLogin }) {
             boxShadow: '0 4px 10px rgba(0, 120, 212, 0.25)'
           }}
         >
-          <Building2 size={18} />
+          <Buildings size={18} weight="bold" aria-hidden="true" />
           <span>Iniciar sesión con Microsoft 365</span>
         </button>
 

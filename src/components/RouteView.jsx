@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { 
   MapPin, 
-  CheckCircle2, 
+  CheckCircle, 
   Clock, 
   ArrowRight, 
-  Flame, 
-  Navigation, 
-  Filter, 
-  Search,
-  Building,
-  Layers,
-  Sparkles
-} from 'lucide-react';
+  FireExtinguisher, 
+  NavigationArrow, 
+  Funnel, 
+  MagnifyingGlass, 
+  Buildings, 
+  Stack, 
+  Sparkle 
+} from '@phosphor-icons/react';
 
 export default function RouteView({ onInspectCode }) {
   const [routeData, setRouteData] = useState(null);
@@ -61,12 +61,12 @@ export default function RouteView({ onInspectCode }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-              <Navigation size={20} color="var(--milicic-orange)" />
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff' }}>
+              <NavigationArrow size={22} weight="bold" color="var(--milicic-orange)" aria-hidden="true" />
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
                 Mi Ruta de Inspección • {round?.name || 'Ronda Mensual'}
               </h2>
             </div>
-            <p style={{ color: '#94a3b8', fontSize: '0.85rem', maxWidth: '650px' }}>
+            <p style={{ color: '#94a3b8', fontSize: '0.85rem', maxWidth: '650px', margin: 0 }}>
               Extintores pendientes de control ordenados por edificio, nivel y sector para optimizar tu recorrido en planta.
             </p>
           </div>
@@ -102,7 +102,7 @@ export default function RouteView({ onInspectCode }) {
       <div className="card" style={{ padding: '0.85rem' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
           <div style={{ position: 'relative' }}>
-            <Search size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+            <MagnifyingGlass size={18} weight="bold" color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} aria-hidden="true" />
             <input 
               type="text"
               placeholder="Buscar puesto o sector..."
@@ -117,6 +117,7 @@ export default function RouteView({ onInspectCode }) {
             value={selectedFloor}
             onChange={(e) => setSelectedFloor(e.target.value)}
             className="select"
+            aria-label="Filtrar por piso"
           >
             <option value="">Todos los Pisos ({items.length} pendientes)</option>
             {routeData?.pendingByFloor?.map(f => (
@@ -137,11 +138,11 @@ export default function RouteView({ onInspectCode }) {
         </div>
       ) : filteredItems.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
-          <CheckCircle2 size={48} color="var(--status-ok-text)" style={{ margin: '0 auto 0.75rem auto' }} />
+          <CheckCircle size={48} weight="bold" color="var(--status-ok-text)" style={{ margin: '0 auto 0.75rem auto' }} aria-hidden="true" />
           <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.35rem' }}>
             ¡Ruta al día!
           </h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>
             No quedan extintores pendientes en este sector para la ronda actual.
           </p>
         </div>
@@ -178,15 +179,15 @@ export default function RouteView({ onInspectCode }) {
 
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span className="font-mono" style={{ fontWeight: 800, color: 'var(--milicic-orange)', fontSize: '1.05rem' }}>
-                      {item.code}
+                    <span className="milicic-id-plate">
+                      <span className="plate-code">{item.code}</span>
                     </span>
                     <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)' }}>
                       • {item.type} {item.capacity}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-body)', fontSize: '0.88rem', fontWeight: 600 }}>
-                    <MapPin size={14} color="var(--milicic-orange)" />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-body)', fontSize: '0.88rem', fontWeight: 600, marginTop: '0.35rem' }}>
+                    <MapPin size={14} weight="bold" color="var(--milicic-orange)" aria-hidden="true" />
                     <span>{item.location}</span>
                   </div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -197,7 +198,7 @@ export default function RouteView({ onInspectCode }) {
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <span className="status-badge pending">
-                  <Clock size={13} />
+                  <Clock size={13} weight="bold" aria-hidden="true" />
                   <span>Pendiente</span>
                 </span>
 
@@ -207,7 +208,7 @@ export default function RouteView({ onInspectCode }) {
                   style={{ minWidth: '130px' }}
                 >
                   <span>Inspeccionar</span>
-                  <ArrowRight size={16} />
+                  <ArrowRight size={16} weight="bold" aria-hidden="true" />
                 </button>
               </div>
             </div>

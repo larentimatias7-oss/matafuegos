@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { 
   Printer, 
   QrCode, 
-  Filter, 
-  Settings, 
+  Funnel, 
+  Gear, 
   Check, 
-  Layers, 
+  Stack, 
   FileText,
   Tag,
-  Search
-} from 'lucide-react';
+  MagnifyingGlass
+} from '@phosphor-icons/react';
 
 export default function QrPrinter() {
   const [qrs, setQrs] = useState([]);

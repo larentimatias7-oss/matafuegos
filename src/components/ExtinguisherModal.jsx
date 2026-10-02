@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, QrCode, Save, Trash2, Printer, ExternalLink, History, Info } from 'lucide-react';
+import { X, QrCode, FloppyDisk, Trash, Printer, ArrowSquareOut, ClockCounterClockwise, Info } from '@phosphor-icons/react';
 
 export default function ExtinguisherModal({ extinguisher, mode, onClose, onSave }) {
   const isQrMode = mode === 'qr';
@@ -381,7 +381,7 @@ export default function ExtinguisherModal({ extinguisher, mode, onClose, onSave 
                 Cancelar
               </button>
               <button type="submit" disabled={saving} className="btn btn-primary">
-                <Save size={16} />
+                <FloppyDisk size={16} weight="bold" aria-hidden="true" />
                 <span>{saving ? 'Guardando...' : 'Guardar Ficha Técnica'}</span>
               </button>
             </div>

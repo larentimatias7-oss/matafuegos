@@ -1,23 +1,32 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { 
-  CheckCircle2, 
-  AlertTriangle, 
+  CheckCircle, 
+  WarningCircle, 
   Clock, 
-  Flame, 
-  Calendar, 
+  FireExtinguisher, 
+  CalendarCheck, 
   ArrowRight, 
-  ScanLine, 
+  QrCode, 
   Printer, 
-  FileSpreadsheet, 
-  ShieldAlert,
-  RotateCcw,
-  Navigation,
-  Wrench,
-  Building,
-  Info
-} from 'lucide-react';
+  FileXls, 
+  ShieldWarning, 
+  NavigationArrow, 
+  Wrench, 
+  Buildings, 
+  Info,
+  CaretRight,
+  GridFour
+} from '@phosphor-icons/react';
 
-export default function Dashboard({ stats, onNavigate, onExportExcel, onResetSeed, loading }) {
+export default function Dashboard({ 
+  stats, 
+  extinguishers = [], 
+  onNavigate, 
+  onExportExcel, 
+  onResetSeed, 
+  onInspectExtinguisher, 
+  loading 
+}) {
   const metrics = stats?.metrics || {
     allTotal: 130,
     totalOperative: 128,
@@ -36,10 +45,51 @@ export default function Dashboard({ stats, onNavigate, onExportExcel, onResetSee
   const activeRound = stats?.activeRound;
   const recent = stats?.recentActivity || [];
 
+  // Group extinguishers by floor / sector for the Heatmap Grid
+  const sectorGroups = useMemo(() => {
+    if (!extinguishers || extinguishers.length === 0) return [];
+    
+    const groups = {};
+    extinguishers.forEach(ext => {
+      const sectorName = ext.floor || 'Sector General';
+      if (!groups[sectorName]) {
+        groups[sectorName] = [];
+      }
+      groups[sectorName].push(ext);
+    });
+
+    // Sort sector keys logically (PB first, then numerical, then other areas)
+    const sortedKeys = Object.keys(groups).sort((a, b) => {
+      if (a.toLowerCase().includes('pb') || a.toLowerCase().includes('baja')) return -1;
+      if (b.toLowerCase().includes('pb') || b.toLowerCase().includes('baja')) return 1;
+      return a.localeCompare(b, undefined, { numeric: true });
+    });
+
+    return sortedKeys.map(key => ({
+      name: key,
+      extinguishers: groups[key].sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }))
+    }));
+  }, [extinguishers]);
+
+  const getHeatmapStatusClass = (ext) => {
+    if (ext.is_expired) return 'status-expired';
+    if (ext.has_active_case || ext.status === 'FAULT' || ext.status === 'FAILED') return 'status-fault';
+    if (ext.status === 'OK' || ext.last_inspected_date) return 'status-ok';
+    return 'status-pending';
+  };
+
+  const getHeatmapTooltip = (ext) => {
+    let statusText = 'Pendiente de inspección';
+    if (ext.is_expired) statusText = 'Carga Vencida IRAM';
+    else if (ext.has_active_case || ext.status === 'FAULT') statusText = 'Caso abierto / Falla';
+    else if (ext.status === 'OK' || ext.last_inspected_date) statusText = 'Inspeccionado OK';
+
+    return `${ext.code} (${ext.type} ${ext.capacity || ''})\nUbicación: ${ext.location || 'N/D'}\nEstado: ${statusText}`;
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       
-      {/* Top Banner with Milicic Branding & Quick Navigation */}
       {/* Top Banner with Milicic Branding & Quick Navigation */}
       <div className="card" style={{
         background: 'linear-gradient(135deg, var(--milicic-slate-dark) 0%, var(--milicic-slate-lead) 100%)',
@@ -67,14 +117,14 @@ export default function Dashboard({ stats, onNavigate, onExportExcel, onResetSee
           </p>
         </div>
 
-        {/* Desktop Buttons (All 4) */}
+        {/* Desktop Buttons */}
         <div className="desktop-only" style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
           <button 
             onClick={() => onNavigate('route')}
             className="btn btn-primary"
             style={{ fontWeight: 800 }}
           >
-            <Navigation size={18} />
+            <NavigationArrow size={18} weight="bold" aria-hidden="true" />
             <span>Mi Ruta</span>
           </button>
           
@@ -83,7 +133,7 @@ export default function Dashboard({ stats, onNavigate, onExportExcel, onResetSee
             className="btn btn-secondary"
             style={{ fontWeight: 700 }}
           >
-            <ScanLine size={18} />
+            <QrCode size={18} weight="bold" aria-hidden="true" />
             <span>Escanear QR</span>
           </button>
 
@@ -95,7 +145,7 @@ export default function Dashboard({ stats, onNavigate, onExportExcel, onResetSee
             style={{ fontWeight: 700, textDecoration: 'none' }}
             title="Genera reporte oficial listo para imprimir o guardar como PDF"
           >
-            <Printer size={18} />
+            <Printer size={18} weight="bold" aria-hidden="true" />
             <span>Informe ART / PDF</span>
           </a>
 
@@ -105,19 +155,19 @@ export default function Dashboard({ stats, onNavigate, onExportExcel, onResetSee
             style={{ fontWeight: 700 }}
             title="Exportar planilla auditada compatible con Microsoft 365"
           >
-            <FileSpreadsheet size={18} />
+            <FileXls size={18} weight="bold" aria-hidden="true" />
             <span>Excel 365</span>
           </button>
         </div>
 
-        {/* Mobile Quick Action Pill (Compact 1-row) */}
+        {/* Mobile Quick Action Pill */}
         <div className="mobile-only" style={{ width: '100%', display: 'flex', gap: '0.5rem', marginTop: '0.2rem' }}>
           <button 
             onClick={() => onNavigate('route')}
             className="btn btn-primary btn-sm"
             style={{ flex: 1, minHeight: '38px', fontWeight: 800, fontSize: '0.8rem' }}
           >
-            <Navigation size={15} />
+            <NavigationArrow size={15} weight="bold" aria-hidden="true" />
             <span>Mi Ruta ({metrics.pendingThisMonth} pend.)</span>
           </button>
 
@@ -128,7 +178,7 @@ export default function Dashboard({ stats, onNavigate, onExportExcel, onResetSee
             className="btn btn-secondary btn-sm" 
             style={{ flex: 1, minHeight: '38px', fontWeight: 700, fontSize: '0.8rem', textDecoration: 'none' }}
           >
-            <Printer size={15} />
+            <Printer size={15} weight="bold" aria-hidden="true" />
             <span>Informe PDF</span>
           </a>
         </div>
@@ -174,10 +224,10 @@ export default function Dashboard({ stats, onNavigate, onExportExcel, onResetSee
 
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
             <span className="status-badge ok" style={{ padding: '0.2rem 0.5rem' }}>
-              <CheckCircle2 size={12} /> {metrics.inspectedThisMonth - metrics.failedThisMonth} OK
+              <CheckCircle size={14} weight="bold" aria-hidden="true" /> {metrics.inspectedThisMonth - metrics.failedThisMonth} OK
             </span>
             <span className="status-badge pending" style={{ padding: '0.2rem 0.5rem' }}>
-              <Clock size={12} /> {metrics.pendingThisMonth} Pendientes
+              <Clock size={14} weight="bold" aria-hidden="true" /> {metrics.pendingThisMonth} Pendientes
             </span>
           </div>
         </div>
@@ -186,7 +236,7 @@ export default function Dashboard({ stats, onNavigate, onExportExcel, onResetSee
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
             <span className="label">Anomalías y Casos</span>
-            <AlertTriangle size={18} color="var(--status-fault-text)" />
+            <WarningCircle size={20} weight="bold" color="var(--status-fault-text)" aria-hidden="true" />
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', marginBottom: '0.75rem' }}>
             <span style={{ fontSize: '2.1rem', fontWeight: 900, color: metrics.openCasesCount > 0 ? 'var(--status-fault-text)' : 'var(--text-main)' }}>
@@ -202,7 +252,7 @@ export default function Dashboard({ stats, onNavigate, onExportExcel, onResetSee
               className="btn btn-secondary btn-sm btn-full"
             >
               <span>Ver Casos de Anomalías</span>
-              <ArrowRight size={14} />
+              <ArrowRight size={14} weight="bold" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -211,7 +261,7 @@ export default function Dashboard({ stats, onNavigate, onExportExcel, onResetSee
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
             <span className="label">Vto. Carga Anual</span>
-            <ShieldAlert size={18} color={metrics.expiredCharges > 0 ? 'var(--status-expired-text)' : 'var(--status-pending-text)'} />
+            <ShieldWarning size={20} weight="bold" color={metrics.expiredCharges > 0 ? 'var(--status-expired-text)' : 'var(--status-pending-text)'} aria-hidden="true" />
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', marginBottom: '0.5rem' }}>
             <span style={{ fontSize: '2.1rem', fontWeight: 900, color: metrics.expiredCharges > 0 ? 'var(--status-expired-text)' : 'var(--text-main)' }}>
@@ -232,7 +282,7 @@ export default function Dashboard({ stats, onNavigate, onExportExcel, onResetSee
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
             <span className="label">Prueba Hidráulica (PH)</span>
-            <Calendar size={18} color="var(--status-info-text)" />
+            <CalendarCheck size={20} weight="bold" color="var(--status-info-text)" aria-hidden="true" />
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', marginBottom: '0.5rem' }}>
             <span style={{ fontSize: '2.1rem', fontWeight: 900, color: 'var(--status-info-text)' }}>
@@ -246,6 +296,101 @@ export default function Dashboard({ stats, onNavigate, onExportExcel, onResetSee
             Coordinar rotación y retiro escalonado con taller habilitado IRAM.
           </p>
         </div>
+      </div>
+
+      {/* HEATMAP / GRID VISUAL POR SECTOR Y PISO */}
+      <div className="card">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <GridFour size={20} weight="bold" color="var(--milicic-orange)" aria-hidden="true" />
+              <h2 className="card-title" style={{ margin: 0 }}>
+                Tablero Táctico de Sectores (Heatmap)
+              </h2>
+            </div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.25rem', marginBottom: 0 }}>
+              Matriz visual de los 130 extintores organizados por sector y piso. Pulsá cualquier equipo para inspeccionar o consultar su ficha.
+            </p>
+          </div>
+
+          {/* Heatmap Legend */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', fontSize: '0.75rem' }}>
+            <span className="status-badge ok" style={{ padding: '0.15rem 0.45rem' }}>
+              <CheckCircle size={12} weight="bold" aria-hidden="true" /> Inspeccionado OK
+            </span>
+            <span className="status-badge pending" style={{ padding: '0.15rem 0.45rem' }}>
+              <Clock size={12} weight="bold" aria-hidden="true" /> Pendiente
+            </span>
+            <span className="status-badge fault" style={{ padding: '0.15rem 0.45rem' }}>
+              <WarningCircle size={12} weight="bold" aria-hidden="true" /> Falla / Caso
+            </span>
+            <span className="status-badge expired" style={{ padding: '0.15rem 0.45rem' }}>
+              <ShieldWarning size={12} weight="bold" aria-hidden="true" /> Carga Vencida
+            </span>
+          </div>
+        </div>
+
+        {sectorGroups.length === 0 ? (
+          <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+            <FireExtinguisher size={32} weight="duotone" style={{ margin: '0 auto 0.5rem' }} aria-hidden="true" />
+            <p>Cargando matriz táctica de extintores...</p>
+          </div>
+        ) : (
+          <div className="sector-heatmap-container">
+            {sectorGroups.map(sector => {
+              const totalInSector = sector.extinguishers.length;
+              const okInSector = sector.extinguishers.filter(e => e.status === 'OK' || e.last_inspected_date).length;
+              const pct = Math.round((okInSector / totalInSector) * 100);
+
+              return (
+                <div key={sector.name} className="sector-heatmap-group">
+                  <div className="sector-heatmap-header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Buildings size={16} weight="bold" color="var(--milicic-orange)" aria-hidden="true" />
+                      <span style={{ fontWeight: 800, fontSize: '0.92rem', color: 'var(--text-main)' }}>
+                        {sector.name}
+                      </span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        ({totalInSector} equipos)
+                      </span>
+                    </div>
+
+                    <span className={`status-badge ${pct === 100 ? 'ok' : 'pending'}`} style={{ fontSize: '0.72rem' }}>
+                      {okInSector}/{totalInSector} ({pct}%)
+                    </span>
+                  </div>
+
+                  <div className="sector-heatmap-grid">
+                    {sector.extinguishers.map(ext => {
+                      const statusClass = getHeatmapStatusClass(ext);
+                      const displayCode = ext.code.replace(/^MF-?/i, '');
+
+                      return (
+                        <button
+                          key={ext.id || ext.code}
+                          type="button"
+                          className={`heatmap-cell ${statusClass}`}
+                          title={getHeatmapTooltip(ext)}
+                          aria-label={`Matafuego ${ext.code}, estado: ${statusClass}`}
+                          onClick={() => {
+                            if (onInspectExtinguisher) {
+                              onInspectExtinguisher(ext);
+                            } else {
+                              onNavigate('extinguishers');
+                            }
+                          }}
+                        >
+                          <span style={{ fontSize: '0.65rem', opacity: 0.75, lineHeight: 1 }}>MF</span>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 900, lineHeight: 1 }}>{displayCode}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Middle Layout: Semáforo & Actividad Reciente */}
@@ -270,7 +415,7 @@ export default function Dashboard({ stats, onNavigate, onExportExcel, onResetSee
               border: '1px solid var(--status-ok-border)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <CheckCircle2 size={20} color="var(--status-ok-text)" />
+                <CheckCircle size={22} weight="bold" color="var(--status-ok-text)" aria-hidden="true" />
                 <div>
                   <span style={{ fontWeight: 800, color: 'var(--status-ok-text)', fontSize: '0.9rem' }}>Controlados OK</span>
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-body)' }}>Inspeccionados este mes sin anomalías</p>
@@ -291,7 +436,7 @@ export default function Dashboard({ stats, onNavigate, onExportExcel, onResetSee
               border: '1px solid var(--status-pending-border)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <Clock size={20} color="var(--status-pending-text)" />
+                <Clock size={22} weight="bold" color="var(--status-pending-text)" aria-hidden="true" />
                 <div>
                   <span style={{ fontWeight: 800, color: 'var(--status-pending-text)', fontSize: '0.9rem' }}>Pendientes de Ronda</span>
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-body)' }}>Equipos que aún faltan auditar este mes</p>
@@ -312,7 +457,7 @@ export default function Dashboard({ stats, onNavigate, onExportExcel, onResetSee
               border: '1px solid var(--status-fault-border)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <AlertTriangle size={20} color="var(--status-fault-text)" />
+                <WarningCircle size={22} weight="bold" color="var(--status-fault-text)" aria-hidden="true" />
                 <div>
                   <span style={{ fontWeight: 800, color: 'var(--status-fault-text)', fontSize: '0.9rem' }}>Falla / Vencido</span>
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-body)' }}>Manómetro bajo, precinto roto o carga vencida</p>
@@ -331,14 +476,14 @@ export default function Dashboard({ stats, onNavigate, onExportExcel, onResetSee
               style={{ flex: 1 }}
             >
               <span>Ver Inventario Completo</span>
-              <ArrowRight size={14} />
+              <ArrowRight size={14} weight="bold" aria-hidden="true" />
             </button>
             <button 
               onClick={() => onNavigate('qrs')}
               className="btn btn-secondary btn-sm"
               style={{ flex: 1 }}
             >
-              <Printer size={14} />
+              <Printer size={14} weight="bold" aria-hidden="true" />
               <span>Imprimir Etiquetas</span>
             </button>
           </div>
@@ -378,8 +523,8 @@ export default function Dashboard({ stats, onNavigate, onExportExcel, onResetSee
                 >
                   <div style={{ minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                      <span className="font-mono" style={{ fontWeight: 800, color: 'var(--milicic-orange)', fontSize: '0.9rem' }}>
-                        {item.extinguisher_code}
+                      <span className="milicic-id-plate" style={{ fontSize: '0.8rem', padding: '0.15rem 0.5rem' }}>
+                        <span className="plate-code">{item.extinguisher_code}</span>
                       </span>
                       <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                         • {item.type} {item.capacity}
@@ -390,7 +535,7 @@ export default function Dashboard({ stats, onNavigate, onExportExcel, onResetSee
                         </span>
                       )}
                     </div>
-                    <p style={{ fontSize: '0.82rem', color: 'var(--text-body)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <p style={{ fontSize: '0.82rem', color: 'var(--text-body)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '0.2rem' }}>
                       {item.location}
                     </p>
                     <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
@@ -401,11 +546,11 @@ export default function Dashboard({ stats, onNavigate, onExportExcel, onResetSee
                   <div>
                     {item.passed === 1 ? (
                       <span className="status-badge ok">
-                        <CheckCircle2 size={13} /> OK
+                        <CheckCircle size={14} weight="bold" aria-hidden="true" /> OK
                       </span>
                     ) : (
                       <span className="status-badge fault">
-                        <AlertTriangle size={13} /> Falla
+                        <WarningCircle size={14} weight="bold" aria-hidden="true" /> Falla
                       </span>
                     )}
                   </div>

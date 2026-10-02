@@ -1,21 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  CheckCircle2, 
+  CheckCircle, 
   XCircle, 
   MapPin, 
-  Calendar, 
-  AlertTriangle, 
-  Send, 
+  CalendarCheck, 
+  WarningCircle, 
+  PaperPlaneTilt, 
   ArrowLeft,
-  Zap,
+  Lightning,
   Camera,
   Info,
   Clock,
-  RotateCcw,
+  ArrowsClockwise,
   ShieldCheck,
-  Building,
-  WifiOff
-} from 'lucide-react';
+  Buildings,
+  WifiSlash,
+  Check,
+  X
+} from '@phosphor-icons/react';
 import { enqueueOfflineInspection, compressImageFile } from '../utils/offlineQueue';
 
 export default function InspectionForm({ extinguisher, onBack, onSaved, onInspectNext }) {
@@ -59,74 +61,81 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
             accuracy: pos.coords.accuracy
           });
         },
-        () => {},
-        { timeout: 5000, enableHighAccuracy: false }
+        (err) => {
+          console.warn('Geolocalización omitida o rechazada:', err.message);
+        },
+        { enableHighAccuracy: true, timeout: 5000 }
       );
     }
-
-    // Load checklist items from API
-    fetch(`/api/checklist?type=${encodeURIComponent(extinguisher?.type || '')}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.items) {
-          setChecklistItems(data.items);
-          const initial = {};
-          data.items.forEach(it => {
-            initial[it.code] = 1; // Default OK
-          });
-          setChecks(initial);
-        }
-      })
-      .catch(console.error)
-      .finally(() => setLoadingChecklist(false));
   }, [extinguisher]);
 
-  // Save inspector name to localStorage
   useEffect(() => {
-    if (inspectorName) {
-      localStorage.setItem('firecontrol_inspector', inspectorName);
-    }
-  }, [inspectorName]);
+    const fetchChecklist = async () => {
+      try {
+        const res = await fetch('/api/checklist');
+        const data = await res.json();
+        setChecklistItems(data);
 
-  const toggleCheck = (code, value) => {
+        // Pre-fill all with OK (1) by default for fast thumb inspection
+        const initial = {};
+        data.forEach(item => {
+          initial[item.code] = 1;
+        });
+        setChecks(initial);
+      } catch (err) {
+        console.error('Error al cargar checklist:', err);
+        // Fallback standard checklist items if offline
+        const fallback = [
+          { code: 'check_location', label: 'Ubicación y Acceso', description: 'Extintor visible, en su puesto reglamentario y con acceso despejado' },
+          { code: 'check_pressure', label: 'Manómetro / Presión', description: 'Aguja indicadora en zona verde operativa' },
+          { code: 'check_seal', label: 'Precinto y Traba', description: 'Precinto plástico de seguridad intacto con pasador colocado' },
+          { code: 'check_physical', label: 'Estado Físico y Manguera', description: 'Sin golpes, corrosión ni manguera cuarteada u obstruida' },
+          { code: 'check_signage', label: 'Chapa Baliza y Cartel', description: 'Cartel señalizador normalizado y chapa baliza limpia' },
+          { code: 'check_card', label: 'Tarjeta de Control', description: 'Tarjeta IRAM presente y legible' },
+        ];
+        setChecklistItems(fallback);
+        const initial = {};
+        fallback.forEach(item => { initial[item.code] = 1; });
+        setChecks(initial);
+      } finally {
+        setLoadingChecklist(false);
+      }
+    };
+
+    fetchChecklist();
+  }, []);
+
+  const toggleCheck = (code, val) => {
+    // Provide short haptic feedback on toggle if available
+    if (navigator.vibrate) {
+      navigator.vibrate(20);
+    }
     setChecks(prev => ({
       ...prev,
-      [code]: value
+      [code]: val
     }));
   };
 
   const markAllOk = () => {
-    const updated = {};
-    checklistItems.forEach(it => {
-      updated[it.code] = 1;
+    if (navigator.vibrate) {
+      navigator.vibrate([20, 50, 20]);
+    }
+    const allOk = {};
+    checklistItems.forEach(item => {
+      allOk[item.code] = 1;
     });
-    setChecks(updated);
+    setChecks(allOk);
     setObservations('');
   };
 
   const hasAnyFailure = Object.values(checks).some(val => val === 0);
 
   const handleSubmit = async (e) => {
-    if (e) e.preventDefault();
-    if (!inspectorName.trim()) {
-      setError('Por favor ingresá tu nombre de inspector.');
-      return;
-    }
-
-    if (isAlreadyInspected && !reinspectionReason.trim()) {
-      setError('Para reinspeccionar un extintor en la misma ronda es obligatorio indicar el motivo.');
-      return;
-    }
-
+    e.preventDefault();
     setSaving(true);
     setError(null);
 
     const durationSeconds = Math.round((Date.now() - startTimeRef.current) / 1000);
-
-    // Haptic feedback
-    if (navigator.vibrate) {
-      navigator.vibrate([40]);
-    }
 
     const inspectionPayload = {
       extinguisher_id: extinguisher.id,
@@ -149,7 +158,6 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
       reinspection_reason: reinspectionReason.trim()
     };
 
-    // Si el navegador ya detecta que no hay conexión, guardamos offline directamente
     if (!navigator.onLine) {
       try {
         await enqueueOfflineInspection(inspectionPayload);
@@ -183,7 +191,6 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
 
       setSavedResult(data);
     } catch (err) {
-      // Si falló por error de red o timeout, respaldar en IndexedDB
       console.warn('Fallo de red en envío, respaldando offline:', err);
       try {
         await enqueueOfflineInspection(inspectionPayload);
@@ -227,7 +234,7 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
           justifyContent: 'center',
           margin: '0 auto 1rem auto'
         }}>
-          {savedResult.passed ? <CheckCircle2 size={36} /> : <AlertTriangle size={36} />}
+          {savedResult.passed ? <CheckCircle size={36} weight="bold" aria-hidden="true" /> : <WarningCircle size={36} weight="bold" aria-hidden="true" />}
         </div>
 
         <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.35rem' }}>
@@ -250,17 +257,27 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
             <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--status-pending-text)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
               Siguiente equipo en tu ruta:
             </div>
-            <div className="font-mono" style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--milicic-orange)' }}>
-              {savedResult.nextPendingCode}
+            <div style={{ marginBottom: '0.4rem' }}>
+              <span className="milicic-id-plate milicic-id-plate-lg">
+                <span className="plate-code">{savedResult.nextPendingCode}</span>
+              </span>
             </div>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-body)', fontWeight: 600 }}>
               {savedResult.nextPendingLocation}
             </div>
           </div>
         ) : (
-          <p style={{ color: 'var(--status-ok-text)', fontWeight: 700, marginBottom: '1.5rem' }}>
-            ¡Excelente! No quedan más extintores pendientes en este sector.
-          </p>
+          <div style={{
+            background: 'var(--status-ok-bg)',
+            color: 'var(--status-ok-text)',
+            padding: '1rem',
+            borderRadius: '8px',
+            fontWeight: 700,
+            fontSize: '0.9rem',
+            marginBottom: '1.5rem'
+          }}>
+            ¡Completaste todos los extintores pendientes en este sector!
+          </div>
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -268,57 +285,57 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
             <button
               onClick={() => onInspectNext(savedResult.nextPendingCode)}
               className="btn btn-primary btn-full"
+              style={{ fontWeight: 800, fontSize: '1rem', minHeight: '48px' }}
             >
               <span>Ir a {savedResult.nextPendingCode}</span>
             </button>
           )}
 
           <button
-            onClick={() => {
-              if (onSaved) onSaved();
-            }}
+            onClick={onSaved}
             className="btn btn-secondary btn-full"
+            style={{ minHeight: '44px' }}
           >
-            <span>Volver a la Ronda / Lista</span>
+            Finalizar y volver
           </button>
         </div>
       </div>
     );
   }
 
-  const isChargeExpired = extinguisher.expiration_charge < new Date().toISOString().split('T')[0];
+  const isChargeExpired = extinguisher.expiration_charge && extinguisher.expiration_charge < new Date().toISOString().split('T')[0];
 
   return (
-    <div style={{ maxWidth: '680px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', paddingBottom: '5rem' }}>
       
-      {/* Top Bar Navigation */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      {/* Top Bar with Back Button */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <button onClick={onBack} className="btn btn-secondary btn-sm">
-          <ArrowLeft size={16} />
+          <ArrowLeft size={16} weight="bold" aria-hidden="true" />
           <span>Volver</span>
         </button>
 
         <span className="status-badge info">
-          <ShieldCheck size={14} />
+          <ShieldCheck size={14} weight="bold" aria-hidden="true" />
           <span>IRAM 3517-2</span>
         </span>
       </div>
 
       {/* Extinguisher Header Card */}
-      <div className="card" style={{ borderLeft: '4px solid var(--milicic-orange)' }}>
+      <div className={`card ${isChargeExpired ? 'hazard-stripes' : ''}`} style={{ borderLeft: '4px solid var(--milicic-orange)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <span className="font-mono" style={{ fontSize: '1.45rem', fontWeight: 900, color: 'var(--milicic-orange)' }}>
-                {extinguisher.code}
-              </span>
+              <div className="milicic-id-plate milicic-id-plate-lg">
+                <span className="plate-code">{extinguisher.code}</span>
+              </div>
               <span className="status-badge info" style={{ fontWeight: 800 }}>
                 {extinguisher.type} {extinguisher.capacity}
               </span>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-main)', fontWeight: 700, fontSize: '0.95rem', marginTop: '0.25rem' }}>
-              <MapPin size={16} color="var(--milicic-orange)" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-main)', fontWeight: 700, fontSize: '0.95rem', marginTop: '0.35rem' }}>
+              <MapPin size={16} weight="bold" color="var(--milicic-orange)" aria-hidden="true" />
               <span>{extinguisher.location}</span>
             </div>
 
@@ -329,10 +346,10 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
 
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Vto. Carga Anual</div>
-            <div style={{ fontWeight: 800, color: isChargeExpired ? 'var(--status-fault-text)' : 'var(--status-ok-text)', fontSize: '0.92rem' }}>
+            <div style={{ fontWeight: 800, color: isChargeExpired ? 'var(--status-fault-text)' : 'var(--status-ok-text)', fontSize: '0.92rem', fontFamily: 'var(--font-mono)' }}>
               {extinguisher.expiration_charge} {isChargeExpired && '(VENCIDO)'}
             </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem', fontFamily: 'var(--font-mono)' }}>
               PH: {extinguisher.expiration_ph}
             </div>
           </div>
@@ -353,10 +370,10 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
           gap: '0.5rem'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}>
-            <RotateCcw size={16} />
+            <ArrowsClockwise size={16} weight="bold" aria-hidden="true" />
             <span>Re-inspección en la misma ronda:</span>
           </div>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-body)' }}>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-body)', margin: 0 }}>
             Este extintor ya fue controlado este mes. Al guardar, se conservará la inspección previa en el historial inmutable de auditoría.
           </p>
           <div>
@@ -386,7 +403,7 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
         alignItems: 'center',
         gap: '0.5rem'
       }}>
-        <Info size={16} color="var(--milicic-orange)" style={{ flexShrink: 0 }} />
+        <Info size={16} weight="bold" color="var(--milicic-orange)" style={{ flexShrink: 0 }} aria-hidden="true" />
         <span>Validar checklist y plazos con el responsable de Seguridad e Higiene y la normativa aplicable (IRAM 3517-2).</span>
       </div>
 
@@ -402,7 +419,7 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
           className="btn btn-success btn-sm"
           style={{ fontWeight: 800, padding: '0.4rem 1rem' }}
         >
-          <Zap size={16} />
+          <Lightning size={16} weight="fill" aria-hidden="true" />
           <span>Todo OK</span>
         </button>
       </div>
@@ -429,16 +446,18 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
                   type="button"
                   onClick={() => toggleCheck(item.code, 1)}
                   className={`toggle-btn ${isOk ? 'active-ok' : ''}`}
+                  aria-label={`${item.label} OK`}
                 >
-                  <CheckCircle2 size={16} />
+                  <Check size={16} weight="bold" aria-hidden="true" />
                   <span>OK</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => toggleCheck(item.code, 0)}
                   className={`toggle-btn ${!isOk ? 'active-fail' : ''}`}
+                  aria-label={`${item.label} Falla`}
                 >
-                  <XCircle size={16} />
+                  <X size={16} weight="bold" aria-hidden="true" />
                   <span>Falla</span>
                 </button>
               </div>
@@ -456,7 +475,7 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
             gap: '0.75rem'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--status-fault-text)', fontWeight: 800, fontSize: '0.92rem' }}>
-              <AlertTriangle size={18} />
+              <WarningCircle size={20} weight="bold" aria-hidden="true" />
               <span>Se abrirá un caso de anomalía automáticamente</span>
             </div>
 
@@ -482,7 +501,7 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <label className="btn btn-secondary" style={{ flex: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
-                    <Camera size={18} />
+                    <Camera size={18} weight="bold" aria-hidden="true" />
                     <span>Tomar / Subir Foto</span>
                     <input
                       type="file"
@@ -546,7 +565,7 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
           </div>
         )}
 
-        {/* STICKY BOTTOM THUMB BAR (ACCESSIBLE CON EL PULGAR) */}
+        {/* STICKY BOTTOM THUMB BAR (ACCESIBLE CON EL PULGAR) */}
         <div className="thumb-bar">
           <button
             type="submit"
@@ -554,7 +573,7 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
             className={`btn ${hasAnyFailure ? 'btn-danger' : 'btn-primary'} btn-full`}
             style={{ fontWeight: 800, fontSize: '1.05rem', minHeight: '52px' }}
           >
-            <Send size={18} />
+            <PaperPlaneTilt size={18} weight="bold" aria-hidden="true" />
             <span>
               {saving ? 'Guardando...' : (hasAnyFailure ? 'Guardar y Abrir Caso' : 'Guardar y Siguiente')}
             </span>

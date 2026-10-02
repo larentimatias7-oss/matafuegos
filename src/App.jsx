@@ -11,7 +11,7 @@ import InspectionHistory from './components/InspectionHistory';
 import M365SyncModal from './components/M365SyncModal';
 import ExtinguisherModal from './components/ExtinguisherModal';
 import LoginModal from './components/LoginModal';
-import { WifiOff, Cloud, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { WifiSlash, Cloud, ArrowsClockwise, CheckCircle } from '@phosphor-icons/react';
 import { getOfflineInspections, syncOfflineInspections } from './utils/offlineQueue';
 
 export default function App() {
@@ -219,7 +219,7 @@ export default function App() {
           gap: '0.5rem'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            {!isOnline ? <WifiOff size={16} /> : <Cloud size={16} />}
+            {!isOnline ? <WifiSlash size={16} aria-hidden="true" /> : <Cloud size={16} aria-hidden="true" />}
             <span>
               {syncFeedback ? syncFeedback :
                !isOnline ? `Modo Sin Conexión (${pendingOfflineCount} guardado/s en dispositivo)` :
@@ -234,7 +234,7 @@ export default function App() {
               className="btn btn-primary"
               style={{ padding: '0.25rem 0.65rem', fontSize: '0.78rem', minHeight: '34px' }}
             >
-              <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
+              <ArrowsClockwise size={14} className={isSyncing ? 'animate-spin' : ''} aria-hidden="true" />
               <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar ahora'}</span>
             </button>
           )}
@@ -262,9 +262,14 @@ export default function App() {
         {activeTab === 'dashboard' && (
           <Dashboard 
             stats={stats}
+            extinguishers={extinguishers}
             onNavigate={(tab) => setActiveTab(tab)}
             onExportExcel={handleExportExcel}
             onResetSeed={handleResetSeed}
+            onInspectExtinguisher={(ext) => {
+              setInspectingExtinguisher(ext);
+              setActiveTab('scan');
+            }}
             loading={loading}
           />
         )}

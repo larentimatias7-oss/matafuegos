@@ -2,19 +2,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { 
   Camera, 
-  Search, 
-  Flame, 
-  AlertCircle, 
-  CheckCircle2, 
-  RefreshCw,
-  Zap,
-  ZapOff,
-  Keyboard,
-  ShieldAlert,
-  ArrowRight,
-  Info,
-  RotateCcw
-} from 'lucide-react';
+  MagnifyingGlass, 
+  FireExtinguisher, 
+  WarningCircle, 
+  CheckCircle, 
+  ArrowsClockwise, 
+  Lightning, 
+  LightningSlash, 
+  Keyboard, 
+  ShieldWarning, 
+  ArrowRight, 
+  Info 
+} from '@phosphor-icons/react';
 
 export default function Scanner({ extinguishers = [], onSelectCode }) {
   const [mode, setMode] = useState('camera'); // 'camera' | 'manual'
@@ -94,7 +93,6 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
     let isMounted = true;
 
     const startScanner = async () => {
-      // Small pause to guarantee DOM is rendered
       await new Promise(resolve => setTimeout(resolve, 80));
       if (!isMounted) return;
 
@@ -110,7 +108,6 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
       try {
         setCameraError(null);
 
-        // Clean up previous instance if any
         if (scannerInstanceRef.current) {
           try {
             if (scannerInstanceRef.current.isScanning) {
@@ -147,12 +144,10 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
 
         const onScanError = () => {};
 
-        // Step 1: Detect available cameras
         let cameraParam = { facingMode: "environment" };
         try {
           const devices = await Html5Qrcode.getCameras();
           if (devices && devices.length > 0) {
-            // Find rear/back camera
             const rearCam = devices.find(d => /back|rear|trasera|trasero|environment|exterior/i.test(d.label)) || devices[devices.length - 1];
             if (rearCam && rearCam.id) {
               cameraParam = rearCam.id;
@@ -163,19 +158,16 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
           cameraParam = { facingMode: "environment" };
         }
 
-        // Step 2: Attempt camera start with fallback
         try {
           await html5QrCode.start(cameraParam, config, onScanSuccess, onScanError);
         } catch (firstErr) {
-          console.warn('Primary camera start failed, attempting user-facing/generic fallback:', firstErr);
-          // Fallback to any camera or facingMode user
+          console.warn('Primary camera start failed, attempting fallback:', firstErr);
           await html5QrCode.start({ facingMode: "user" }, config, onScanSuccess, onScanError);
         }
 
         if (isMounted) {
           setIsScanning(true);
 
-          // Detect torch support
           try {
             const videoElement = document.querySelector('#qr-reader-container video');
             if (videoElement && videoElement.srcObject) {
@@ -252,7 +244,7 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
             className={`btn btn-sm ${mode === 'camera' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ minHeight: '34px', padding: '0.2rem 0.65rem', fontSize: '0.78rem' }}
           >
-            <Camera size={14} />
+            <Camera size={15} weight="bold" aria-hidden="true" />
             <span>Cámara</span>
           </button>
 
@@ -261,7 +253,7 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
             className={`btn btn-sm ${mode === 'manual' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ minHeight: '34px', padding: '0.2rem 0.65rem', fontSize: '0.78rem' }}
           >
-            <Keyboard size={14} />
+            <Keyboard size={15} weight="bold" aria-hidden="true" />
             <span>Manual</span>
           </button>
         </div>
@@ -278,7 +270,7 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
           fontSize: '0.85rem'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800, marginBottom: '0.35rem' }}>
-            <ShieldAlert size={18} />
+            <ShieldWarning size={18} weight="bold" aria-hidden="true" />
             <span>La cámara requiere HTTPS</span>
           </div>
           <p style={{ marginBottom: '0.65rem' }}>
@@ -315,7 +307,7 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
               }} 
             />
 
-            {/* Reticle Overlay */}
+            {/* Reticle Overlay with Industrial Milicic Style */}
             <div className="scanner-reticle-overlay">
               <div className="scanner-frame">
                 <div className="scanner-scan-line" />
@@ -344,8 +336,9 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
                   zIndex: 10
                 }}
                 title={torchOn ? 'Apagar linterna' : 'Encender linterna'}
+                aria-label={torchOn ? 'Apagar linterna' : 'Encender linterna'}
               >
-                {torchOn ? <Zap size={20} /> : <ZapOff size={20} />}
+                {torchOn ? <Lightning size={20} weight="fill" aria-hidden="true" /> : <LightningSlash size={20} weight="bold" aria-hidden="true" />}
               </button>
             )}
 
@@ -355,7 +348,7 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
               bottom: '12px',
               left: '12px',
               right: '12px',
-              background: 'rgba(15, 23, 42, 0.8)',
+              background: 'rgba(15, 23, 42, 0.85)',
               color: '#ffffff',
               padding: '0.5rem 0.85rem',
               borderRadius: '8px',
@@ -378,7 +371,7 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
               borderRadius: 'var(--radius-sm)',
               border: '1px solid var(--status-fault-border)'
             }}>
-              <AlertCircle size={36} style={{ margin: '0 auto 0.65rem auto' }} />
+              <WarningCircle size={36} weight="bold" style={{ margin: '0 auto 0.65rem auto' }} aria-hidden="true" />
               <h3 style={{ fontSize: '1.05rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--status-fault-text)' }}>
                 No se pudo activar la cámara
               </h3>
@@ -395,7 +388,7 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
                   className="btn btn-secondary"
                   style={{ minHeight: '44px', fontWeight: 800 }}
                 >
-                  <RotateCcw size={16} />
+                  <ArrowsClockwise size={16} weight="bold" aria-hidden="true" />
                   <span>Reintentar Cámara</span>
                 </button>
                 <button 
@@ -404,7 +397,7 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
                   className="btn btn-primary"
                   style={{ minHeight: '44px', fontWeight: 800 }}
                 >
-                  <Keyboard size={16} />
+                  <Keyboard size={16} weight="bold" aria-hidden="true" />
                   <span>Ingresar Código</span>
                 </button>
               </div>
@@ -425,8 +418,8 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
                 className="input"
                 style={{ flex: 1, textTransform: 'uppercase' }}
               />
-              <button type="submit" className="btn btn-secondary" style={{ flexShrink: 0 }}>
-                <ArrowRight size={18} />
+              <button type="submit" className="btn btn-secondary" style={{ flexShrink: 0 }} aria-label="Buscar código">
+                <ArrowRight size={18} weight="bold" aria-hidden="true" />
               </button>
             </form>
           </div>
@@ -478,7 +471,7 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
             )}
 
             <button type="submit" className="btn btn-primary btn-full" style={{ minHeight: '48px', fontWeight: 800 }}>
-              <ArrowRight size={18} />
+              <ArrowRight size={18} weight="bold" aria-hidden="true" />
               <span>Abrir Ficha de Inspección</span>
             </button>
           </form>
