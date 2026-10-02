@@ -39,6 +39,7 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
   const videoTrackRef = useRef(null);
   const isStartingRef = useRef(false);
   const isProcessingRef = useRef(false);
+  const hasStoppedRef = useRef(false);
 
   // Parse QR content
   const handleDecodedText = (decodedText) => {
@@ -51,9 +52,13 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
       isProcessingRef.current = false;
     }, 2000);
 
-    // Haptic feedback upon scan
-    if (navigator.vibrate) {
-      navigator.vibrate([60]);
+    // Haptic feedback upon scan (safe guarded)
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        navigator.vibrate([60]);
+      }
+    } catch (_vErr) {
+      // Ignore vibration error if blocked by browser policy
     }
 
     // 1. Check for short public URL /m/<publicId>
@@ -158,13 +163,28 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
           }
         };
 
-        const onScanSuccess = (decodedText) => {
+        const onScanSuccess = async (decodedText) => {
+          if (!isMounted || hasStoppedRef.current) return;
+          hasStoppedRef.current = true;
+
+          try {
+            if (html5QrCode && html5QrCode.isScanning) {
+              await html5QrCode.stop();
+            }
+          } catch (stopErr) {
+            console.warn('html5QrCode stop error ignored:', stopErr);
+          }
+
+          try {
+            if (html5QrCode) {
+              html5QrCode.clear();
+            }
+          } catch (_clearErr) {
+            // Container may already be removed by React unmount
+          }
+
           if (isMounted) {
-            html5QrCode.stop().then(() => {
-              handleDecodedText(decodedText);
-            }).catch(() => {
-              handleDecodedText(decodedText);
-            });
+            handleDecodedText(decodedText);
           }
         };
 
@@ -192,6 +212,7 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
         }
 
         if (isMounted) {
+          hasStoppedRef.current = false;
           setIsScanning(true);
 
           try {
@@ -230,14 +251,36 @@ export default function Scanner({ extinguishers = [], onSelectCode }) {
       }
     };
 
+    hasStoppedRef.current = false;
     startScanner();
 
     return () => {
       isMounted = false;
-      if (scannerInstanceRef.current) {
-        scannerInstanceRef.current.stop().catch(() => {}).finally(() => {
-          scannerInstanceRef.current?.clear();
-        });
+      const scanner = scannerInstanceRef.current;
+      scannerInstanceRef.current = null;
+      if (scanner && !hasStoppedRef.current) {
+        hasStoppedRef.current = true;
+        try {
+          if (scanner.isScanning) {
+            scanner.stop()
+              .catch(err => console.warn('Cleanup stop error ignored:', err))
+              .finally(() => {
+                try {
+                  scanner.clear();
+                } catch (_cErr) {
+                  // Container may already be removed by React unmount
+                }
+              });
+          } else {
+            try {
+              scanner.clear();
+            } catch (_cErr) {
+              // Container may already be removed by React unmount
+            }
+          }
+        } catch (err) {
+          console.warn('Cleanup scanner error ignored:', err);
+        }
       }
     };
   }, [mode, isSecure, retryCount]);
