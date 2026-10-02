@@ -13,7 +13,8 @@ import {
   Moon,
   UserCheck,
   LogOut,
-  CalendarCheck
+  CalendarCheck,
+  BookOpen
 } from 'lucide-react';
 
 export default function Navbar({ 
@@ -180,6 +181,33 @@ export default function Navbar({
             </button>
           );
         })}
+
+        {/* Enlace directo al Centro de Documentación */}
+        <a
+          href="/documentacion"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+            minHeight: '42px',
+            padding: '0.4rem 0.85rem',
+            borderRadius: '5px',
+            fontSize: '0.84rem',
+            fontWeight: 600,
+            textDecoration: 'none',
+            whiteSpace: 'nowrap',
+            color: '#fdba74',
+            background: 'rgba(234, 88, 12, 0.15)',
+            border: '1px solid rgba(253, 186, 116, 0.3)',
+            marginLeft: 'auto'
+          }}
+          title="Abrir Centro de Documentación Oficial de Milicic S.A."
+        >
+          <BookOpen size={16} />
+          <span>Manuales & Docs</span>
+        </a>
       </div>
     </header>
   );

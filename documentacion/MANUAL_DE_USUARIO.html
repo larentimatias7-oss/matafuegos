@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manual de Usuario | Control de Extintores • Milicic S.A.</title>
+  <link rel="stylesheet" href="milicic-ui.css">
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 18mm 14mm 18mm 14mm;
+    }
+    * {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    body {
+      background-color: var(--bg-page);
+      color: var(--slate-text);
+      font-size: 13.5px;
+      line-height: 1.6;
+    }
+    .doc-container {
+      max-width: 960px;
+      margin: 0 auto;
+      background: #ffffff;
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border-color);
+      min-height: 100vh;
+    }
+    .doc-header-bar {
+      background-color: var(--dark-slate);
+      color: #ffffff;
+      padding: 16px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 3px solid var(--primary);
+    }
+    .doc-content {
+      padding: 40px;
+    }
+    .cover-banner {
+      background: linear-gradient(135deg, var(--dark-slate) 0%, var(--slate-lead) 100%);
+      color: #ffffff;
+      padding: 36px 30px;
+      border-radius: var(--radius);
+      border-left: 6px solid var(--primary);
+      margin-bottom: 30px;
+      position: relative;
+    }
+    .category-pill {
+      background-color: var(--primary);
+      color: #ffffff;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 4px 12px;
+      border-radius: var(--radius-full);
+      display: inline-block;
+      margin-bottom: 12px;
+    }
+    .cover-title {
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1.25;
+      margin-bottom: 8px;
+      color: #ffffff;
+    }
+    .cover-subtitle {
+      color: #cbd5e1;
+      font-size: 14px;
+      max-width: 700px;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .meta-item {
+      font-size: 11px;
+    }
+    .meta-label {
+      color: #94a3b8;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+    .meta-value {
+      color: #ffffff;
+      font-weight: 600;
+    }
+    h2.section-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--dark-slate);
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 6px;
+      margin: 32px 0 16px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    h3.subsection-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--primary);
+      margin: 20px 0 8px 0;
+    }
+    .step-card {
+      background: #ffffff;
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 14px;
+      transition: border-color 0.2s;
+    }
+    .step-card:hover {
+      border-color: var(--primary);
+    }
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .step-num {
+      width: 28px;
+      height: 28px;
+      background: var(--primary);
+      color: #ffffff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 12px;
+    }
+    .flow-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin: 18px 0;
+    }
+    .flow-box {
+      background: var(--primary-light);
+      border: 1px solid var(--primary-border);
+      border-radius: var(--radius);
+      padding: 14px;
+      text-align: center;
+    }
+    .flow-box h4 {
+      color: var(--primary-hover);
+      font-size: 13px;
+      font-weight: 800;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+    .flow-box p {
+      font-size: 11.5px;
+      color: var(--slate-body);
+    }
+    .print-bar {
+      background: var(--primary-light);
+      border-bottom: 1px solid var(--primary-border);
+      padding: 10px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    @media print {
+      .print-bar { display: none; }
+      .doc-container { box-shadow: none; border: none; }
+      .doc-content { padding: 0; }
+      .page-break { page-break-after: always; break-after: page; }
+      body { background: #ffffff; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="print-bar">
+    <div style="font-size: 12px; font-weight: 700; color: var(--primary-hover);">
+      MILICIC S.A. • Documento Oficial de Higiene y Seguridad Laboral
+    </div>
+    <button onclick="window.print()" class="btn btn-primary btn-sm" style="font-weight: bold;">
+      Descargar en PDF / Imprimir A4
+    </button>
+  </div>
+
+  <div class="doc-container">
+
+    <!-- Header Corporativo -->
+    <header class="doc-header-bar">
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <img src="logo-milicic.svg" alt="Milicic S.A." height="32" onerror="this.src='logo-milicic.png'">
+        <div style="border-left: 1px solid rgba(255,255,255,0.25); padding-left: 14px;">
+          <div style="font-size: 13px; font-weight: 800; letter-spacing: 0.05em;">MILICIC S.A.</div>
+          <div style="font-size: 10px; color: #94a3b8;">SISTEMA INTEGRADO DE GESTIÓN HSE</div>
+        </div>
+      </div>
+      <div style="text-align: right; font-size: 11px; color: #cbd5e1;">
+        <div>NORMA IRAM 3517-2</div>
+        <div style="color: var(--primary); font-weight: 700;">MANUAL DE OPERACIONES</div>
+      </div>
+    </header>
+
+    <div class="doc-content">
+
+      <!-- Portada Ejecutiva -->
+      <div class="cover-banner">
+        <span class="category-pill">Manual Oficial de Usuario</span>
+        <h1 class="cover-title">Control Periódico Mensual de Extintores</h1>
+        <p class="cover-subtitle">
+          Guía de operación integral para personal de campo, supervisores de obra y responsables de Higiene y Seguridad Laboral. Flujo de 3 toques, modo offline, escaneo QR y exportación auditada.
+        </p>
+
+        <div class="meta-grid">
+          <div class="meta-item">
+            <div class="meta-label">Organización</div>
+            <div class="meta-value">Milicic S.A.</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Gerencia Emisora</div>
+            <div class="meta-value">Seguridad e Higiene (HSE)</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Versión / Año</div>
+            <div class="meta-value">v2.4.0 • 2026</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Clasificación</div>
+            <div class="meta-value">Uso Interno Operativo</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sección 1 -->
+      <h2 class="section-title">1. Resumen Ejecutivo del Flujo Operativo</h2>
+      <p style="margin-bottom: 14px;">
+        El sistema está diseñado para que cualquier operario e inspector calificado pueda ejecutar y registrar la auditoría de un equipo extintor en <strong>menos de 15 segundos</strong> con ergonomía mobile-first (botones táctiles de más de 48px y control a una sola mano).
+      </p>
+
+      <div class="flow-grid">
+        <div class="flow-box">
+          <h4>1. Localizar / Escanear</h4>
+          <p>Apuntar la cámara al QR de la etiqueta o seleccionar el puesto en "Mi Ruta".</p>
+        </div>
+        <div class="flow-box">
+          <h4>2. Control Rápido</h4>
+          <p>Si manómetro y precinto están bien, tocar <strong>"⚡ Todo OK"</strong> (1 toque).</p>
+        </div>
+        <div class="flow-box">
+          <h4>3. Guardar y Seguir</h4>
+          <p>Tocar botón verde inferior. El sistema vibra y avanza al siguiente equipo.</p>
+        </div>
+      </div>
+
+      <!-- Sección 2 -->
+      <h2 class="section-title">2. Guía para el Inspector en Campo</h2>
+
+      <div class="step-card">
+        <div class="step-header">
+          <div class="step-num">1</div>
+          <h3 class="subsection-title" style="margin: 0;">Ingreso y Vista Optimizada "Mi Ruta"</h3>
+        </div>
+        <p>
+          Al ingresar a la aplicación desde el celular (recomendado agregar como PWA a la pantalla de inicio), acceda a la pestaña <strong>"Mi Ruta"</strong>. Los 130 equipos del parque se encuentran agrupados y ordenados por Edificio, Piso y Sector para recorrer el predio en un trayecto continuo y eficiente sin retrocesos.
+        </p>
+      </div>
+
+      <div class="step-card">
+        <div class="step-header">
+          <div class="step-num">2</div>
+          <h3 class="subsection-title" style="margin: 0;">Escaneo del Código QR Industrial</h3>
+        </div>
+        <p>
+          En la pestaña <strong>"Escanear QR"</strong>, apunte la cámara al código QR de la etiqueta. El sistema utiliza códigos con <strong>Corrección de Error Nivel H (30%)</strong>, lo que permite su lectura inmediata aun con manchas de obra, polvo, rayaduras o poca luz. En caso de daño total de la etiqueta, puede seleccionar el código directamente en el buscador manual.
+        </p>
+      </div>
+
+      <div class="step-card">
+        <div class="step-header">
+          <div class="step-num">3</div>
+          <h3 class="subsection-title" style="margin: 0;">Puntos de Control IRAM 3517-2</h3>
+        </div>
+        <p style="margin-bottom: 8px;">La pantalla presenta 6 puntos normativos con selectores binarios (OK / Falla):</p>
+        <ul style="padding-left: 20px; line-height: 1.8; color: var(--slate-body);">
+          <li><strong>Ubicación y Acceso:</strong> El equipo está en su soporte reglamentario y no hay obstáculos que bloqueen su retiro inmediato.</li>
+          <li><strong>Presión / Peso:</strong> En extintores con manómetro (ABC, Agua), la aguja debe estar en el cuadrante verde. En extintores de CO2, se verifica por peso contra tara.</li>
+          <li><strong>Precinto y Traba:</strong> Pasador metálico colocado y precinto plástico numerado sin roturas.</li>
+          <li><strong>Estado Físico:</strong> Cilindro sin corrosión ni deformaciones; manguera flexible y tobera sin nidos de insectos o barro.</li>
+          <li><strong>Señalización:</strong> Chapa baliza y cartel con tipo de fuego visibles.</li>
+          <li><strong>Marbete y Tarjeta:</strong> Collarín plástico del año colocado y tarjeta firmable vigente.</li>
+        </ul>
+      </div>
+
+      <div class="callout" style="margin: 18px 0;">
+        <div style="font-weight: 800; color: var(--primary-hover); margin-bottom: 4px;">⚡ Atajo "Marcar Todo OK"</div>
+        <div>
+          Si el extintor cumple los 6 requisitos, toque el botón <strong>"⚡ Marcar Todo OK"</strong>. Todos los interruptores pasarán a estado verde en forma instantánea y el botón inferior se activará para registrar la inspección.
+        </div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-header">
+          <div class="step-num">4</div>
+          <h3 class="subsection-title" style="margin: 0;">Reporte de Falla y Foto Comprimida</h3>
+        </div>
+        <p>
+          Si detecta una anomalía (ej. manómetro descargado), presione <strong>"Falla"</strong> en ese punto. El sistema desplegará automáticamente:
+        </p>
+        <ul style="padding-left: 20px; line-height: 1.7; margin-top: 6px;">
+          <li>Campo obligatorio para describir la deficiencia.</li>
+          <li>Botón <strong>"Tomar / Subir Foto"</strong> que abre la cámara del teléfono y <strong>comprime la imagen a 1024px JPEG 70%</strong> en el dispositivo para no saturar la red celular.</li>
+          <li>Apertura automática de un <strong>Caso de Anomalía</strong> para seguimiento de taller.</li>
+        </ul>
+      </div>
+
+      <div class="step-card">
+        <div class="step-header">
+          <div class="step-num">5</div>
+          <h3 class="subsection-title" style="margin: 0;">Funcionamiento Sin Conexión (Offline)</h3>
+        </div>
+        <p>
+          Si se encuentra en un subsuelo o zona sin señal, aparecerá la barra amarilla de <strong>"Modo Sin Conexión"</strong>. La inspección se guarda de inmediato en la base de datos interna de su celular (IndexedDB). Al regresar a una zona con señal o Wi-Fi, la aplicación sincronizará automáticamente todos los registros pendientes con el servidor central de Milicic S.A.
+        </p>
+      </div>
+
+      <div class="page-break"></div>
+
+      <!-- Sección 3 -->
+      <h2 class="section-title">3. Guía para el Administrador de HSE</h2>
+
+      <h3 class="subsection-title">3.1. Tablero Ejecutivo (Dashboard)</h3>
+      <p style="margin-bottom: 12px;">El panel condensa en tiempo real los indicadores obligatorios:</p>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px;">
+        <div class="kpi-card kpi-primary">
+          <div class="kpi-title">Cobertura de Ronda</div>
+          <div class="kpi-value">Avance %</div>
+          <p style="font-size: 11px; color: var(--slate-muted);">Controles aprobados sobre parque activo.</p>
+        </div>
+        <div class="kpi-card kpi-warning">
+          <div class="kpi-title">Alertas Preventivas</div>
+          <div class="kpi-value">15 / 30 / 60 d</div>
+          <p style="font-size: 11px; color: var(--slate-muted);">Vencimientos de recarga y prueba hidr.</p>
+        </div>
+        <div class="kpi-card kpi-danger">
+          <div class="kpi-title">Casos Abiertos</div>
+          <div class="kpi-value">Antigüedad</div>
+          <p style="font-size: 11px; color: var(--slate-muted);">Días corridos sin resolución técnica.</p>
+        </div>
+      </div>
+
+      <h3 class="subsection-title">3.2. Gestión de Casos y Equipos de Reemplazo</h3>
+      <p>
+        Cuando un equipo es retirado para recarga o reparación en taller externo, el administrador puede asignar un <strong>extintor de reemplazo temporal</strong> (ej. <em>MF-R02</em>) para garantizar la continuidad de la protección contra incendios del sector según los requerimientos de la ART.
+      </p>
+
+      <h3 class="subsection-title">3.3. Impresión de Etiquetas QR y Reportes Oficiales</h3>
+      <p>
+        - <strong>Etiquetas QR (Hoja A4 y 70x40 mm):</strong> Disponibles en la pestaña <em>"Imprimir QRs"</em> con logo oficial, código grande e ID único no adivinable.<br>
+        - <strong>Informe Oficial en PDF / HTML:</strong> Genera la minuta formal con resumen ejecutivo, parque de extintores y <strong>espacio reservado para firma y aclaración con matrícula profesional del Responsable de Higiene y Seguridad</strong>.<br>
+        - <strong>Planilla Microsoft Excel 365:</strong> Descarga el archivo XLSX estructurado en 5 hojas para archivo y auditorías corporativas.
+      </p>
+
+      <!-- Pie de página institucional -->
+      <footer style="margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; font-size: 10px; color: var(--slate-muted);">
+        <div>Milicic S.A. • Sistema de Control de Extintores (IRAM 3517-2)</div>
+        <div>Confidencial • Uso Interno Exclusivo</div>
+      </footer>
+
+    </div>
+  </div>
+
+</body>
+</html>

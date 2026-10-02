@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manual Técnico y Arquitectura | Control de Extintores • Milicic S.A.</title>
+  <link rel="stylesheet" href="milicic-ui.css">
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 18mm 14mm 18mm 14mm;
+    }
+    * {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    body {
+      background-color: var(--bg-page);
+      color: var(--slate-text);
+      font-size: 13.5px;
+      line-height: 1.6;
+    }
+    .doc-container {
+      max-width: 960px;
+      margin: 0 auto;
+      background: #ffffff;
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border-color);
+      min-height: 100vh;
+    }
+    .doc-header-bar {
+      background-color: var(--dark-slate);
+      color: #ffffff;
+      padding: 16px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 3px solid var(--primary);
+    }
+    .doc-content {
+      padding: 40px;
+    }
+    .cover-banner {
+      background: linear-gradient(135deg, var(--dark-slate) 0%, var(--slate-lead) 100%);
+      color: #ffffff;
+      padding: 36px 30px;
+      border-radius: var(--radius);
+      border-left: 6px solid var(--primary);
+      margin-bottom: 30px;
+    }
+    .category-pill {
+      background-color: var(--primary);
+      color: #ffffff;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 4px 12px;
+      border-radius: var(--radius-full);
+      display: inline-block;
+      margin-bottom: 12px;
+    }
+    .cover-title {
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1.25;
+      margin-bottom: 8px;
+      color: #ffffff;
+    }
+    .cover-subtitle {
+      color: #cbd5e1;
+      font-size: 14px;
+      max-width: 700px;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .meta-item {
+      font-size: 11px;
+    }
+    .meta-label {
+      color: #94a3b8;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+    .meta-value {
+      color: #ffffff;
+      font-weight: 600;
+    }
+    h2.section-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--dark-slate);
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 6px;
+      margin: 32px 0 16px 0;
+    }
+    h3.subsection-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--primary);
+      margin: 20px 0 8px 0;
+    }
+    pre {
+      background: var(--dark-slate);
+      color: #f1f5f9;
+      padding: 14px 18px;
+      border-radius: var(--radius-sm);
+      font-family: monospace;
+      font-size: 12px;
+      overflow-x: auto;
+      margin: 12px 0;
+      border-left: 4px solid var(--primary);
+    }
+    code {
+      font-family: monospace;
+      background: #f1f5f9;
+      padding: 2px 5px;
+      border-radius: 4px;
+      color: var(--primary-hover);
+      font-size: 12px;
+    }
+    pre code {
+      background: none;
+      color: inherit;
+      padding: 0;
+    }
+    .tech-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin: 14px 0;
+    }
+    .tech-table th {
+      background: var(--dark-slate);
+      color: #ffffff;
+      text-align: left;
+      padding: 8px 12px;
+      font-weight: 700;
+    }
+    .tech-table td {
+      border-bottom: 1px solid var(--border-color);
+      padding: 7px 12px;
+    }
+    .tech-table tr:nth-child(even) td {
+      background: var(--bg-page);
+    }
+    .print-bar {
+      background: var(--primary-light);
+      border-bottom: 1px solid var(--primary-border);
+      padding: 10px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    @media print {
+      .print-bar { display: none; }
+      .doc-container { box-shadow: none; border: none; }
+      .doc-content { padding: 0; }
+      .page-break { page-break-after: always; break-after: page; }
+      body { background: #ffffff; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="print-bar">
+    <div style="font-size: 12px; font-weight: 700; color: var(--primary-hover);">
+      MILICIC S.A. • Documento Técnico de Arquitectura de Sistemas
+    </div>
+    <button onclick="window.print()" class="btn btn-primary btn-sm" style="font-weight: bold;">
+      Descargar en PDF / Imprimir A4
+    </button>
+  </div>
+
+  <div class="doc-container">
+
+    <!-- Header Corporativo -->
+    <header class="doc-header-bar">
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <img src="logo-milicic.svg" alt="Milicic S.A." height="32" onerror="this.src='logo-milicic.png'">
+        <div style="border-left: 1px solid rgba(255,255,255,0.25); padding-left: 14px;">
+          <div style="font-size: 13px; font-weight: 800; letter-spacing: 0.05em;">MILICIC S.A.</div>
+          <div style="font-size: 10px; color: #94a3b8;">DEPARTAMENTO DE TECNOLOGÍAS DE LA INFORMACIÓN</div>
+        </div>
+      </div>
+      <div style="text-align: right; font-size: 11px; color: #cbd5e1;">
+        <div>DOKPLOY / DOCKER / M365</div>
+        <div style="color: var(--primary); font-weight: 700;">MANUAL TÉCNICO & ARQUITECTURA</div>
+      </div>
+    </header>
+
+    <div class="doc-content">
+
+      <!-- Portada -->
+      <div class="cover-banner">
+        <span class="category-pill">Manual Técnico de Arquitectura</span>
+        <h1 class="cover-title">Especificación Técnica & Despliegue Dokploy</h1>
+        <p class="cover-subtitle">
+          Arquitectura del software, modelo de datos SQLite nativo, esquema de seguridad, compresión client-side, resiliencia offline PWA y procedimientos de respaldo / disaster recovery.
+        </p>
+
+        <div class="meta-grid">
+          <div class="meta-item">
+            <div class="meta-label">Organización</div>
+            <div class="meta-value">Milicic S.A.</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Entorno</div>
+            <div class="meta-value">Node 22 / Express 5 / Dokploy</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Base de Datos</div>
+            <div class="meta-value">SQLite (node:sqlite) / /data</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Zona Horaria</div>
+            <div class="meta-value">America/Argentina/Buenos_Aires</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sección 1: Stack Tecnológico -->
+      <h2 class="section-title">1. Stack Tecnológico & Componentes</h2>
+      <table class="tech-table">
+        <thead>
+          <tr>
+            <th>Capa / Componente</th>
+            <th>Tecnología Seleccionada</th>
+            <th>Propósito y Justificación</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Frontend UI</strong></td>
+            <td>React 19 + Vite</td>
+            <td>Renderizado ultra rápido, PWA instalable y diseño mobile-first.</td>
+          </tr>
+          <tr>
+            <td><strong>Iconografía & Estilos</strong></td>
+            <td>Lucide React + Vanilla CSS Tokens</td>
+            <td>Paleta estricta Milicic S.A. (#EA580C / #0F172A), sin emojis, 48px touch targets.</td>
+          </tr>
+          <tr>
+            <td><strong>Caché & Offline</strong></td>
+            <td>Service Worker + IndexedDB</td>
+            <td>Almacenamiento transaccional local en campo con auto-sincronización.</td>
+          </tr>
+          <tr>
+            <td><strong>Backend Runtime</strong></td>
+            <td>Node.js v22/v24 Alpine</td>
+            <td>Ejecución liviana, arranque instantáneo y soporte de <code>node:sqlite</code> nativo.</td>
+          </tr>
+          <tr>
+            <td><strong>Servidor Web API</strong></td>
+            <td>Express 5 + Middleware</td>
+            <td>Enrutamiento REST, rate limiting, cabeceras de seguridad y redirección corta QR.</td>
+          </tr>
+          <tr>
+            <td><strong>Motor de Base de Datos</strong></td>
+            <td>SQLite síncrono nativo</td>
+            <td>Cero dependencias binarias externas, archivo único <code>/data/matafuegos.db</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>Infraestructura</strong></td>
+            <td>Dokploy (Docker Compose & Traefik)</td>
+            <td>Despliegue automatizado por Git, SSL Let's Encrypt y volumen persistente.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Sección 2: Modelo de Datos -->
+      <h2 class="section-title">2. Modelo de Tablas y Diccionario de Datos</h2>
+      <p style="margin-bottom: 12px;">
+        La base de datos cuenta con migraciones idempotentes automáticas ejecutadas en el arranque del servicio (<code>server/db.js</code>).
+      </p>
+
+      <h3 class="subsection-title">2.1. Tabla: extinguishers (Parque de Extintores)</h3>
+      <table class="tech-table">
+        <thead>
+          <tr>
+            <th>Columna</th>
+            <th>Tipo</th>
+            <th>Definición IRAM 3517-2</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>id</code></td><td>INTEGER PK</td><td>Identificador numérico autoincremental.</td></tr>
+          <tr><td><code>public_id</code></td><td>TEXT UNIQUE</td><td>UUID corto no adivinable para el enlace físico del QR (ej: <code>/m/:publicId</code>).</td></tr>
+          <tr><td><code>code</code></td><td>TEXT UNIQUE</td><td>Código visible del equipo (ej: <code>MF-001</code> al <code>MF-130</code>).</td></tr>
+          <tr><td><code>type</code></td><td>TEXT</td><td>Tipo de agente extintor (<code>Polvo ABC</code>, <code>CO2</code>, <code>Agua</code>, <code>Clase K</code>).</td></tr>
+          <tr><td><code>capacity</code></td><td>TEXT</td><td>Capacidad nominal (ej: <code>5 kg</code>, <code>10 kg</code>, <code>50 L</code>).</td></tr>
+          <tr><td><code>floor</code> / <code>area</code></td><td>TEXT</td><td>Piso y sector de emplazamiento para optimización de ruta.</td></tr>
+          <tr><td><code>manufacturer</code></td><td>TEXT</td><td>Fabricante homologado del cilindro.</td></tr>
+          <tr><td><code>fab_year</code></td><td>INTEGER</td><td>Año de fabricación (límite de vida útil de 20 años).</td></tr>
+          <tr><td><code>expiration_charge</code></td><td>TEXT (YYYY-MM-DD)</td><td>Vencimiento de la recarga anual obligatoria.</td></tr>
+          <tr><td><code>expiration_ph</code></td><td>TEXT (YYYY-MM-DD)</td><td>Vencimiento de la Prueba Hidráulica quinquenal (5 años).</td></tr>
+          <tr><td><code>collar_year_color</code></td><td>TEXT</td><td>Año y color reglamentario del marbete plástico de cuello.</td></tr>
+          <tr><td><code>status</code></td><td>TEXT</td><td><code>OPERATIVO</code>, <code>EN_TALLER</code>, <code>FUERA_DE_SERVICIO</code>, <code>REEMPLAZADO</code>.</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="subsection-title">2.2. Tablas Complementarias del Sistema</h3>
+      <ul style="padding-left: 20px; line-height: 1.8; color: var(--slate-body);">
+        <li><code>rounds</code>: Control de ciclos mensuales de inspección (apertura, avance y cierre).</li>
+        <li><code>inspections</code>: Registro inmutable de cada control con inspector, duración, flags antifraude y geolocalización opcional.</li>
+        <li><code>cases</code>: Seguimiento de no conformidades con cálculo de antigüedad en días corridos y extintor temporal de reemplazo.</li>
+        <li><code>audit_logs</code>: Bitácora de trazabilidad de cambios en la ficha técnica (quién, cuándo y qué campo cambió).</li>
+      </ul>
+
+      <div class="page-break"></div>
+
+      <!-- Sección 3: Seguridad y Antifraude -->
+      <h2 class="section-title">3. Seguridad, Antifraude y Resiliencia</h2>
+
+      <div class="callout callout-amber" style="margin-bottom: 16px;">
+        <div style="font-weight: 800; margin-bottom: 4px;">Mecanismo Antifraude Liviano</div>
+        <div>
+          El sistema cronometra el tiempo exacto entre la apertura de la ficha del extintor y el guardado final. Si la duración es menor a <strong>5 segundos</strong>, se registra el flag <code>is_suspicious = 1</code> para auditoría posterior, sin bloquear al inspector en campo para no demorar la operación.
+        </div>
+      </div>
+
+      <pre><code>// Protección contra MIME type sniffing y clickjacking (server/index.js)
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});</code></pre>
+
+      <!-- Sección 4: Despliegue en Dokploy -->
+      <h2 class="section-title">4. Despliegue en Dokploy (Docker & Traefik)</h2>
+      <p style="margin-bottom: 8px;">Variables requeridas en el archivo <code>.env</code> para producción:</p>
+      <pre><code>NODE_ENV=production
+TZ=America/Argentina/Buenos_Aires
+PORT=3000
+DATA_DIR=/data
+BASE_URL=https://matafuegos.milicic.com.ar
+CORS_ORIGIN=*
+AUTH_PROVIDER=local</code></pre>
+
+      <h3 class="subsection-title">Volumen Persistente Obligatorio</h3>
+      <p>
+        En la configuración de la aplicación en Dokploy, montar el volumen:
+        <code>milicic_matafuegos_data</code> ➔ <code>/data</code>. Esto asegura que la base de datos SQLite y los backups automáticos sobrevivan a cualquier redeployment o reinicio del host.
+      </p>
+
+      <!-- Sección 5: Backup y Restore -->
+      <h2 class="section-title">5. Respaldo y Restauración (Disaster Recovery)</h2>
+      <pre><code># Ejecución de backup en caliente dentro del contenedor
+docker exec -it &lt;CONTAINER_ID&gt; /app/scripts/backup.sh
+
+# Restauración de un respaldo anterior
+docker stop milicic-matafuegos
+gzip -d /data/backups/matafuegos_backup_20261002.db.gz
+cp /data/backups/matafuegos_backup_20261002.db /data/matafuegos.db
+docker start milicic-matafuegos</code></pre>
+
+      <!-- Pie de página institucional -->
+      <footer style="margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; font-size: 10px; color: var(--slate-muted);">
+        <div>Milicic S.A. • Sistema de Control de Extintores (IRAM 3517-2)</div>
+        <div>Departamento de Sistemas & Seguridad e Higiene</div>
+      </footer>
+
+    </div>
+  </div>
+
+</body>
+</html>

@@ -92,6 +92,13 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Serve documentation portal
+const docsPath = path.join(__dirname, '../documentacion');
+if (fs.existsSync(docsPath)) {
+  console.log(`Sirviendo portal de documentación desde ${docsPath}`);
+  app.use('/documentacion', express.static(docsPath));
+}
+
 // Serve frontend in production
 const distPath = path.join(__dirname, '../dist');
 if (fs.existsSync(distPath)) {
@@ -111,7 +118,7 @@ if (fs.existsSync(distPath)) {
 
   // Universal SPA fallback for Express 5
   app.use((req, res, next) => {
-    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/m/')) {
+    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/m/') && !req.path.startsWith('/documentacion')) {
       // Si la URL apunta a un archivo específico (ej: .js, .css, .png) y no existió en static, devolver 404
       if (req.path.match(/\.[a-zA-Z0-9]+$/)) {
         return res.status(404).type('text/plain').send('Archivo no encontrado');

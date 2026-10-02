@@ -24,9 +24,10 @@ ENV DATA_DIR=/data
 COPY package*.json ./
 RUN npm install --omit=dev
 
-# Copy server, scripts and built frontend from builder
+# Copy server, scripts, documentation and built frontend from builder
 COPY server/ ./server/
 COPY scripts/ ./scripts/
+COPY documentacion/ ./documentacion/
 RUN chmod +x ./scripts/*.sh 2>/dev/null || true
 COPY --from=builder /app/dist ./dist
 
