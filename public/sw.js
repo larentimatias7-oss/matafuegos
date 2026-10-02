@@ -1,7 +1,7 @@
-const CACHE_NAME = 'milicic-firecontrol-v2';
+// c:\antigravity\matafuegos\public\sw.js
+// Milicic S.A. - Service Worker con Network First para navegación
+const CACHE_NAME = 'milicic-firecontrol-v3';
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
   '/manifest.json',
   '/logo-milicic.svg',
   '/logo-milicic.png'
@@ -30,7 +30,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Cache static assets and pages; network first for API
+  // 1. API: Network first, con fallback JSON offline si no hay red
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(event.request).catch(() => {
@@ -39,21 +39,39 @@ self.addEventListener('fetch', (event) => {
         });
       })
     );
-  } else {
+    return;
+  }
+
+  // 2. Navegación (HTML): NETWORK FIRST para garantizar que siempre reciba la versión con los hashes JS actuales
+  if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html')) {
     event.respondWith(
-      caches.match(event.request).then((cached) => {
-        return cached || fetch(event.request).then((response) => {
-          if (response.status === 200 && event.request.method === 'GET') {
+      fetch(event.request)
+        .then((response) => {
+          if (response.status === 200) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
           }
           return response;
-        });
-      }).catch(() => {
-        if (event.request.mode === 'navigate') {
-          return caches.match('/');
-        }
-      })
+        })
+        .catch(() => {
+          // Si está offline, servir el HTML cacheado
+          return caches.match(event.request).then((cached) => cached || caches.match('/'));
+        })
     );
+    return;
   }
+
+  // 3. Static assets (/assets/): Cache first con network fallback
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      if (cached) return cached;
+      return fetch(event.request).then((response) => {
+        if (response.status === 200 && event.request.method === 'GET') {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
+        return response;
+      });
+    })
+  );
 });

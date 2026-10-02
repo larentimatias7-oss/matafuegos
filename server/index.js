@@ -96,11 +96,27 @@ app.get('/api/health', (req, res) => {
 const distPath = path.join(__dirname, '../dist');
 if (fs.existsSync(distPath)) {
   console.log(`Sirviendo archivos estáticos desde ${distPath}`);
-  app.use(express.static(distPath));
+  
+  // Serve static assets with appropriate caching
+  app.use(express.static(distPath, {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('index.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      } else if (filePath.includes(path.sep + 'assets' + path.sep)) {
+        // Hashed assets can be cached
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
+    }
+  }));
 
   // Universal SPA fallback for Express 5
   app.use((req, res, next) => {
     if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/m/')) {
+      // Si la URL apunta a un archivo específico (ej: .js, .css, .png) y no existió en static, devolver 404
+      if (req.path.match(/\.[a-zA-Z0-9]+$/)) {
+        return res.status(404).type('text/plain').send('Archivo no encontrado');
+      }
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       return res.sendFile(path.join(distPath, 'index.html'));
     }
     next();
