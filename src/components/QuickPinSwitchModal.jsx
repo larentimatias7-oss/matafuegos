@@ -92,11 +92,11 @@ export default function QuickPinSwitchModal({ onClose, onSwitchSuccess }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
             <DeviceMobile size={22} color="var(--milicic-orange)" weight="bold" />
-            <span style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-main)' }}>
-              Cambio Rápido de Operador
-            </span>
+            <h2 style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-main)', margin: 0 }}>
+              Cambio Rápido de Inspector
+            </h2>
           </div>
-          <button onClick={onClose} className="btn btn-secondary btn-sm" style={{ padding: '0.2rem 0.4rem' }}>
+          <button onClick={onClose} className="btn btn-secondary btn-sm" style={{ padding: '0.2rem 0.4rem' }} aria-label="Cerrar">
             <X size={16} weight="bold" />
           </button>
         </div>
@@ -226,6 +226,12 @@ export default function QuickPinSwitchModal({ onClose, onSwitchSuccess }) {
             title="Confirmar"
           >
             {submitting ? <ArrowsClockwise size={20} className="animate-spin" /> : <Check size={22} weight="bold" />}
+          </button>
+        </div>
+
+        <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'center' }}>
+          <button type="button" onClick={onClose} className="btn btn-secondary btn-sm">
+            Cancelar
           </button>
         </div>
 

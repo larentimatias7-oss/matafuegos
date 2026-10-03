@@ -1,0 +1,195 @@
+openapi: 3.0.3
+info:
+  title: Milicic FireControl 365 API
+  description: API REST corporativa para la gestión de inspecciones periódicas de extintores contra incendio, trazabilidad bajo norma IRAM 3517-2 y exportación a Microsoft 365.
+  version: 2.6.0
+  contact:
+    name: Departamento de Higiene y Seguridad Laboral - Milicic S.A.
+servers:
+  - url: http://localhost:3000
+    description: Servidor Local de Desarrollo
+  - url: https://matafuegos.milicic.com.ar
+    description: Servidor de Producción (Dokploy / Docker)
+
+paths:
+  /api/health:
+    get:
+      summary: Verificación de salud y estado operativo
+      responses:
+        '200':
+          description: Sistema completamente saludable
+        '503':
+          description: Servicio degradado o no disponible
+
+  /api/metrics:
+    get:
+      summary: Métricas en formato estándar Prometheus
+      responses:
+        '200':
+          description: Métricas en formato de texto plano OpenMetrics
+
+  /api/auth/login:
+    post:
+      summary: Autenticación local de usuarios
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  example: admin@milicic.com.ar
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Sesión iniciada exitosamente
+        '401':
+          description: Credenciales inválidas
+        '423':
+          description: Cuenta temporalmente bloqueada por exceso de intentos fallidos
+
+  /api/auth/switch-pin:
+    post:
+      summary: Cambio rápido de usuario por PIN (dispositivo compartido)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [usuario_id, pin]
+              properties:
+                usuario_id:
+                  type: string
+                pin:
+                  type: string
+                  example: "1234"
+      responses:
+        '200':
+          description: Cambio de usuario exitoso en la sesión actual
+        '401':
+          description: PIN incorrecto o usuario inactivo
+
+  /api/auth/logout:
+    post:
+      summary: Cierre y revocación de la sesión actual
+      responses:
+        '200':
+          description: Sesión revocada
+
+  /api/users:
+    get:
+      summary: Listar usuarios (Requiere rol ADMIN o SUPERADMIN)
+      responses:
+        '200':
+          description: Lista de usuarios de la organización
+    post:
+      summary: Crear nuevo usuario local
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nombre, apellido, email, rol, password]
+              properties:
+                nombre:
+                  type: string
+                apellido:
+                  type: string
+                email:
+                  type: string
+                rol:
+                  type: string
+                  enum: [SUPERADMIN, ADMIN, SUPERVISOR, INSPECTOR, LECTURA]
+                password:
+                  type: string
+      responses:
+        '201':
+          description: Usuario creado exitosamente
+
+  /api/audit:
+    get:
+      summary: Consultar bitácora inmutable de auditoría
+      parameters:
+        - name: accion
+          in: query
+          schema:
+            type: string
+        - name: entidad
+          in: query
+          schema:
+            type: string
+        - name: desde
+          in: query
+          schema:
+            type: string
+        - name: hasta
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Registros de auditoría
+
+  /api/extinguishers:
+    get:
+      summary: Listar extintores del inventario
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Listado de extintores
+    post:
+      summary: Crear nuevo extintor (Requiere permiso extintor:crear)
+      responses:
+        '201':
+          description: Extintor creado exitosamente
+
+  /api/inspections:
+    get:
+      summary: Consultar historial de inspecciones
+      responses:
+        '200':
+          description: Historial de inspecciones auditables
+    post:
+      summary: Registrar control mensual de extintor (IRAM 3517-2)
+      responses:
+        '201':
+          description: Inspección guardada con éxito
+    put:
+      summary: Intento de edición de inspección (Inmutable)
+      responses:
+        '405':
+          description: Las inspecciones normativas son inmutables
+    delete:
+      summary: Intento de eliminación de inspección (Inmutable)
+      responses:
+        '405':
+          description: Las inspecciones normativas son inmutables
+
+  /api/rounds:
+    get:
+      summary: Listar rondas mensuales
+      responses:
+        '200':
+          description: Rondas registradas
+
+  /api/cases:
+    get:
+      summary: Listar casos de anomalías abiertas o en taller
+      responses:
+        '200':
+          description: Listado de casos técnicos

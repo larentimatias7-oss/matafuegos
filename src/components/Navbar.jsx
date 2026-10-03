@@ -117,6 +117,26 @@ export default function Navbar({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
+          {user ? (
+            <button
+              onClick={onOpenProfile}
+              className="btn btn-secondary btn-sm"
+              style={{ width: '36px', height: '36px', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.2)' }}
+              title="Abrir Mi Perfil"
+              aria-label="Abrir Mi Perfil"
+            >
+              <UserCheck size={18} color="#34d399" weight="bold" />
+            </button>
+          ) : (
+            <button
+              onClick={onOpenLogin}
+              className="btn btn-secondary btn-sm"
+              style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', height: '36px' }}
+            >
+              Iniciar Sesión
+            </button>
+          )}
+
           {onOpenPinSwitch && (
             <button
               onClick={onOpenPinSwitch}

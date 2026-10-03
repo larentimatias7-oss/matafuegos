@@ -23,7 +23,9 @@
     "precommit": "npm run lint && npm run test:unit",
     "backup": "node scripts/backup-db.js",
     "restore": "node scripts/restore-db.js",
-    "crear-admin": "node scripts/crear-admin.js"
+    "crear-admin": "node scripts/crear-admin.js",
+    "docs:check": "node scripts/docs-check.js",
+    "docs:generate": "node scripts/docs-generate.js"
   },
   "keywords": [],
   "author": "",

@@ -1,0 +1,130 @@
+classDiagram
+    direction TB
+
+    class Organizacion {
+        +int id
+        +string nombre
+        +boolean activa
+        +string creado_en
+    }
+
+    class Usuario {
+        +string id
+        +int organizacion_id
+        +string nombre
+        +string apellido
+        +string email
+        +string origen
+        +string rol
+        +boolean activo
+        +boolean debe_cambiar_password
+        +string ultimo_acceso
+        +validarPassword(pass)
+        +validarPIN(pin)
+        +desactivar()
+        +cambiarRol(nuevoRol)
+    }
+
+    class SectorScope {
+        +int id
+        +string usuario_id
+        +string edificio
+        +string piso
+        +string sector
+    }
+
+    class Extintor {
+        +int id
+        +int organizacion_id
+        +string code
+        +string public_id
+        +string type
+        +string capacity
+        +string location
+        +string area
+        +string floor
+        +string building
+        +string expiration_charge
+        +string expiration_ph
+        +string status
+        +int fab_year
+        +string supplier
+        +calcularVencimientos()
+        +pasarATaller()
+        +retornarOperativo()
+        +darDeBaja()
+    }
+
+    class Ronda {
+        +int id
+        +int organizacion_id
+        +string name
+        +string year_month
+        +string status
+        +string opened_at
+        +string closed_at
+        +string notes
+        +cerrarRonda(notas)
+        +reabrirRonda()
+        +calcularCobertura()
+    }
+
+    class Inspeccion {
+        +int id
+        +int extinguisher_id
+        +int round_id
+        +string usuario_id
+        +string inspector_name_snapshot
+        +string inspection_date
+        +boolean passed
+        +boolean check_location
+        +boolean check_access
+        +boolean check_seal
+        +boolean check_pressure
+        +boolean check_hose
+        +boolean check_card
+        +int duration_seconds
+        +boolean is_suspicious
+        +string fraud_flags
+        +boolean is_reinspection
+        +string photo_url
+        +validarAntifraude()
+    }
+
+    class Caso {
+        +int id
+        +int extinguisher_id
+        +int inspection_id
+        +string status
+        +string severity
+        +string description
+        +string assigned_to
+        +string opened_at
+        +string closed_at
+        +string resolution_notes
+        +transicionarA(nuevoEstado, notas)
+    }
+
+    class Auditoria {
+        +int id
+        +string fecha
+        +string usuario_id
+        +string accion
+        +string entidad
+        +string entidad_id
+        +json datos_antes
+        +json datos_despues
+        +string ip
+        +string user_agent
+    }
+
+    Organizacion "1" -- "0..*" Usuario : agrupa
+    Organizacion "1" -- "0..*" Extintor : gestiona
+    Organizacion "1" -- "0..*" Ronda : calendariza
+    Usuario "1" -- "0..*" SectorScope : asignado
+    Usuario "1" -- "0..*" Inspeccion : ejecuta
+    Usuario "1" -- "0..*" Auditoria : genera
+    Extintor "1" -- "0..*" Inspeccion : recibe
+    Extintor "1" -- "0..*" Caso : origina
+    Ronda "1" -- "0..*" Inspeccion : consolida
+    Inspeccion "1" -- "0..1" Caso : dispara

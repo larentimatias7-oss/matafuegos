@@ -110,7 +110,7 @@ export default function UsersList({ currentUser }) {
             gap: '0.6rem'
           }}>
             <Users size={28} weight="bold" color="var(--milicic-orange)" />
-            <span>Administración de Usuarios y Accesos</span>
+            <span>Gestión de Usuarios y Accesos</span>
           </h1>
           <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
             Control de Identidad, Asignación de Roles (RBAC) y Alcance Sectorial en Milicic S.A.

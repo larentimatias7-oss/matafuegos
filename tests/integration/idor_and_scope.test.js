@@ -174,6 +174,8 @@ describe('FASE 6 & 7: Seguridad, IDOR, Alcance Sectorial y Multi-Organización',
 
   describe('4. Protección Anti-Enumeración de Cuentas y Rate Limiting', () => {
     it('login debe responder con idéntico mensaje genérico si el correo no existe o si la clave es incorrecta', async () => {
+      db.prepare("UPDATE usuarios SET activo = 1, intentos_fallidos = 0, bloqueado_hasta = NULL WHERE id = ?").run(scopedUser.id);
+
       // Caso 1: Correo inexistente
       const resNonExistent = await request(app)
         .post('/api/auth/login')

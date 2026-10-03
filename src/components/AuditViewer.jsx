@@ -93,7 +93,7 @@ export default function AuditViewer() {
             gap: '0.6rem'
           }}>
             <ShieldCheck size={28} weight="bold" color="var(--milicic-orange)" />
-            <span>Auditoría de Seguridad y Trazabilidad (Append-Only)</span>
+            <span>Registro de Auditoría de Seguridad y Trazabilidad (Append-Only)</span>
           </h1>
           <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
             Registro legal e inmutable de eventos, autenticaciones, mutaciones y descargas de Milicic S.A.

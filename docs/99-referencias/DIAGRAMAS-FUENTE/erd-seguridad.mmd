@@ -1,0 +1,70 @@
+erDiagram
+    organizaciones ||--o{ usuarios : "pertenece"
+    organizaciones ||--o{ extinguishers : "posee"
+    organizaciones ||--o{ rounds : "planifica"
+    
+    usuarios ||--o{ usuarios_sectores : "alcance"
+    usuarios ||--o{ sesiones : "mantiene"
+    usuarios ||--o{ auditoria : "registra"
+    usuarios ||--o{ inspections : "ejecuta"
+    usuarios ||--o{ tokens_seguridad : "genera"
+
+    organizaciones {
+        INTEGER id PK
+        TEXT nombre
+        INTEGER activa
+        TEXT creado_en
+    }
+
+    usuarios {
+        TEXT id PK
+        INTEGER organizacion_id FK
+        TEXT nombre
+        TEXT apellido
+        TEXT email
+        TEXT origen
+        TEXT entra_oid
+        TEXT password_hash
+        TEXT pin_hash
+        TEXT rol
+        INTEGER activo
+        INTEGER debe_cambiar_password
+        INTEGER intentos_fallidos
+        TEXT bloqueado_hasta
+        TEXT ultimo_acceso
+        TEXT creado_en
+    }
+
+    usuarios_sectores {
+        INTEGER id PK
+        TEXT usuario_id FK
+        TEXT edificio
+        TEXT piso
+        TEXT sector
+        TEXT asignado_en
+    }
+
+    sesiones {
+        TEXT id PK
+        TEXT usuario_id FK
+        TEXT dispositivo
+        TEXT ip
+        TEXT user_agent
+        TEXT creada_en
+        TEXT ultimo_uso
+        TEXT expira_en
+        INTEGER revocada
+    }
+
+    auditoria {
+        INTEGER id PK
+        TEXT fecha
+        TEXT usuario_id FK
+        TEXT accion
+        TEXT entidad
+        TEXT entidad_id
+        TEXT datos_antes
+        TEXT datos_despues
+        TEXT ip
+        TEXT user_agent
+    }

@@ -1,0 +1,5 @@
+# CODEOWNERS - Propietarios de Código y Documentación
+
+# Documentación Técnica Docs-as-Code
+/docs/ @milicic-sa/tech-leads @milicic-sa/arquitectura
+/.github/workflows/ci.yml @milicic-sa/devops

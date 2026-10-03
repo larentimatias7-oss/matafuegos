@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test';
-import { navigateToTab } from './helpers.js';
+import { navigateToTab, ensureAdminSession } from './helpers.js';
 import path from 'path';
 
 test.describe('E2E Flow 5: Generación y Decodificación de Etiquetas QR', () => {
 
   test('debe generar las etiquetas QR del parque y decodificar que coincidan con la URL del equipo', async ({ page }) => {
+    await ensureAdminSession(page);
     await page.goto('/');
 
     // 1. Navegar a la pestaña de Impresión de Etiquetas QR

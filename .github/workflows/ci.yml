@@ -38,6 +38,9 @@ jobs:
       - name: Análisis Estático de Código (ESLint)
         run: npm run lint
 
+      - name: Verificación de Calidad y Enlaces de Documentación (Docs-as-Code)
+        run: npm run docs:check
+
       - name: Pruebas Unitarias y de Integración con Cobertura (Vitest)
         run: npm run test:coverage
         env:

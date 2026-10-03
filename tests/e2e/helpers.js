@@ -3,6 +3,54 @@
  * Soportan de forma transparente vista de escritorio y vista móvil con bottom-nav y drawer "Más".
  */
 
+export async function ensureAdminSession(page) {
+  const { db } = require('../../server/db');
+  const { hashPassword, createSession } = require('../../server/services/authService');
+  const { ROLES } = require('../../server/config/permissions');
+  const passHash = await hashPassword('AdminMilicic2026!');
+  const adminId = 'a5c57ded-2699-4822-9b5a-9095cd07419b';
+  const existing = db.prepare("SELECT id FROM usuarios WHERE id = ?").get(adminId);
+  if (existing) {
+    db.prepare(`
+      UPDATE usuarios 
+      SET password_hash = ?, activo = 1, intentos_fallidos = 0, bloqueado_hasta = NULL, rol = ?
+      WHERE id = ?
+    `).run(passHash, ROLES.SUPERADMIN, existing.id);
+  } else {
+    db.prepare(`
+      INSERT INTO usuarios (
+        id, organizacion_id, nombre, apellido, email, origen, password_hash, rol, activo, debe_cambiar_password
+      ) VALUES (
+        ?, 1, 'Administrador', 'TI', 'admin.ti@milicic.com.ar', 'local', ?, ?, 1, 0
+      )
+    `).run(adminId, passHash, ROLES.SUPERADMIN);
+  }
+
+  // Crear la sesión en SQLite y setear la cookie en el contexto de Playwright
+  const session = createSession(db, { usuario_id: adminId });
+  await page.context().addCookies([{
+    name: 'firecontrol_session',
+    value: session.sessionId,
+    domain: 'localhost',
+    path: '/',
+    httpOnly: true,
+    sameSite: 'Lax'
+  }]);
+
+  // Asegurar que localStorage tenga la identidad de Administrador para render inmediato
+  await page.addInitScript(() => {
+    localStorage.setItem('firecontrol_user', JSON.stringify({
+      id: 'a5c57ded-2699-4822-9b5a-9095cd07419b',
+      name: 'Administrador TI',
+      email: 'admin.ti@milicic.com.ar',
+      role: 'SUPERADMIN',
+      rol: 'SUPERADMIN',
+      activo: 1,
+      isGlobalScope: true
+    }));
+  });
+}
+
 export async function navigateToTab(page, tabId) {
   // Verificar si estamos en móvil o escritorio
   const isMobile = await page.locator('.mobile-bottom-nav').isVisible().catch(() => false);

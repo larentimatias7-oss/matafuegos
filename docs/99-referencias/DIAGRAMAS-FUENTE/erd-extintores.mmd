@@ -1,0 +1,86 @@
+erDiagram
+    extinguishers ||--o{ inspections : "historial"
+    extinguishers ||--o{ cases : "anomalias"
+    rounds ||--o{ inspections : "consolida"
+    inspections ||--o{ cases : "origina"
+
+    extinguishers {
+        INTEGER id PK
+        INTEGER organizacion_id FK
+        TEXT code UK
+        TEXT public_id UK
+        TEXT type
+        TEXT capacity
+        TEXT location
+        TEXT area
+        TEXT floor
+        TEXT building
+        TEXT expiration_charge
+        TEXT expiration_ph
+        TEXT status
+        TEXT manufacturer
+        INTEGER fab_year
+        TEXT lifespan_limit
+        TEXT last_charge_date
+        TEXT collar_year_color
+        TEXT last_ph_date
+        TEXT supplier
+        TEXT certificate_number
+        TEXT reference_photo
+        TEXT location_ref
+        TEXT notes
+    }
+
+    rounds {
+        INTEGER id PK
+        INTEGER organizacion_id FK
+        TEXT name
+        TEXT year_month UK
+        TEXT status
+        TEXT opened_at
+        TEXT closed_at
+        TEXT notes
+    }
+
+    inspections {
+        INTEGER id PK
+        INTEGER extinguisher_id FK
+        INTEGER round_id FK
+        TEXT usuario_id FK
+        TEXT extinguisher_code
+        TEXT inspector_name_snapshot
+        TEXT inspection_date
+        TEXT year_month
+        INTEGER passed
+        INTEGER check_location
+        INTEGER check_access
+        INTEGER check_seal
+        INTEGER check_pressure
+        INTEGER check_hose
+        INTEGER check_card
+        TEXT checklist_results
+        TEXT observations
+        TEXT photo_url
+        INTEGER duration_seconds
+        INTEGER is_suspicious
+        TEXT fraud_flags
+        INTEGER is_reinspection
+        TEXT reinspection_reason
+        REAL latitude
+        REAL longitude
+        REAL geo_accuracy
+        INTEGER synced_m365
+    }
+
+    cases {
+        INTEGER id PK
+        INTEGER extinguisher_id FK
+        INTEGER inspection_id FK
+        TEXT status
+        TEXT severity
+        TEXT description
+        TEXT assigned_to
+        TEXT opened_at
+        TEXT closed_at
+        TEXT resolution_notes
+    }

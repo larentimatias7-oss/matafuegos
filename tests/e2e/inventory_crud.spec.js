@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { navigateToTab } from './helpers.js';
+import { navigateToTab, ensureAdminSession } from './helpers.js';
 
 test.describe('E2E Flow 4: Alta, Edición y Búsqueda / Filtros de Inventario', () => {
 
   test('debe permitir buscar, filtrar, dar de alta y editar un extintor', async ({ page }) => {
+    await ensureAdminSession(page);
     await page.goto('/');
 
     // 1. Navegar a Inventario de Extintores

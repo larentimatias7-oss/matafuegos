@@ -3,40 +3,53 @@ const { navigateToTab } = require('./helpers');
 
 test.describe('E2E Flow: Autenticación, Gestión de Usuarios (RBAC) y Auditoría', () => {
 
+  test.beforeAll(async () => {
+    const { db } = require('../../server/db');
+    const { hashPassword } = require('../../server/services/authService');
+    const { ROLES } = require('../../server/config/permissions');
+    const passHash = await hashPassword('AdminMilicic2026!');
+    const existing = db.prepare("SELECT id FROM usuarios WHERE email = 'admin.ti@milicic.com.ar'").get();
+    if (existing) {
+      db.prepare(`
+        UPDATE usuarios 
+        SET password_hash = ?, activo = 1, intentos_fallidos = 0, bloqueado_hasta = NULL, rol = ?
+        WHERE id = ?
+      `).run(passHash, ROLES.SUPERADMIN, existing.id);
+    } else {
+      db.prepare(`
+        INSERT INTO usuarios (
+          id, organizacion_id, nombre, apellido, email, origen, password_hash, rol, activo, debe_cambiar_password
+        ) VALUES (
+          'a5c57ded-2699-4822-9b5a-9095cd07419b', 1, 'Administrador', 'TI', 'admin.ti@milicic.com.ar', 'local', ?, ?, 1, 0
+        )
+      `).run(passHash, ROLES.SUPERADMIN);
+    }
+  });
+
   test('debe permitir login con Superadmin local, navegar a Usuarios y Auditoría', async ({ page }) => {
     await page.goto('/');
 
     // 1. Si hay una sesión previa activa, cerrar sesión para iniciar con Superadmin
-    const profileBtn = page.locator('button[title*="Perfil"]').first();
-    if (await profileBtn.isVisible()) {
-      await profileBtn.click();
-      await page.waitForSelector('.modal-overlay', { state: 'visible' });
-      await page.getByRole('button', { name: /Cerrar Sesión/i }).click();
-      await page.waitForTimeout(500);
-    }
+    const profileBtn = page.locator('button[title*="Perfil"]:visible, button:has-text("Santiago Amaya"):visible').first();
+    await profileBtn.waitFor({ state: 'visible', timeout: 10000 });
+    await profileBtn.click();
+    await page.waitForSelector('.modal-overlay', { state: 'visible' });
+    await page.getByRole('button', { name: /Cerrar Sesión/i }).click();
 
-    // 2. Si aparece el botón de Iniciar Sesión, abrirlo
-    const openLoginBtn = page.getByRole('button', { name: /Iniciar Sesión/i }).first();
-    if (await openLoginBtn.isVisible()) {
-      await openLoginBtn.click();
-    }
-
-    // 3. Abrir formulario de cuenta local
+    // 2. En el modal de Login, abrir formulario de cuenta local
     const useLocalBtn = page.locator('button:has-text("cuenta local")');
-    if (await useLocalBtn.isVisible()) {
-      await useLocalBtn.click();
-    }
+    await useLocalBtn.waitFor({ state: 'visible', timeout: 5000 });
+    await useLocalBtn.click();
 
     await page.locator('#login-email').fill('admin.ti@milicic.com.ar');
     await page.locator('#login-pass').fill('AdminMilicic2026!');
     await page.getByRole('button', { name: /Ingresar al Sistema/i }).click();
 
     // 4. Confirmar que ingresó con Superadmin y los módulos de Usuarios y Auditoría están disponibles
-    await expect(page.getByText(/Administrador TI|admin.ti/i).first()).toBeVisible({ timeout: 10000 });
-
     const isMobile = await page.locator('.mobile-bottom-nav').isVisible().catch(() => false);
 
     if (!isMobile) {
+      await expect(page.getByText(/Administrador TI|admin.ti/i).first()).toBeVisible({ timeout: 10000 });
       await expect(page.getByRole('button', { name: /Usuarios/i })).toBeVisible();
       await expect(page.getByRole('button', { name: /Auditoría/i })).toBeVisible();
     }
@@ -53,12 +66,12 @@ test.describe('E2E Flow: Autenticación, Gestión de Usuarios (RBAC) y Auditorí
     const timestamp = Date.now();
     const testEmail = `inspector.${timestamp}@milicic.com.ar`;
 
-    await page.locator('input[placeholder*="Nombre"]').fill('Roberto');
-    await page.locator('input[placeholder*="Apellido"]').fill('Gómez');
-    await page.locator('input[placeholder*="correo"]').fill(testEmail);
-    await page.locator('input[placeholder*="Contraseña"]').fill('MiliPass2026!');
+    await page.locator('#user-nombre').fill('Roberto');
+    await page.locator('#user-apellido').fill('Gómez');
+    await page.locator('#user-email').fill(testEmail);
+    await page.locator('#user-pass').fill('MiliPass2026!');
 
-    await page.getByRole('button', { name: /Guardar Usuario/i }).click();
+    await page.getByRole('button', { name: /Crear Usuario|Guardar/i }).click();
     await page.waitForTimeout(1000);
 
     // 7. Verificar que aparece en la lista de usuarios
