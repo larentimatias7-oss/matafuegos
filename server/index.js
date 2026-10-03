@@ -119,6 +119,8 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/audit', require('./routes/audit'));
 app.use('/api/qrs', require('./routes/qrs'));
 app.use('/api/m365', require('./routes/m365'));
+app.use('/api/gerencia', require('./routes/gerencia'));
+app.use('/api/bi', require('./routes/bi'));
 
 // Short URL redirection for physical QR labels: /m/:publicId
 app.get('/m/:publicId', (req, res) => {

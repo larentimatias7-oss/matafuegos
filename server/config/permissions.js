@@ -6,6 +6,7 @@
 const ROLES = {
   SUPERADMIN: 'SUPERADMIN',
   ADMIN: 'ADMIN',
+  GERENCIA: 'GERENCIA',
   SUPERVISOR: 'SUPERVISOR',
   INSPECTOR: 'INSPECTOR',
   AUDITOR: 'AUDITOR'
@@ -16,6 +17,7 @@ const ROLES = {
 const ROLE_HIERARCHY = {
   [ROLES.SUPERADMIN]: 100,
   [ROLES.ADMIN]: 80,
+  [ROLES.GERENCIA]: 70, // Perfil directivo / ejecutivo de lectura estratégica
   [ROLES.SUPERVISOR]: 60,
   [ROLES.INSPECTOR]: 40,
   [ROLES.AUDITOR]: 20
@@ -73,14 +75,32 @@ const PERMISOS = {
   // Reportes e Integración Excel
   REPORTE_EXPORTAR: 'reporte:exportar',
   REPORTE_IMPORTAR: 'reporte:importar',
-  DASHBOARD_VER: 'dashboard:ver'
+  DASHBOARD_VER: 'dashboard:ver',
+
+  // Módulo Gerencial y BI Ejecutivo
+  GERENCIA_VER: 'gerencia:ver',
+  GERENCIA_EXPORTAR: 'gerencia:exportar',
+  GERENCIA_CONFIGURAR: 'gerencia:configurar',
+  BI_DATASET_VER: 'bi:dataset_ver'
 };
 
 // Matriz de Rol -> Permisos
 const ROLE_PERMISSIONS = {
   [ROLES.SUPERADMIN]: Object.values(PERMISOS), // Acceso total a todos los módulos
 
+  [ROLES.GERENCIA]: [
+    PERMISOS.GERENCIA_VER,
+    PERMISOS.GERENCIA_EXPORTAR,
+    PERMISOS.BI_DATASET_VER,
+    PERMISOS.DASHBOARD_VER,
+    PERMISOS.REPORTE_EXPORTAR
+  ],
+
   [ROLES.ADMIN]: [
+    PERMISOS.GERENCIA_VER,
+    PERMISOS.GERENCIA_EXPORTAR,
+    PERMISOS.GERENCIA_CONFIGURAR,
+    PERMISOS.BI_DATASET_VER,
     PERMISOS.USUARIO_VER,
     PERMISOS.USUARIO_INVITAR,
     PERMISOS.USUARIO_EDITAR,

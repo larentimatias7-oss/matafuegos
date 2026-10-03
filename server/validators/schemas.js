@@ -64,7 +64,7 @@ const UserCreateSchema = z.object({
   nombre: z.string({ required_error: 'El nombre es obligatorio' }).min(2, 'El nombre debe tener al menos 2 caracteres'),
   apellido: z.string({ required_error: 'El apellido es obligatorio' }).min(2, 'El apellido debe tener al menos 2 caracteres'),
   email: z.string({ required_error: 'El email es obligatorio' }).email('Formato de correo electrónico inválido'),
-  rol: z.enum(['SUPERADMIN', 'ADMIN', 'SUPERVISOR', 'INSPECTOR', 'AUDITOR'], {
+  rol: z.enum(['SUPERADMIN', 'ADMIN', 'GERENCIA', 'SUPERVISOR', 'INSPECTOR', 'AUDITOR'], {
     required_error: 'El rol es obligatorio'
   }),
   password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres').optional(),
@@ -76,7 +76,7 @@ const UserCreateSchema = z.object({
 const UserUpdateSchema = z.object({
   nombre: z.string().min(2, 'El nombre debe tener al menos 2 caracteres').optional(),
   apellido: z.string().min(2, 'El apellido debe tener al menos 2 caracteres').optional(),
-  rol: z.enum(['SUPERADMIN', 'ADMIN', 'SUPERVISOR', 'INSPECTOR', 'AUDITOR']).optional(),
+  rol: z.enum(['SUPERADMIN', 'ADMIN', 'GERENCIA', 'SUPERVISOR', 'INSPECTOR', 'AUDITOR']).optional(),
   activo: z.union([z.boolean(), z.literal(0), z.literal(1)]).optional(),
   sectores: z.array(z.union([z.string(), z.record(z.any())])).optional()
 });

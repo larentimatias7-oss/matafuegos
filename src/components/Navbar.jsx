@@ -21,7 +21,8 @@ import {
   WifiSlash,
   Users,
   ShieldCheck,
-  DeviceMobile
+  DeviceMobile,
+  ChartLineUp
 } from '@phosphor-icons/react';
 
 export default function Navbar({ 
@@ -43,6 +44,7 @@ export default function Navbar({
 
   const allTabs = [
     { id: 'dashboard', label: 'Dashboard', icon: SquaresFour },
+    { id: 'gerencia', label: 'Gerencia', icon: ChartLineUp, roles: ['SUPERADMIN', 'ADMIN', 'GERENCIA'] },
     { id: 'route', label: 'Mi Ruta', icon: MapPin, roles: ['SUPERADMIN', 'ADMIN', 'SUPERVISOR', 'INSPECTOR'] },
     { id: 'scan', label: 'Control Rápido', icon: QrCode, highlight: true, roles: ['SUPERADMIN', 'ADMIN', 'SUPERVISOR', 'INSPECTOR'] },
     { id: 'extinguishers', label: 'Inventario', icon: FireExtinguisher },
@@ -60,6 +62,7 @@ export default function Navbar({
   const getTabTitle = (tabId) => {
     switch (tabId) {
       case 'dashboard': return 'Dashboard General';
+      case 'gerencia': return 'Gerencia • KPIs Estratégicos';
       case 'route': return 'Mi Ruta de Inspección';
       case 'scan': return 'Control Mensual';
       case 'extinguishers': return 'Inventario de Extintores';
@@ -413,7 +416,7 @@ export default function Navbar({
         {/* Tab 5: Más (Abre Drawer / Bottom Sheet) */}
         <button
           onClick={() => setShowMoreMenu(true)}
-          className={`mobile-nav-btn ${['route', 'cases', 'qrs', 'users', 'audit', 'm365'].includes(activeTab) ? 'active' : ''}`}
+          className={`mobile-nav-btn ${['gerencia', 'route', 'cases', 'qrs', 'users', 'audit', 'm365'].includes(activeTab) ? 'active' : ''}`}
         >
           <List size={22} weight="regular" aria-hidden="true" />
           <span>Más</span>
@@ -448,6 +451,21 @@ export default function Navbar({
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {/* Opción: Gerencia (KPIs) */}
+              {['SUPERADMIN', 'ADMIN', 'GERENCIA'].includes(userRole) && (
+                <button
+                  onClick={() => handleSelectTab('gerencia')}
+                  className="btn btn-secondary btn-full"
+                  style={{ justifyContent: 'space-between', minHeight: '50px', background: activeTab === 'gerencia' ? 'var(--milicic-orange-soft)' : undefined }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <ChartLineUp size={18} weight="bold" color="var(--milicic-orange)" aria-hidden="true" />
+                    <span style={{ fontWeight: 700 }}>Gerencia • Tablero de Control</span>
+                  </div>
+                  <CaretRight size={16} weight="bold" color="var(--text-muted)" aria-hidden="true" />
+                </button>
+              )}
+
               {/* Opción: Mi Ruta */}
               {['SUPERADMIN', 'ADMIN', 'SUPERVISOR', 'INSPECTOR'].includes(userRole) && (
                 <button

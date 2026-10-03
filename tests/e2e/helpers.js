@@ -86,6 +86,54 @@ export async function ensureInspectorSession(page) {
   });
 }
 
+export async function ensureGerenciaSession(page) {
+  const { db } = require('../../server/db');
+  const { hashPassword, createSession } = require('../../server/services/authService');
+  const { ROLES } = require('../../server/config/permissions');
+  const passHash = await hashPassword('Gerencia2026!');
+  const gerenciaEmail = 'gerencia@milicic.com.ar';
+  const existing = db.prepare("SELECT id FROM usuarios WHERE email = ?").get(gerenciaEmail);
+  const targetId = existing ? existing.id : 'gerencia-0000-4000-8000-000000000001';
+
+  if (existing) {
+    db.prepare(`
+      UPDATE usuarios 
+      SET password_hash = ?, activo = 1, intentos_fallidos = 0, bloqueado_hasta = NULL, rol = ?
+      WHERE id = ?
+    `).run(passHash, ROLES.GERENCIA, targetId);
+  } else {
+    db.prepare(`
+      INSERT INTO usuarios (
+        id, organizacion_id, nombre, apellido, email, origen, password_hash, rol, activo, debe_cambiar_password
+      ) VALUES (
+        ?, 1, 'Gerencia', 'Corporativa', ?, 'local', ?, ?, 1, 0
+      )
+    `).run(targetId, gerenciaEmail, passHash, ROLES.GERENCIA);
+  }
+
+  const session = createSession(db, { usuario_id: targetId });
+  await page.context().addCookies([{
+    name: 'firecontrol_session',
+    value: session.sessionId,
+    domain: 'localhost',
+    path: '/',
+    httpOnly: true,
+    sameSite: 'Lax'
+  }]);
+
+  await page.addInitScript((id) => {
+    localStorage.setItem('firecontrol_user', JSON.stringify({
+      id: id,
+      name: 'Gerencia Corporativa',
+      email: 'gerencia@milicic.com.ar',
+      role: 'GERENCIA',
+      rol: 'GERENCIA',
+      activo: 1,
+      isGlobalScope: true
+    }));
+  }, targetId);
+}
+
 export async function navigateToTab(page, tabId) {
   // Verificar si estamos en móvil o escritorio
   const isMobile = await page.locator('.mobile-bottom-nav').isVisible().catch(() => false);
@@ -94,6 +142,7 @@ export async function navigateToTab(page, tabId) {
     // En escritorio, mapear tabId a la etiqueta correspondiente
     const desktopLabels = {
       dashboard: 'Dashboard',
+      gerencia: 'Gerencia',
       route: 'Mi Ruta',
       scan: 'Control Rápido',
       extinguishers: 'Inventario',
@@ -123,6 +172,7 @@ export async function navigateToTab(page, tabId) {
       await page.waitForSelector('.bottom-sheet', { state: 'visible' });
 
       const sheetLabels = {
+        gerencia: /Gerencia/i,
         route: /Mi Ruta/i,
         cases: /Casos y Anomalías/i,
         qrs: /Etiquetas QR/i,

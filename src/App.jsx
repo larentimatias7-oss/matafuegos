@@ -16,11 +16,23 @@ import AuditViewer from './components/AuditViewer';
 import UserProfileModal from './components/UserProfileModal';
 import QuickPinSwitchModal from './components/QuickPinSwitchModal';
 import AccessDenied from './components/AccessDenied';
+import GerenciaDashboard from './components/GerenciaDashboard';
 import { WifiSlash, Cloud, ArrowsClockwise, CheckCircle } from '@phosphor-icons/react';
 import { getOfflineInspections, syncOfflineInspections } from './utils/offlineQueue';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const saved = localStorage.getItem('firecontrol_user');
+      if (saved) {
+        const u = JSON.parse(saved);
+        if (u?.role === 'GERENCIA') return 'gerencia';
+      }
+    } catch (_e) {
+      // Ignorar error de parsing
+    }
+    return 'dashboard';
+  });
   const [extinguishers, setExtinguishers] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -78,6 +90,9 @@ export default function App() {
         setUser(data.user);
         localStorage.setItem('firecontrol_user', JSON.stringify(data.user));
         setShowLoginModal(false);
+        if (data.user?.role === 'GERENCIA' && activeTab === 'dashboard') {
+          setActiveTab('gerencia');
+        }
       } else {
         setUser(null);
         localStorage.removeItem('firecontrol_user');
@@ -359,6 +374,20 @@ export default function App() {
           />
         )}
 
+        {/* TAB GERENCIA: TABLERO EJECUTIVO DE SEGURIDAD (KPIs) */}
+        {activeTab === 'gerencia' && (
+          ['SUPERADMIN', 'ADMIN', 'GERENCIA'].includes(userRole) ? (
+            <GerenciaDashboard currentUser={user} />
+          ) : (
+            <AccessDenied 
+              userRole={userRole} 
+              requiredRole="GERENCIA, ADMIN o SUPERADMIN" 
+              moduleName="Tablero Ejecutivo de Gerencia" 
+              onReturn={() => setActiveTab('dashboard')} 
+            />
+          )
+        )}
+
         {/* TAB 2: MI RUTA DE INSPECCIÓN */}
         {activeTab === 'route' && (
           userRole === 'AUDITOR' ? (
@@ -508,6 +537,9 @@ export default function App() {
             setUser(u);
             localStorage.setItem('firecontrol_user', JSON.stringify(u));
             setShowLoginModal(false);
+            if (u?.role === 'GERENCIA') {
+              setActiveTab('gerencia');
+            }
             fetchData();
           }}
           onClose={user ? () => setShowLoginModal(false) : null}
