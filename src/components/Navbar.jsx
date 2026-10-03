@@ -18,7 +18,10 @@ import {
   X,
   CaretRight,
   WifiHigh,
-  WifiSlash
+  WifiSlash,
+  Users,
+  ShieldCheck,
+  DeviceMobile
 } from '@phosphor-icons/react';
 
 export default function Navbar({ 
@@ -29,20 +32,30 @@ export default function Navbar({
   onToggleTheme, 
   user, 
   currentRound,
-  isOnline = true
+  isOnline = true,
+  onOpenProfile,
+  onOpenPinSwitch,
+  onOpenLogin
 }) {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
-  const tabs = [
+  const userRole = user?.role || 'INSPECTOR';
+
+  const allTabs = [
     { id: 'dashboard', label: 'Dashboard', icon: SquaresFour },
-    { id: 'route', label: 'Mi Ruta', icon: MapPin },
-    { id: 'scan', label: 'Control Rápido', icon: QrCode, highlight: true },
+    { id: 'route', label: 'Mi Ruta', icon: MapPin, roles: ['SUPERADMIN', 'ADMIN', 'SUPERVISOR', 'INSPECTOR'] },
+    { id: 'scan', label: 'Control Rápido', icon: QrCode, highlight: true, roles: ['SUPERADMIN', 'ADMIN', 'SUPERVISOR', 'INSPECTOR'] },
     { id: 'extinguishers', label: 'Inventario', icon: FireExtinguisher },
     { id: 'cases', label: 'Anomalías / Casos', icon: WarningCircle },
-    { id: 'qrs', label: 'Etiquetas QR', icon: Printer },
+    { id: 'qrs', label: 'Etiquetas QR', icon: Printer, roles: ['SUPERADMIN', 'ADMIN', 'SUPERVISOR'] },
     { id: 'history', label: 'Historial', icon: ClockCounterClockwise },
-    { id: 'm365', label: 'Microsoft 365', icon: FileXls },
+    { id: 'users', label: 'Usuarios', icon: Users, roles: ['SUPERADMIN', 'ADMIN'] },
+    { id: 'audit', label: 'Auditoría', icon: ShieldCheck, roles: ['SUPERADMIN', 'ADMIN', 'AUDITOR'] },
+    { id: 'm365', label: 'Microsoft 365', icon: FileXls, roles: ['SUPERADMIN', 'ADMIN', 'SUPERVISOR'] },
   ];
+
+  // Filtrar según permisos del rol
+  const visibleTabs = allTabs.filter(t => !t.roles || t.roles.includes(userRole));
 
   const getTabTitle = (tabId) => {
     switch (tabId) {
@@ -53,6 +66,8 @@ export default function Navbar({
       case 'cases': return 'Casos y Anomalías';
       case 'qrs': return 'Impresión de Etiquetas QR';
       case 'history': return 'Historial de Inspecciones';
+      case 'users': return 'Gestión de Usuarios y Roles';
+      case 'audit': return 'Auditoría y Trazabilidad';
       case 'm365': return 'Integración Microsoft 365';
       default: return 'Control de Extintores';
     }
@@ -102,6 +117,18 @@ export default function Navbar({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
+          {onOpenPinSwitch && (
+            <button
+              onClick={onOpenPinSwitch}
+              className="btn btn-secondary btn-sm"
+              style={{ width: '36px', height: '36px', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.2)' }}
+              title="Cambio de Operador por PIN"
+              aria-label="Cambio de Operador por PIN"
+            >
+              <DeviceMobile size={18} color="var(--milicic-orange)" weight="bold" />
+            </button>
+          )}
+
           <button
             onClick={onToggleTheme}
             className="btn btn-secondary btn-sm"
@@ -112,15 +139,17 @@ export default function Navbar({
             {theme === 'dark' ? <Sun size={16} weight="bold" color="#fbbf24" aria-hidden="true" /> : <Moon size={16} weight="bold" color="#cbd5e1" aria-hidden="true" />}
           </button>
 
-          <button
-            onClick={onNewExtinguisher}
-            className="btn btn-primary btn-sm"
-            style={{ width: '36px', height: '36px', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-            title="Nuevo Extintor"
-            aria-label="Nuevo Extintor"
-          >
-            <Plus size={18} weight="bold" aria-hidden="true" />
-          </button>
+          {(userRole === 'SUPERADMIN' || userRole === 'ADMIN') && (
+            <button
+              onClick={onNewExtinguisher}
+              className="btn btn-primary btn-sm"
+              style={{ width: '36px', height: '36px', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+              title="Nuevo Extintor"
+              aria-label="Nuevo Extintor"
+            >
+              <Plus size={18} weight="bold" aria-hidden="true" />
+            </button>
+          )}
         </div>
       </header>
 
@@ -195,31 +224,56 @@ export default function Navbar({
               {theme === 'dark' ? <Sun size={16} weight="bold" color="#fbbf24" aria-hidden="true" /> : <Moon size={16} weight="bold" color="#475569" aria-hidden="true" />}
             </button>
 
-            {user && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                padding: '0.35rem 0.75rem',
-                borderRadius: '6px',
-                background: 'rgba(255, 255, 255, 0.08)',
-                color: '#f8fafc',
-                fontSize: '0.82rem'
-              }}>
-                <UserCheck size={14} weight="bold" color="#34d399" aria-hidden="true" />
-                <span style={{ fontWeight: 600 }}>{user.name}</span>
-                <span style={{ color: '#94a3b8', fontSize: '0.7rem' }}>({user.role})</span>
+            {user ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <button
+                  onClick={onOpenProfile}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    padding: '0.35rem 0.75rem',
+                    borderRadius: '6px',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    color: '#f8fafc',
+                    fontSize: '0.82rem',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    cursor: 'pointer'
+                  }}
+                  title="Abrir Mi Perfil y Sesiones"
+                >
+                  <UserCheck size={14} weight="bold" color="#34d399" aria-hidden="true" />
+                  <span style={{ fontWeight: 600 }}>{user.name}</span>
+                  <span style={{ color: '#94a3b8', fontSize: '0.7rem' }}>({user.role})</span>
+                </button>
+
+                {onOpenPinSwitch && (
+                  <button
+                    onClick={onOpenPinSwitch}
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: '0.35rem 0.5rem', background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.2)' }}
+                    title="Cambio rápido de operario con PIN"
+                  >
+                    <DeviceMobile size={15} color="var(--milicic-orange)" weight="bold" />
+                  </button>
+                )}
               </div>
+            ) : (
+              <button onClick={onOpenLogin} className="btn btn-secondary btn-sm">
+                Iniciar Sesión
+              </button>
             )}
 
-            <button
-              onClick={onNewExtinguisher}
-              className="btn btn-primary btn-sm"
-              style={{ fontWeight: 700 }}
-            >
-              <Plus size={16} weight="bold" aria-hidden="true" />
-              <span>Nuevo Extintor</span>
-            </button>
+            {(userRole === 'SUPERADMIN' || userRole === 'ADMIN') && (
+              <button
+                onClick={onNewExtinguisher}
+                className="btn btn-primary btn-sm"
+                style={{ fontWeight: 700 }}
+              >
+                <Plus size={16} weight="bold" aria-hidden="true" />
+                <span>Nuevo Extintor</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -232,7 +286,7 @@ export default function Navbar({
           gap: '0.25rem',
           overflowX: 'auto'
         }}>
-          {tabs.map((tab) => {
+          {visibleTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
@@ -316,14 +370,16 @@ export default function Navbar({
         </button>
 
         {/* Tab 3: Escanear (Central destacado) */}
-        <button
-          onClick={() => handleSelectTab('scan')}
-          className="mobile-nav-scan"
-          aria-label="Escanear Código QR"
-          title="Escanear Código QR"
-        >
-          <QrCode size={28} weight="bold" aria-hidden="true" />
-        </button>
+        {['SUPERADMIN', 'ADMIN', 'SUPERVISOR', 'INSPECTOR'].includes(userRole) && (
+          <button
+            onClick={() => handleSelectTab('scan')}
+            className="mobile-nav-scan"
+            aria-label="Escanear Código QR"
+            title="Escanear Código QR"
+          >
+            <QrCode size={28} weight="bold" aria-hidden="true" />
+          </button>
+        )}
 
         {/* Tab 4: Historial */}
         <button
@@ -337,7 +393,7 @@ export default function Navbar({
         {/* Tab 5: Más (Abre Drawer / Bottom Sheet) */}
         <button
           onClick={() => setShowMoreMenu(true)}
-          className={`mobile-nav-btn ${['route', 'cases', 'qrs', 'm365'].includes(activeTab) ? 'active' : ''}`}
+          className={`mobile-nav-btn ${['route', 'cases', 'qrs', 'users', 'audit', 'm365'].includes(activeTab) ? 'active' : ''}`}
         >
           <List size={22} weight="regular" aria-hidden="true" />
           <span>Más</span>
@@ -373,17 +429,19 @@ export default function Navbar({
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {/* Opción: Mi Ruta */}
-              <button
-                onClick={() => handleSelectTab('route')}
-                className="btn btn-secondary btn-full"
-                style={{ justifyContent: 'space-between', minHeight: '50px', background: activeTab === 'route' ? 'var(--milicic-orange-soft)' : undefined }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <MapPin size={18} weight="bold" color="var(--milicic-orange)" aria-hidden="true" />
-                  <span style={{ fontWeight: 700 }}>Mi Ruta de Inspección</span>
-                </div>
-                <CaretRight size={16} weight="bold" color="var(--text-muted)" aria-hidden="true" />
-              </button>
+              {['SUPERADMIN', 'ADMIN', 'SUPERVISOR', 'INSPECTOR'].includes(userRole) && (
+                <button
+                  onClick={() => handleSelectTab('route')}
+                  className="btn btn-secondary btn-full"
+                  style={{ justifyContent: 'space-between', minHeight: '50px', background: activeTab === 'route' ? 'var(--milicic-orange-soft)' : undefined }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <MapPin size={18} weight="bold" color="var(--milicic-orange)" aria-hidden="true" />
+                    <span style={{ fontWeight: 700 }}>Mi Ruta de Inspección</span>
+                  </div>
+                  <CaretRight size={16} weight="bold" color="var(--text-muted)" aria-hidden="true" />
+                </button>
+              )}
 
               {/* Opción: Casos y Anomalías */}
               <button
@@ -398,31 +456,65 @@ export default function Navbar({
                 <CaretRight size={16} weight="bold" color="var(--text-muted)" aria-hidden="true" />
               </button>
 
+              {/* Opción: Usuarios (Admin/Superadmin) */}
+              {(userRole === 'SUPERADMIN' || userRole === 'ADMIN') && (
+                <button
+                  onClick={() => handleSelectTab('users')}
+                  className="btn btn-secondary btn-full"
+                  style={{ justifyContent: 'space-between', minHeight: '50px', background: activeTab === 'users' ? 'var(--milicic-orange-soft)' : undefined }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <Users size={18} weight="bold" color="#7c3aed" aria-hidden="true" />
+                    <span style={{ fontWeight: 700 }}>Gestión de Usuarios</span>
+                  </div>
+                  <CaretRight size={16} weight="bold" color="var(--text-muted)" aria-hidden="true" />
+                </button>
+              )}
+
+              {/* Opción: Auditoría (Admin/Superadmin/Auditor) */}
+              {(userRole === 'SUPERADMIN' || userRole === 'ADMIN' || userRole === 'AUDITOR') && (
+                <button
+                  onClick={() => handleSelectTab('audit')}
+                  className="btn btn-secondary btn-full"
+                  style={{ justifyContent: 'space-between', minHeight: '50px', background: activeTab === 'audit' ? 'var(--milicic-orange-soft)' : undefined }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <ShieldCheck size={18} weight="bold" color="var(--milicic-orange)" aria-hidden="true" />
+                    <span style={{ fontWeight: 700 }}>Auditoría y Trazabilidad</span>
+                  </div>
+                  <CaretRight size={16} weight="bold" color="var(--text-muted)" aria-hidden="true" />
+                </button>
+              )}
+
               {/* Opción: Etiquetas QR */}
-              <button
-                onClick={() => handleSelectTab('qrs')}
-                className="btn btn-secondary btn-full"
-                style={{ justifyContent: 'space-between', minHeight: '50px', background: activeTab === 'qrs' ? 'var(--milicic-orange-soft)' : undefined }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <Printer size={18} weight="bold" color="var(--text-main)" aria-hidden="true" />
-                  <span style={{ fontWeight: 700 }}>Impresión de Etiquetas QR</span>
-                </div>
-                <CaretRight size={16} weight="bold" color="var(--text-muted)" aria-hidden="true" />
-              </button>
+              {['SUPERADMIN', 'ADMIN', 'SUPERVISOR'].includes(userRole) && (
+                <button
+                  onClick={() => handleSelectTab('qrs')}
+                  className="btn btn-secondary btn-full"
+                  style={{ justifyContent: 'space-between', minHeight: '50px', background: activeTab === 'qrs' ? 'var(--milicic-orange-soft)' : undefined }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <Printer size={18} weight="bold" color="var(--text-main)" aria-hidden="true" />
+                    <span style={{ fontWeight: 700 }}>Impresión de Etiquetas QR</span>
+                  </div>
+                  <CaretRight size={16} weight="bold" color="var(--text-muted)" aria-hidden="true" />
+                </button>
+              )}
 
               {/* Opción: Microsoft 365 */}
-              <button
-                onClick={() => handleSelectTab('m365')}
-                className="btn btn-secondary btn-full"
-                style={{ justifyContent: 'space-between', minHeight: '50px', background: activeTab === 'm365' ? 'var(--milicic-orange-soft)' : undefined }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <FileXls size={18} weight="bold" color="#16a34a" aria-hidden="true" />
-                  <span style={{ fontWeight: 700 }}>Microsoft 365 & Excel</span>
-                </div>
-                <CaretRight size={16} weight="bold" color="var(--text-muted)" aria-hidden="true" />
-              </button>
+              {['SUPERADMIN', 'ADMIN', 'SUPERVISOR'].includes(userRole) && (
+                <button
+                  onClick={() => handleSelectTab('m365')}
+                  className="btn btn-secondary btn-full"
+                  style={{ justifyContent: 'space-between', minHeight: '50px', background: activeTab === 'm365' ? 'var(--milicic-orange-soft)' : undefined }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <FileXls size={18} weight="bold" color="#16a34a" aria-hidden="true" />
+                    <span style={{ fontWeight: 700 }}>Microsoft 365 & Excel</span>
+                  </div>
+                  <CaretRight size={16} weight="bold" color="var(--text-muted)" aria-hidden="true" />
+                </button>
+              )}
 
               {/* Opción: Documentación Oficial */}
               <a
@@ -449,7 +541,11 @@ export default function Navbar({
               justifyContent: 'space-between',
               alignItems: 'center'
             }}>
-              <div>
+              <div 
+                onClick={() => { setShowMoreMenu(false); if (onOpenProfile) onOpenProfile(); }}
+                style={{ cursor: 'pointer' }}
+                title="Tocar para ver perfil"
+              >
                 <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)' }}>
                   {user?.name || 'Inspector HyS'}
                 </div>
@@ -458,14 +554,25 @@ export default function Navbar({
                 </div>
               </div>
 
-              <button
-                onClick={onToggleTheme}
-                className="btn btn-secondary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-              >
-                {theme === 'dark' ? <Sun size={15} color="#fbbf24" /> : <Moon size={15} color="#475569" />}
-                <span>{theme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}</span>
-              </button>
+              <div style={{ display: 'flex', gap: '0.35rem' }}>
+                {onOpenPinSwitch && (
+                  <button
+                    onClick={() => { setShowMoreMenu(false); onOpenPinSwitch(); }}
+                    className="btn btn-secondary btn-sm"
+                    title="Cambio de PIN"
+                  >
+                    <DeviceMobile size={15} color="var(--milicic-orange)" />
+                  </button>
+                )}
+
+                <button
+                  onClick={onToggleTheme}
+                  className="btn btn-secondary btn-sm"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  {theme === 'dark' ? <Sun size={15} color="#fbbf24" /> : <Moon size={15} color="#475569" />}
+                </button>
+              </div>
             </div>
           </div>
         </div>

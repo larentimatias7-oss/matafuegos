@@ -4,6 +4,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 
 const { config } = require('./config');
+const { runMigrations, rollbackLastMigration } = require('./migrations');
 
 const DATA_DIR = config.DATA_DIR;
 const DB_PATH = config.DB_PATH;
@@ -260,6 +261,9 @@ function initSchema() {
   if (!checkSetting.get('alert_days')) {
     insertSetting.run('alert_days', '60,30,15');
   }
+
+  // Versioned and reversible schema migrations
+  runMigrations(db);
 }
 
 // Function to generate 130 realistic extinguishers with enriched fields
@@ -363,5 +367,7 @@ module.exports = {
   db,
   initSchema,
   seed130Extinguishers,
-  generatePublicId
+  generatePublicId,
+  runMigrations,
+  rollbackLastMigration
 };

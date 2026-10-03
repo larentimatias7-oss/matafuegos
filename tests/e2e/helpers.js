@@ -17,6 +17,8 @@ export async function navigateToTab(page, tabId) {
       cases: 'Anomalías / Casos',
       qrs: 'Etiquetas QR',
       history: 'Historial',
+      users: 'Usuarios',
+      audit: 'Auditoría',
       m365: 'Microsoft 365'
     };
     const label = desktopLabels[tabId] || tabId;
@@ -33,7 +35,7 @@ export async function navigateToTab(page, tabId) {
     } else if (tabId === 'history') {
       await page.locator('.mobile-bottom-nav').getByRole('button', { name: /Historial/i }).click();
     } else {
-      // Submenú "Más" (route, cases, qrs, m365)
+      // Submenú "Más" (route, cases, qrs, users, audit, m365)
       await page.locator('.mobile-bottom-nav').getByRole('button', { name: /Más/i }).click();
       await page.waitForSelector('.bottom-sheet', { state: 'visible' });
 
@@ -41,6 +43,8 @@ export async function navigateToTab(page, tabId) {
         route: /Mi Ruta/i,
         cases: /Casos y Anomalías/i,
         qrs: /Etiquetas QR/i,
+        users: /Usuarios/i,
+        audit: /Auditoría/i,
         m365: /Microsoft 365/i
       };
       await page.locator('.bottom-sheet').getByRole('button', { name: sheetLabels[tabId] }).click();

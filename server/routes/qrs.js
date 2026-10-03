@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const QRCode = require('qrcode');
 const { db } = require('../db');
+const { authenticate, requirePermiso } = require('../middleware/auth');
+const { PERMISOS } = require('../config/permissions');
 
 // Helper to get base URL dynamically from request, env, or settings
 function getBaseUrl(req) {
@@ -73,7 +75,7 @@ router.get('/single/:codeOrPublicId', async (req, res) => {
 });
 
 // GET batch QRs with filters (floor, area, building)
-router.get('/batch', async (req, res) => {
+router.get('/batch', authenticate, requirePermiso(PERMISOS.QR_IMPRIMIR), async (req, res) => {
   try {
     const { floor, area, building, codes, format = 'grid' } = req.query;
     let query = "SELECT * FROM extinguishers WHERE status != 'FUERA_DE_SERVICIO'";

@@ -98,7 +98,9 @@ const corsOptions = {
   origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 };
+const cookieParser = require('cookie-parser');
 app.use(cors(corsOptions));
+app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -109,6 +111,8 @@ app.use('/api/rounds', require('./routes/rounds'));
 app.use('/api/cases', require('./routes/cases'));
 app.use('/api/checklist', require('./routes/checklist'));
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/audit', require('./routes/audit'));
 app.use('/api/qrs', require('./routes/qrs'));
 app.use('/api/m365', require('./routes/m365'));
 

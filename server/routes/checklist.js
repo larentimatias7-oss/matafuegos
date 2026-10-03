@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../db');
+const { authenticate, requirePermiso } = require('../middleware/auth');
+const { PERMISOS } = require('../config/permissions');
 
 // GET all active checklist items
-router.get('/', (req, res) => {
+router.get('/', authenticate, (req, res) => {
   try {
     const { type } = req.query;
     let items = db.prepare("SELECT * FROM checklist_items WHERE is_active = 1 ORDER BY order_index ASC").all();
@@ -30,8 +32,8 @@ router.get('/', (req, res) => {
   }
 });
 
-// POST new checklist item
-router.post('/', (req, res) => {
+// POST new checklist item (HyS Config managers only)
+router.post('/', authenticate, requirePermiso(PERMISOS.CHECKLIST_GESTIONAR), (req, res) => {
   try {
     const { code, label, description, applicable_types = 'ALL', is_required = 1, order_index = 0 } = req.body;
     if (!code || !label) {

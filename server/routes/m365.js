@@ -3,7 +3,9 @@ const router = express.Router();
 const ExcelJS = require('exceljs');
 const multer = require('multer');
 const { db } = require('../db');
-const { authenticate, requireRole, ROLES } = require('../middleware/auth');
+const { authenticate, requirePermiso } = require('../middleware/auth');
+const { PERMISOS } = require('../config/permissions');
+const { recordAudit } = require('../services/auditService');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -21,7 +23,7 @@ const upload = multer({
 });
 
 // GET export full workbook formatted for Microsoft 365 Excel
-router.get('/export-excel', authenticate, async (req, res) => {
+router.get('/export-excel', authenticate, requirePermiso(PERMISOS.REPORTE_EXPORTAR), async (req, res) => {
   try {
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Milicic S.A. - Control de Extintores';
@@ -349,7 +351,7 @@ router.get('/export-excel', authenticate, async (req, res) => {
 });
 
 // GET HTML printable report for ART and Fire Department Audits
-router.get('/report-html', (req, res) => {
+router.get('/report-html', authenticate, requirePermiso(PERMISOS.REPORTE_EXPORTAR), (req, res) => {
   try {
     const round = db.prepare("SELECT * FROM rounds WHERE status = 'OPEN' ORDER BY id DESC LIMIT 1").get();
     const extinguishers = db.prepare('SELECT * FROM extinguishers ORDER BY code ASC').all();
@@ -526,7 +528,7 @@ router.get('/report-html', (req, res) => {
 });
 
 // POST import extinguishers from Excel
-router.post('/import-excel', authenticate, requireRole([ROLES.ADMIN, ROLES.INSPECTOR]), upload.single('file'), async (req, res) => {
+router.post('/import-excel', authenticate, requirePermiso(PERMISOS.REPORTE_IMPORTAR), upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, error: 'No se envió ningún archivo Excel' });
@@ -553,9 +555,10 @@ router.post('/import-excel', authenticate, requireRole([ROLES.ADMIN, ROLES.INSPE
     let inserted = 0;
     let skipped = 0;
 
+    const orgId = req.user?.organizacion_id || 1;
     const upsertStmt = db.prepare(`
-      INSERT INTO extinguishers (code, type, capacity, location, floor, area, expiration_charge, expiration_ph, status, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO extinguishers (organizacion_id, code, type, capacity, location, floor, area, expiration_charge, expiration_ph, status, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(code) DO UPDATE SET
         type = excluded.type,
         capacity = excluded.capacity,
@@ -606,12 +609,23 @@ router.post('/import-excel', authenticate, requireRole([ROLES.ADMIN, ROLES.INSPE
       const status = row.getCell(9).text ? row.getCell(9).text.trim() : 'OPERATIVO';
 
       try {
-        upsertStmt.run(code, type, capacity, location, floor, area, expCharge, expPh, status, '');
+        upsertStmt.run(orgId, code, type, capacity, location, floor, area, expCharge, expPh, status, '');
         inserted++;
       } catch (e) {
         console.error('Error insertando fila:', code, e.message);
         skipped++;
       }
+    });
+
+    recordAudit(db, {
+      usuario_id: req.user?.id || null,
+      usuario_nombre_snapshot: req.user?.name || 'Sistema',
+      organizacion_id: req.user?.organizacion_id || 1,
+      accion: 'IMPORTAR_EXCEL',
+      entidad: 'inventario',
+      entidad_id: 0,
+      datos_despues: { inserted, skipped },
+      req
     });
 
     res.json({
@@ -625,7 +639,7 @@ router.post('/import-excel', authenticate, requireRole([ROLES.ADMIN, ROLES.INSPE
 });
 
 // GET settings
-router.get('/settings', (req, res) => {
+router.get('/settings', authenticate, requirePermiso(PERMISOS.CONFIG_GESTIONAR), (req, res) => {
   try {
     const rows = db.prepare('SELECT key, value FROM settings').all();
     const settings = {};
@@ -636,8 +650,8 @@ router.get('/settings', (req, res) => {
   }
 });
 
-// POST save settings (Admin only)
-router.post('/settings', authenticate, requireRole([ROLES.ADMIN]), (req, res) => {
+// POST save settings (Config managers only)
+router.post('/settings', authenticate, requirePermiso(PERMISOS.CONFIG_GESTIONAR), (req, res) => {
   try {
     const { m365_webhook_url, base_url, company_name } = req.body;
     const upsert = db.prepare(`
@@ -649,6 +663,17 @@ router.post('/settings', authenticate, requireRole([ROLES.ADMIN]), (req, res) =>
     if (base_url !== undefined) upsert.run('base_url', base_url.trim());
     if (company_name !== undefined) upsert.run('company_name', company_name.trim());
 
+    recordAudit(db, {
+      usuario_id: req.user?.id || null,
+      usuario_nombre_snapshot: req.user?.name || 'Sistema',
+      organizacion_id: req.user?.organizacion_id || 1,
+      accion: 'ACTUALIZAR_CONFIGURACION',
+      entidad: 'configuracion',
+      entidad_id: 0,
+      datos_despues: req.body,
+      req
+    });
+
     res.json({ success: true, message: 'Configuraciones guardadas' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -656,7 +681,7 @@ router.post('/settings', authenticate, requireRole([ROLES.ADMIN]), (req, res) =>
 });
 
 // POST test M365 Power Automate Webhook
-router.post('/test-webhook', async (req, res) => {
+router.post('/test-webhook', authenticate, requirePermiso(PERMISOS.CONFIG_GESTIONAR), async (req, res) => {
   try {
     const row = db.prepare("SELECT value FROM settings WHERE key = 'm365_webhook_url'").get();
     const webhookUrl = row ? row.value : null;

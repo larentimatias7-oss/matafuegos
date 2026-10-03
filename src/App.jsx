@@ -11,6 +11,11 @@ import InspectionHistory from './components/InspectionHistory';
 import M365SyncModal from './components/M365SyncModal';
 import ExtinguisherModal from './components/ExtinguisherModal';
 import LoginModal from './components/LoginModal';
+import UsersList from './components/UsersList';
+import AuditViewer from './components/AuditViewer';
+import UserProfileModal from './components/UserProfileModal';
+import QuickPinSwitchModal from './components/QuickPinSwitchModal';
+import AccessDenied from './components/AccessDenied';
 import { WifiSlash, Cloud, ArrowsClockwise, CheckCircle } from '@phosphor-icons/react';
 import { getOfflineInspections, syncOfflineInspections } from './utils/offlineQueue';
 
@@ -30,18 +35,17 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.name && (parsed.name.includes('Santi ') || parsed.name === 'Santi')) {
-          parsed.name = 'Santiago Amaya (Inspector HyS)';
-          localStorage.setItem('firecontrol_user', JSON.stringify(parsed));
-        }
         return parsed;
       } catch (_e) {
-        // Fallback to default user if parse fails
+        // Fallback al usuario predeterminado
       }
     }
-    return { name: 'Santiago Amaya (Inspector HyS)', role: 'INSPECTOR' };
+    return { name: 'Santiago Amaya (Inspector HyS)', role: 'INSPECTOR', id: '11111111-1111-4111-8111-111111111111' };
   });
+
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showPinSwitchModal, setShowPinSwitchModal] = useState(false);
 
   // Theme State (Light default per Milicic specifications)
   const [theme, setTheme] = useState(() => {
@@ -62,6 +66,20 @@ export default function App() {
     mode: 'create',
     extinguisher: null
   });
+
+  // Verify server session on load
+  const verifySession = async () => {
+    try {
+      const res = await fetch('/api/auth/me');
+      const data = await res.json();
+      if (data.authenticated && data.user) {
+        setUser(data.user);
+        localStorage.setItem('firecontrol_user', JSON.stringify(data.user));
+      }
+    } catch (e) {
+      console.warn('Error verificando sesión con el servidor:', e);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -165,6 +183,7 @@ export default function App() {
   // Network online/offline listener and auto-sync
   useEffect(() => {
     checkOfflineQueue();
+    verifySession();
 
     const handleOnline = () => {
       setIsOnline(true);
@@ -227,6 +246,8 @@ export default function App() {
         const data = await res.json();
         if (data.success) {
           fetchData();
+        } else {
+          alert(data.error);
         }
       } catch (e) {
         alert(e.message);
@@ -234,9 +255,23 @@ export default function App() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (_e) {
+      // Ignorar error de red en logout
+    }
+    setUser(null);
+    localStorage.removeItem('firecontrol_user');
+    setShowProfileModal(false);
+    setShowLoginModal(true);
+  };
+
   const toggleTheme = () => {
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
   };
+
+  const userRole = user?.role || 'INSPECTOR';
 
   return (
     <div className="app-container">
@@ -291,6 +326,10 @@ export default function App() {
         onToggleTheme={toggleTheme}
         user={user}
         currentRound={stats?.activeRound}
+        isOnline={isOnline}
+        onOpenProfile={() => setShowProfileModal(true)}
+        onOpenPinSwitch={() => setShowPinSwitchModal(true)}
+        onOpenLogin={() => setShowLoginModal(true)}
       />
 
       {/* Main Content Area */}
@@ -314,31 +353,51 @@ export default function App() {
 
         {/* TAB 2: MI RUTA DE INSPECCIÓN */}
         {activeTab === 'route' && (
-          <RouteView 
-            onInspectCode={(code) => handleSelectCode(code)}
-          />
+          userRole === 'AUDITOR' ? (
+            <AccessDenied 
+              userRole={userRole} 
+              requiredRole="INSPECTOR o SUPERVISOR" 
+              moduleName="Mi Ruta de Inspección" 
+              onReturn={() => setActiveTab('dashboard')} 
+            />
+          ) : (
+            <RouteView 
+              onInspectCode={(code) => handleSelectCode(code)}
+              currentUser={user}
+            />
+          )
         )}
 
         {/* TAB 3: ESCANEAR / CONTROL MENSUAL */}
         {activeTab === 'scan' && (
-          inspectingExtinguisher ? (
-            <InspectionForm 
-              extinguisher={inspectingExtinguisher}
-              onBack={() => setInspectingExtinguisher(null)}
-              onSaved={() => {
-                fetchData();
-                setInspectingExtinguisher(null);
-              }}
-              onInspectNext={(nextCode) => {
-                fetchData();
-                handleSelectCode(nextCode);
-              }}
+          userRole === 'AUDITOR' ? (
+            <AccessDenied 
+              userRole={userRole} 
+              requiredRole="INSPECTOR, SUPERVISOR o ADMIN" 
+              moduleName="Control Mensual de Extintores" 
+              onReturn={() => setActiveTab('dashboard')} 
             />
           ) : (
-            <Scanner 
-              extinguishers={extinguishers}
-              onSelectCode={handleSelectCode}
-            />
+            inspectingExtinguisher ? (
+              <InspectionForm 
+                extinguisher={inspectingExtinguisher}
+                currentUser={user}
+                onBack={() => setInspectingExtinguisher(null)}
+                onSaved={() => {
+                  fetchData();
+                  setInspectingExtinguisher(null);
+                }}
+                onInspectNext={(nextCode) => {
+                  fetchData();
+                  handleSelectCode(nextCode);
+                }}
+              />
+            ) : (
+              <Scanner 
+                extinguishers={extinguishers}
+                onSelectCode={handleSelectCode}
+              />
+            )
           )
         )}
 
@@ -346,6 +405,7 @@ export default function App() {
         {activeTab === 'extinguishers' && (
           <ExtinguishersList 
             extinguishers={extinguishers}
+            currentUser={user}
             onInspect={(ext) => {
               setInspectingExtinguisher(ext);
               setActiveTab('scan');
@@ -359,24 +419,62 @@ export default function App() {
 
         {/* TAB 5: CASOS Y ANOMALÍAS */}
         {activeTab === 'cases' && (
-          <CasesList />
+          <CasesList currentUser={user} />
         )}
 
         {/* TAB 6: IMPRESIÓN DE ETIQUETAS QR */}
         {activeTab === 'qrs' && (
-          <QrPrinter />
+          ['SUPERADMIN', 'ADMIN', 'SUPERVISOR'].includes(userRole) ? (
+            <QrPrinter />
+          ) : (
+            <AccessDenied 
+              userRole={userRole} 
+              requiredRole="SUPERVISOR o ADMIN" 
+              moduleName="Impresión de Etiquetas QR" 
+              onReturn={() => setActiveTab('dashboard')} 
+            />
+          )
         )}
 
         {/* TAB 7: HISTORIAL AUDITABLE */}
         {activeTab === 'history' && (
-          <InspectionHistory onExportExcel={handleExportExcel} />
+          <InspectionHistory onExportExcel={handleExportExcel} currentUser={user} />
         )}
 
-        {/* TAB 8: MICROSOFT 365 INTEGRATION */}
+        {/* TAB 8: GESTIÓN DE USUARIOS */}
+        {activeTab === 'users' && (
+          ['SUPERADMIN', 'ADMIN'].includes(userRole) ? (
+            <UsersList currentUser={user} />
+          ) : (
+            <AccessDenied 
+              userRole={userRole} 
+              requiredRole="ADMIN o SUPERADMIN" 
+              moduleName="Gestión de Usuarios y Permisos" 
+              onReturn={() => setActiveTab('dashboard')} 
+            />
+          )
+        )}
+
+        {/* TAB 9: AUDITORÍA Y TRAZABILIDAD */}
+        {activeTab === 'audit' && (
+          ['SUPERADMIN', 'ADMIN', 'AUDITOR'].includes(userRole) ? (
+            <AuditViewer />
+          ) : (
+            <AccessDenied 
+              userRole={userRole} 
+              requiredRole="ADMIN, AUDITOR o SUPERADMIN" 
+              moduleName="Auditoría del Sistema" 
+              onReturn={() => setActiveTab('dashboard')} 
+            />
+          )
+        )}
+
+        {/* TAB 10: MICROSOFT 365 INTEGRATION */}
         {activeTab === 'm365' && (
           <M365SyncModal 
             onExportExcel={handleExportExcel} 
             onRefreshData={fetchData}
+            currentUser={user}
           />
         )}
 
@@ -395,13 +493,42 @@ export default function App() {
         />
       )}
 
-      {/* Optional Login Modal */}
+      {/* Login Modal */}
       {showLoginModal && (
         <LoginModal 
           onLogin={(u) => {
             setUser(u);
             localStorage.setItem('firecontrol_user', JSON.stringify(u));
             setShowLoginModal(false);
+            fetchData();
+          }}
+          onClose={() => setShowLoginModal(false)}
+          onOpenPinSwitch={() => {
+            setShowLoginModal(false);
+            setShowPinSwitchModal(true);
+          }}
+        />
+      )}
+
+      {/* Profile Modal */}
+      {showProfileModal && (
+        <UserProfileModal
+          user={user}
+          onClose={() => setShowProfileModal(false)}
+          onLogout={handleLogout}
+          onRefreshUser={verifySession}
+        />
+      )}
+
+      {/* Quick PIN Switch Modal */}
+      {showPinSwitchModal && (
+        <QuickPinSwitchModal
+          onClose={() => setShowPinSwitchModal(false)}
+          onSwitchSuccess={(newUser) => {
+            setUser(newUser);
+            localStorage.setItem('firecontrol_user', JSON.stringify(newUser));
+            setShowPinSwitchModal(false);
+            fetchData();
           }}
         />
       )}

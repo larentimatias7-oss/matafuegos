@@ -2,8 +2,9 @@
 // Manejo de almacenamiento local offline con IndexedDB y compresión de fotos
 
 const DB_NAME = 'milicic_matafuegos_offline';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = 'pending_inspections';
+const QUARANTINE_STORE = 'quarantine_inspections';
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -15,6 +16,9 @@ function openDB() {
       const db = event.target.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+      }
+      if (!db.objectStoreNames.contains(QUARANTINE_STORE)) {
+        db.createObjectStore(QUARANTINE_STORE, { keyPath: 'id', autoIncrement: true });
       }
     };
     request.onsuccess = (event) => resolve(event.target.result);
@@ -74,11 +78,78 @@ export async function removeOfflineInspection(id) {
 }
 
 /**
+ * Mueve inspecciones rechazadas/cuarentena al almacén de cuarentena para revisión del supervisor
+ */
+export async function quarantineInspections(items, reason = 'Usuario desactivado o no autorizado') {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction([STORE_NAME, QUARANTINE_STORE], 'readwrite');
+    const pendingStore = tx.objectStore(STORE_NAME);
+    const quarantineStore = tx.objectStore(QUARANTINE_STORE);
+
+    for (const item of items) {
+      const quarantinedItem = {
+        ...item,
+        quarantined_at: new Date().toISOString(),
+        quarantine_reason: reason
+      };
+      quarantineStore.add(quarantinedItem);
+      if (item.id) {
+        pendingStore.delete(item.id);
+      }
+    }
+
+    tx.oncomplete = () => resolve(items.length);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+/**
+ * Obtiene inspecciones en cuarentena
+ */
+export async function getQuarantinedInspections() {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(QUARANTINE_STORE, 'readonly');
+      const store = tx.objectStore(QUARANTINE_STORE);
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  } catch (err) {
+    console.warn('Error leyendo cuarentena:', err);
+    return [];
+  }
+}
+
+/**
  * Intenta sincronizar todos los registros pendientes con el backend
+ * Revalida sesión previamente. Si el usuario fue desactivado, cuarentena las inspecciones.
  */
 export async function syncOfflineInspections(onItemSynced) {
   const pending = await getOfflineInspections();
-  if (!pending.length) return { synced: 0, failed: 0 };
+  if (!pending.length) return { synced: 0, failed: 0, status: 'EMPTY' };
+
+  // Revalidar sesión antes de sincronizar
+  try {
+    const authCheck = await fetch('/api/auth/me', { credentials: 'include' });
+    if (!authCheck.ok) {
+      const authData = await authCheck.json().catch(() => ({}));
+      const reason = authData.error || 'Sesión no válida o usuario inactivo';
+      await quarantineInspections(pending, reason);
+      return {
+        synced: 0,
+        failed: pending.length,
+        status: 'AUTH_REJECTED',
+        error: reason,
+        quarantined: pending.length
+      };
+    }
+  } catch (err) {
+    // Si la red sigue caída, no reintentamos envío
+    return { synced: 0, failed: pending.length, status: 'OFFLINE_RETRY' };
+  }
 
   let synced = 0;
   let failed = 0;
@@ -89,6 +160,7 @@ export async function syncOfflineInspections(onItemSynced) {
       const res = await fetch('/api/inspections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(payload)
       });
 
@@ -96,6 +168,17 @@ export async function syncOfflineInspections(onItemSynced) {
         await removeOfflineInspection(id);
         synced++;
         if (onItemSynced) onItemSynced(item);
+      } else if (res.status === 401 || res.status === 403) {
+        // Usuario revocado a mitad del envío
+        const remaining = pending.slice(synced);
+        await quarantineInspections(remaining, 'Acceso revocado durante la sincronización');
+        return {
+          synced,
+          failed: remaining.length,
+          status: 'AUTH_REJECTED',
+          error: 'Acceso revocado durante la sincronización',
+          quarantined: remaining.length
+        };
       } else {
         failed++;
       }
@@ -105,7 +188,7 @@ export async function syncOfflineInspections(onItemSynced) {
     }
   }
 
-  return { synced, failed, total: pending.length };
+  return { synced, failed, total: pending.length, status: 'COMPLETED' };
 }
 
 /**

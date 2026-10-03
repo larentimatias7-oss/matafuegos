@@ -1,10 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../db');
-const { authenticate, requireRole, ROLES } = require('../middleware/auth');
+const { authenticate, requirePermiso, checkUserSectorScope } = require('../middleware/auth');
+const { PERMISOS, ROLES } = require('../config/permissions');
 const { evaluateInspectionFraud } = require('../services/antifraudService');
 const { validateInspectionInRound } = require('../services/roundService');
 const { getBuenosAiresDateString } = require('../services/expirationService');
+const { recordAudit } = require('../services/auditService');
 
 // Immutability: inspections cannot be modified or deleted by regulation IRAM 3517-2
 router.use((req, res, next) => {
@@ -40,17 +42,19 @@ async function notifyM365Webhook(payload) {
   }
 }
 
-// GET all inspections with filters
-router.get('/', (req, res) => {
+// GET all inspections with filters, inspector filter, and antifraud
+router.get('/', authenticate, requirePermiso(PERMISOS.INSPECCION_VER), (req, res) => {
   try {
-    const { month, code, limit, round_id } = req.query;
+    const { month, code, limit, round_id, inspector, usuario_id, suspicious } = req.query;
+    const orgId = req.user?.organizacion_id || 1;
+
     let query = `
       SELECT i.*, e.location, e.type, e.capacity, e.floor, e.area, e.building
       FROM inspections i
       LEFT JOIN extinguishers e ON i.extinguisher_id = e.id
-      WHERE 1=1
+      WHERE i.organizacion_id = ?
     `;
-    const params = [];
+    const params = [orgId];
 
     if (round_id) {
       query += ' AND i.round_id = ?';
@@ -63,6 +67,25 @@ router.get('/', (req, res) => {
     if (code) {
       query += ' AND i.extinguisher_code = ?';
       params.push(code.toUpperCase());
+    }
+    if (usuario_id) {
+      query += ' AND i.usuario_id = ?';
+      params.push(usuario_id);
+    }
+    if (inspector) {
+      query += ' AND (i.inspector_name_snapshot LIKE ? OR i.inspector_name LIKE ?)';
+      params.push(`%${inspector}%`, `%${inspector}%`);
+    }
+    if (suspicious !== undefined && suspicious !== '') {
+      query += ' AND i.is_suspicious = ?';
+      params.push(Number(suspicious));
+    }
+
+    // Sector scope filtering for scoped inspectors
+    if (req.user && req.user.role === ROLES.INSPECTOR && req.user.scopeSectors && req.user.scopeSectors.length > 0) {
+      const placeholders = req.user.scopeSectors.map(() => '?').join(',');
+      query += ` AND (e.floor IN (${placeholders}) OR e.area IN (${placeholders}) OR e.location IN (${placeholders}))`;
+      params.push(...req.user.scopeSectors, ...req.user.scopeSectors, ...req.user.scopeSectors);
     }
 
     query += ' ORDER BY i.inspection_date DESC';
@@ -82,8 +105,9 @@ router.get('/', (req, res) => {
 });
 
 // GET statistics for dashboard
-router.get('/stats', (req, res) => {
+router.get('/stats', authenticate, requirePermiso(PERMISOS.DASHBOARD_VER), (req, res) => {
   try {
+    const orgId = req.user?.organizacion_id || 1;
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const todayStr = now.toISOString().split('T')[0];
@@ -94,53 +118,64 @@ router.get('/stats', (req, res) => {
     const in60Days = new Date(now.getTime() + 60 * 86400000).toISOString().split('T')[0];
     const in90Days = new Date(now.getTime() + 90 * 86400000).toISOString().split('T')[0];
 
-    const totalExtinguishers = db.prepare("SELECT COUNT(*) as c FROM extinguishers WHERE status = 'OPERATIVO'").get().c;
-    const allTotal = db.prepare("SELECT COUNT(*) as c FROM extinguishers").get().c;
+    // Sector scope filter if inspector is restricted
+    let sectorFilter = '';
+    const sectorParams = [];
+    if (req.user && req.user.role === ROLES.INSPECTOR && req.user.scopeSectors && req.user.scopeSectors.length > 0) {
+      const placeholders = req.user.scopeSectors.map(() => '?').join(',');
+      sectorFilter = ` AND (floor IN (${placeholders}) OR area IN (${placeholders}) OR location IN (${placeholders}))`;
+      sectorParams.push(...req.user.scopeSectors, ...req.user.scopeSectors, ...req.user.scopeSectors);
+    }
+
+    const totalExtinguishers = db.prepare(`SELECT COUNT(*) as c FROM extinguishers WHERE status = 'OPERATIVO' AND organizacion_id = ? ${sectorFilter}`).get(orgId, ...sectorParams).c;
+    const allTotal = db.prepare(`SELECT COUNT(*) as c FROM extinguishers WHERE organizacion_id = ? ${sectorFilter}`).get(orgId, ...sectorParams).c;
 
     // Distinct extinguishers inspected this month
     const inspectedDistinct = db.prepare(`
-      SELECT COUNT(DISTINCT extinguisher_id) as c 
-      FROM inspections 
-      WHERE year_month = ?
-    `).get(currentMonth).c;
+      SELECT COUNT(DISTINCT i.extinguisher_id) as c 
+      FROM inspections i
+      JOIN extinguishers e ON i.extinguisher_id = e.id
+      WHERE i.year_month = ? AND i.organizacion_id = ? ${sectorFilter}
+    `).get(currentMonth, orgId, ...sectorParams).c;
 
     // Passed vs Failed this month
     const failedThisMonth = db.prepare(`
-      SELECT COUNT(DISTINCT extinguisher_id) as c 
-      FROM inspections 
-      WHERE year_month = ? AND passed = 0
-    `).get(currentMonth).c;
+      SELECT COUNT(DISTINCT i.extinguisher_id) as c 
+      FROM inspections i
+      JOIN extinguishers e ON i.extinguisher_id = e.id
+      WHERE i.year_month = ? AND i.passed = 0 AND i.organizacion_id = ? ${sectorFilter}
+    `).get(currentMonth, orgId, ...sectorParams).c;
 
     // Open cases count
-    const openCasesCount = db.prepare("SELECT COUNT(*) as c FROM cases WHERE status != 'RESUELTO'").get().c;
+    const openCasesCount = db.prepare(`SELECT COUNT(*) as c FROM cases WHERE status != 'RESUELTO' AND organizacion_id = ?`).get(orgId).c;
 
     // Expired charges (already expired)
     const expiredCharges = db.prepare(`
       SELECT COUNT(*) as c FROM extinguishers 
-      WHERE expiration_charge < ? AND status = 'OPERATIVO'
-    `).get(todayStr).c;
+      WHERE expiration_charge < ? AND status = 'OPERATIVO' AND organizacion_id = ? ${sectorFilter}
+    `).get(todayStr, orgId, ...sectorParams).c;
 
     // Expiring charges soon (granular alerts)
     const expiringCharge15 = db.prepare(`
       SELECT COUNT(*) as c FROM extinguishers 
-      WHERE expiration_charge >= ? AND expiration_charge <= ? AND status = 'OPERATIVO'
-    `).get(todayStr, in15Days).c;
+      WHERE expiration_charge >= ? AND expiration_charge <= ? AND status = 'OPERATIVO' AND organizacion_id = ? ${sectorFilter}
+    `).get(todayStr, in15Days, orgId, ...sectorParams).c;
 
     const expiringCharge30 = db.prepare(`
       SELECT COUNT(*) as c FROM extinguishers 
-      WHERE expiration_charge >= ? AND expiration_charge <= ? AND status = 'OPERATIVO'
-    `).get(todayStr, in30Days).c;
+      WHERE expiration_charge >= ? AND expiration_charge <= ? AND status = 'OPERATIVO' AND organizacion_id = ? ${sectorFilter}
+    `).get(todayStr, in30Days, orgId, ...sectorParams).c;
 
     const expiringCharge60 = db.prepare(`
       SELECT COUNT(*) as c FROM extinguishers 
-      WHERE expiration_charge >= ? AND expiration_charge <= ? AND status = 'OPERATIVO'
-    `).get(todayStr, in60Days).c;
+      WHERE expiration_charge >= ? AND expiration_charge <= ? AND status = 'OPERATIVO' AND organizacion_id = ? ${sectorFilter}
+    `).get(todayStr, in60Days, orgId, ...sectorParams).c;
 
     // Expiring PH soon (between today and 90 days)
     const expiringPhSoon = db.prepare(`
       SELECT COUNT(*) as c FROM extinguishers 
-      WHERE expiration_ph >= ? AND expiration_ph <= ? AND status = 'OPERATIVO'
-    `).get(todayStr, in90Days).c;
+      WHERE expiration_ph >= ? AND expiration_ph <= ? AND status = 'OPERATIVO' AND organizacion_id = ? ${sectorFilter}
+    `).get(todayStr, in90Days, orgId, ...sectorParams).c;
 
     const pendingThisMonth = Math.max(0, totalExtinguishers - inspectedDistinct);
     const coveragePercentage = totalExtinguishers > 0 
@@ -148,15 +183,31 @@ router.get('/stats', (req, res) => {
       : 0;
 
     // Active round
-    const activeRound = db.prepare("SELECT * FROM rounds WHERE year_month = ?").get(currentMonth);
+    const activeRound = db.prepare("SELECT * FROM rounds WHERE year_month = ? AND organizacion_id = ?").get(currentMonth, orgId);
+
+    // Inspector activity breakdown for supervisory dashboard
+    const inspectorBreakdown = db.prepare(`
+      SELECT 
+        COALESCE(i.inspector_name_snapshot, i.inspector_name) as inspector,
+        i.usuario_id,
+        COUNT(*) as total_inspections,
+        SUM(CASE WHEN i.passed = 1 THEN 1 ELSE 0 END) as passed_count,
+        SUM(CASE WHEN i.passed = 0 THEN 1 ELSE 0 END) as failed_count,
+        SUM(i.is_suspicious) as suspicious_count
+      FROM inspections i
+      WHERE i.year_month = ? AND i.organizacion_id = ?
+      GROUP BY COALESCE(i.inspector_name_snapshot, i.inspector_name), i.usuario_id
+      ORDER BY total_inspections DESC
+    `).all(currentMonth, orgId);
 
     // Recent activity
     const recentActivity = db.prepare(`
       SELECT i.*, e.location, e.type, e.capacity
       FROM inspections i
       LEFT JOIN extinguishers e ON i.extinguisher_id = e.id
+      WHERE i.organizacion_id = ?
       ORDER BY i.id DESC LIMIT 6
-    `).all();
+    `).all(orgId);
 
     res.json({
       success: true,
@@ -176,6 +227,7 @@ router.get('/stats', (req, res) => {
         expiringCharge60,
         expiringPhSoon
       },
+      inspectorBreakdown,
       recentActivity
     });
   } catch (error) {
@@ -184,7 +236,7 @@ router.get('/stats', (req, res) => {
 });
 
 // POST register new inspection with antifraud, case creation and next pending finder
-router.post('/', authenticate, requireRole([ROLES.ADMIN, ROLES.INSPECTOR]), async (req, res) => {
+router.post('/', authenticate, requirePermiso(PERMISOS.INSPECCION_CREAR), async (req, res) => {
   try {
     const {
       extinguisher_id,
@@ -218,11 +270,21 @@ router.post('/', authenticate, requireRole([ROLES.ADMIN, ROLES.INSPECTOR]), asyn
       return res.status(404).json({ success: false, error: 'Matafuego no encontrado' });
     }
 
+    // Verificación de alcance sectorial en servidor
+    if (req.user && !checkUserSectorScope(req.user, ext)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Acceso denegado: este extintor se encuentra fuera de su sector operativo asignado.'
+      });
+    }
+
     const now = new Date();
     const todayBA = getBuenosAiresDateString(now);
     const year_month = todayBA.slice(0, 7);
     const inspection_date = now.toISOString().replace('T', ' ').substring(0, 19);
     const inspector = (inspector_name || (req.user ? req.user.name : 'Inspector')).trim();
+    const usuarioId = req.user?.id || null;
+    const orgId = req.user?.organizacion_id || 1;
 
     // Regla de una inspección por ronda o reinspección motivada
     const existingCount = db.prepare(`
@@ -263,17 +325,21 @@ router.post('/', authenticate, requireRole([ROLES.ADMIN, ROLES.INSPECTOR]), asyn
     const is_suspicious = fraudEval.isSuspicious ? 1 : 0;
     const fraud_flags = fraudEval.fraudFlags.join(';') || null;
 
-    // Insert immutable inspection record
+    // Insert immutable inspection record with full traceability
     const insert = db.prepare(`
       INSERT INTO inspections (
+        organizacion_id, usuario_id, inspector_name_snapshot,
         extinguisher_id, extinguisher_code, inspector_name, inspection_date, year_month,
         passed, check_location, check_pressure, check_seal, check_physical, check_signage, check_card,
         observations, photo_url, synced_m365, round_id, is_reinspection, reinspection_reason,
         duration_seconds, is_suspicious, fraud_flags, latitude, longitude, geo_accuracy, checklist_results
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const result = insert.run(
+      orgId,
+      usuarioId,
+      inspector,
       ext.id,
       ext.code,
       inspector,
@@ -302,6 +368,23 @@ router.post('/', authenticate, requireRole([ROLES.ADMIN, ROLES.INSPECTOR]), asyn
 
     const inspectionId = result.lastInsertRowid;
 
+    // Registrar en auditoría inmutable append-only
+    recordAudit(db, {
+      usuario_id: usuarioId,
+      usuario_nombre_snapshot: inspector,
+      organizacion_id: orgId,
+      accion: 'REGISTRAR_INSPECCION',
+      entidad: 'inspeccion',
+      entidad_id: inspectionId,
+      datos_despues: {
+        extinguisher_code: ext.code,
+        passed,
+        is_suspicious,
+        year_month
+      },
+      req
+    });
+
     // --- CASE CREATION ON FAILURE ---
     let caseId = null;
     if (passed === 0) {
@@ -319,10 +402,11 @@ router.post('/', authenticate, requireRole([ROLES.ADMIN, ROLES.INSPECTOR]), asyn
 
       const insertCase = db.prepare(`
         INSERT INTO cases (
+          organizacion_id, usuario_id, usuario_nombre_snapshot,
           extinguisher_id, extinguisher_code, inspection_id, title, description, status, priority, photo_url
-        ) VALUES (?, ?, ?, ?, ?, 'ABIERTO', 'ALTA', ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ABIERTO', 'ALTA', ?)
       `);
-      const caseRes = insertCase.run(ext.id, ext.code, inspectionId, title, desc, photo_url);
+      const caseRes = insertCase.run(orgId, usuarioId, inspector, ext.id, ext.code, inspectionId, title, desc, photo_url);
       caseId = caseRes.lastInsertRowid;
     }
 

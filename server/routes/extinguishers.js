@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const { db, generatePublicId } = require('../db');
-const { authenticate, requireRole, ROLES } = require('../middleware/auth');
+const { authenticate, requirePermiso, checkUserSectorScope } = require('../middleware/auth');
+const { PERMISOS, ROLES } = require('../config/permissions');
 const { validateExtinguisherInput } = require('../validators/dataValidators');
 const { resolveSemaphoreStatus } = require('../services/semaphoreService');
+const { recordAudit } = require('../services/auditService');
 
 // Helper to determine monthly inspection status using unified semaphore service
 function getMonthlyStatus(extinguisher, currentMonth) {
@@ -27,34 +29,16 @@ function getMonthlyStatus(extinguisher, currentMonth) {
   };
 }
 
-// Helper to log changes to audit_logs
-function logAudit(entityType, entityId, action, changedBy, oldValues, newValues) {
-  try {
-    db.prepare(`
-      INSERT INTO audit_logs (entity_type, entity_id, action, changed_by, old_values, new_values)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(
-      entityType,
-      entityId,
-      action,
-      changedBy || 'Sistema',
-      oldValues ? JSON.stringify(oldValues) : null,
-      newValues ? JSON.stringify(newValues) : null
-    );
-  } catch (err) {
-    console.error('Audit log error:', err.message);
-  }
-}
-
-// GET all extinguishers with current month status
-router.get('/', authenticate, (req, res) => {
+// GET all extinguishers with current month status and sector scoping
+router.get('/', authenticate, requirePermiso(PERMISOS.INVENTARIO_VER), (req, res) => {
   try {
     const { search, type, floor, status, month } = req.query;
     const now = new Date();
     const currentMonth = month || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const orgId = req.user?.organizacion_id || 1;
 
-    let query = 'SELECT * FROM extinguishers WHERE 1=1';
-    const params = [];
+    let query = 'SELECT * FROM extinguishers WHERE organizacion_id = ?';
+    const params = [orgId];
 
     if (type) {
       query += ' AND type = ?';
@@ -72,6 +56,13 @@ router.get('/', authenticate, (req, res) => {
       query += ' AND (code LIKE ? OR location LIKE ? OR area LIKE ? OR building LIKE ? OR notes LIKE ? OR manufacturer LIKE ? OR public_id = ?)';
       const term = `%${search}%`;
       params.push(term, term, term, term, term, term, search.trim().toLowerCase());
+    }
+
+    // Sector scope filtering for scoped inspectors
+    if (req.user && req.user.role === ROLES.INSPECTOR && req.user.scopeSectors && req.user.scopeSectors.length > 0) {
+      const placeholders = req.user.scopeSectors.map(() => '?').join(',');
+      query += ` AND (floor IN (${placeholders}) OR area IN (${placeholders}) OR location IN (${placeholders}))`;
+      params.push(...req.user.scopeSectors, ...req.user.scopeSectors, ...req.user.scopeSectors);
     }
 
     query += ' ORDER BY code ASC';
@@ -99,11 +90,12 @@ router.get('/', authenticate, (req, res) => {
   }
 });
 
-// GET single extinguisher by id, code or public_id
-router.get('/:idOrCode', authenticate, (req, res) => {
+// GET single extinguisher by id, code or public_id with scope verification
+router.get('/:idOrCode', authenticate, requirePermiso(PERMISOS.INVENTARIO_VER), (req, res) => {
   try {
     const rawParam = req.params.idOrCode || '';
     let clean = decodeURIComponent(rawParam).trim();
+    const orgId = req.user?.organizacion_id || 1;
 
     // 1. If a full or relative URL is passed, extract /m/:publicId
     if (clean.includes('/m/')) {
@@ -120,26 +112,34 @@ router.get('/:idOrCode', authenticate, (req, res) => {
     let ext;
 
     // 3. Search by exact code (case-insensitive) e.g. MF-001
-    ext = db.prepare('SELECT * FROM extinguishers WHERE UPPER(code) = ?').get(clean.toUpperCase());
+    ext = db.prepare('SELECT * FROM extinguishers WHERE UPPER(code) = ? AND organizacion_id = ?').get(clean.toUpperCase(), orgId);
 
     // 4. Search by public_id (case-insensitive) e.g. bb03f46d028d
     if (!ext) {
-      ext = db.prepare('SELECT * FROM extinguishers WHERE LOWER(public_id) = ?').get(clean.toLowerCase());
+      ext = db.prepare('SELECT * FROM extinguishers WHERE LOWER(public_id) = ? AND organizacion_id = ?').get(clean.toLowerCase(), orgId);
     }
 
     // 5. If purely digits, try numeric ID
     if (!ext && /^\d+$/.test(clean)) {
-      ext = db.prepare('SELECT * FROM extinguishers WHERE id = ?').get(Number(clean));
+      ext = db.prepare('SELECT * FROM extinguishers WHERE id = ? AND organizacion_id = ?').get(Number(clean), orgId);
     }
 
     // 6. If purely digits, try standard padded MF code (e.g. 1 -> MF-001)
     if (!ext && /^\d+$/.test(clean)) {
       const padded = `MF-${clean.padStart(3, '0')}`;
-      ext = db.prepare('SELECT * FROM extinguishers WHERE UPPER(code) = ?').get(padded);
+      ext = db.prepare('SELECT * FROM extinguishers WHERE UPPER(code) = ? AND organizacion_id = ?').get(padded, orgId);
     }
 
     if (!ext) {
       return res.status(404).json({ success: false, error: 'Matafuego no encontrado' });
+    }
+
+    // Enforce user sector scope for scoped inspectors
+    if (req.user && !checkUserSectorScope(req.user, ext)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Acceso denegado: este extintor se encuentra fuera de su sector asignado.'
+      });
     }
 
     const now = new Date();
@@ -149,16 +149,16 @@ router.get('/:idOrCode', authenticate, (req, res) => {
     // Get last inspections
     const inspections = db.prepare(`
       SELECT * FROM inspections 
-      WHERE extinguisher_id = ? 
+      WHERE extinguisher_id = ? AND organizacion_id = ?
       ORDER BY id DESC LIMIT 15
-    `).all(ext.id);
+    `).all(ext.id, orgId);
 
     // Get open cases
     const cases = db.prepare(`
       SELECT * FROM cases 
-      WHERE extinguisher_id = ? 
+      WHERE extinguisher_id = ? AND organizacion_id = ?
       ORDER BY id DESC LIMIT 5
-    `).all(ext.id);
+    `).all(ext.id, orgId);
 
     // Get audit history
     const auditHistory = db.prepare(`
@@ -183,7 +183,7 @@ router.get('/:idOrCode', authenticate, (req, res) => {
 });
 
 // POST create new extinguisher
-router.post('/', authenticate, requireRole([ROLES.ADMIN, ROLES.INSPECTOR]), (req, res) => {
+router.post('/', authenticate, requirePermiso(PERMISOS.INVENTARIO_CREAR), (req, res) => {
   try {
     const validation = validateExtinguisherInput(req.body);
     if (!validation.valid) {
@@ -199,20 +199,21 @@ router.post('/', authenticate, requireRole([ROLES.ADMIN, ROLES.INSPECTOR]), (req
       location_ref = '', manufacturer = '', fab_year = null, lifespan_limit = '',
       collar_year_color = '', last_charge_date = '', expiration_charge,
       last_ph_date = '', expiration_ph, supplier = '', certificate_number = '',
-      status = 'OPERATIVO', notes = '', changed_by = (req.user ? req.user.name : 'Admin')
+      status = 'OPERATIVO', notes = ''
     } = req.body;
 
+    const orgId = req.user?.organizacion_id || 1;
     const cleanCode = code.trim().toUpperCase();
     const publicId = generatePublicId();
 
     const insert = db.prepare(`
       INSERT INTO extinguishers (
-        code, public_id, type, capacity, location, area, floor, building,
+        organizacion_id, code, public_id, type, capacity, location, area, floor, building,
         location_ref, manufacturer, fab_year, lifespan_limit, last_charge_date,
         expiration_charge, collar_year_color, last_ph_date, expiration_ph,
         supplier, certificate_number, status, notes
       ) VALUES (
-        ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?, ?, ?, ?,
         ?, ?, ?, ?, ?,
         ?, ?, ?, ?,
         ?, ?, ?, ?
@@ -220,6 +221,7 @@ router.post('/', authenticate, requireRole([ROLES.ADMIN, ROLES.INSPECTOR]), (req
     `);
 
     const result = insert.run(
+      orgId,
       cleanCode,
       publicId,
       type,
@@ -244,7 +246,17 @@ router.post('/', authenticate, requireRole([ROLES.ADMIN, ROLES.INSPECTOR]), (req
     );
 
     const newId = result.lastInsertRowid;
-    logAudit('EXTINGUISHER', newId, 'CREATE', changed_by, null, { code: cleanCode, location, type, capacity });
+
+    recordAudit(db, {
+      usuario_id: req.user?.id || null,
+      usuario_nombre_snapshot: req.user?.name || 'Sistema',
+      organizacion_id: orgId,
+      accion: 'CREAR_EXTINTOR',
+      entidad: 'extintor',
+      entidad_id: newId,
+      datos_despues: { code: cleanCode, location, type, capacity, floor, area },
+      req
+    });
 
     res.status(201).json({
       success: true,
@@ -262,20 +274,28 @@ router.post('/', authenticate, requireRole([ROLES.ADMIN, ROLES.INSPECTOR]), (req
 });
 
 // PUT update extinguisher with full audit logging
-router.put('/:id', authenticate, requireRole([ROLES.ADMIN, ROLES.INSPECTOR]), (req, res) => {
+router.put('/:id', authenticate, requirePermiso(PERMISOS.INVENTARIO_EDITAR), (req, res) => {
   try {
     const { id } = req.params;
-    const oldExt = db.prepare('SELECT * FROM extinguishers WHERE id = ?').get(id);
+    const orgId = req.user?.organizacion_id || 1;
+    const oldExt = db.prepare('SELECT * FROM extinguishers WHERE id = ? AND organizacion_id = ?').get(id, orgId);
 
     if (!oldExt) {
       return res.status(404).json({ success: false, error: 'Matafuego no encontrado' });
+    }
+
+    if (req.user && !checkUserSectorScope(req.user, oldExt)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Acceso denegado: este extintor se encuentra fuera de su sector asignado.'
+      });
     }
 
     const { 
       code, type, capacity, location, area, floor, building,
       location_ref, manufacturer, fab_year, lifespan_limit, collar_year_color,
       last_charge_date, expiration_charge, last_ph_date, expiration_ph,
-      supplier, certificate_number, status, notes, changed_by = (req.user ? req.user.name : 'Operario / Admin')
+      supplier, certificate_number, status, notes
     } = req.body;
 
     const update = db.prepare(`
@@ -301,7 +321,7 @@ router.put('/:id', authenticate, requireRole([ROLES.ADMIN, ROLES.INSPECTOR]), (r
         status = COALESCE(?, status),
         notes = COALESCE(?, notes),
         updated_at = datetime('now', 'localtime')
-      WHERE id = ?
+      WHERE id = ? AND organizacion_id = ?
     `);
 
     update.run(
@@ -325,16 +345,21 @@ router.put('/:id', authenticate, requireRole([ROLES.ADMIN, ROLES.INSPECTOR]), (r
       certificate_number ?? null,
       status ?? null,
       notes ?? null,
-      id
+      id,
+      orgId
     );
 
-    // Audit log
-    const changes = {};
-    if (location && location !== oldExt.location) changes.location = { from: oldExt.location, to: location };
-    if (status && status !== oldExt.status) changes.status = { from: oldExt.status, to: status };
-    if (expiration_charge && expiration_charge !== oldExt.expiration_charge) changes.expiration_charge = { from: oldExt.expiration_charge, to: expiration_charge };
-
-    logAudit('EXTINGUISHER', id, 'UPDATE', changed_by, oldExt, req.body);
+    recordAudit(db, {
+      usuario_id: req.user?.id || null,
+      usuario_nombre_snapshot: req.user?.name || 'Sistema',
+      organizacion_id: orgId,
+      accion: 'ACTUALIZAR_EXTINTOR',
+      entidad: 'extintor',
+      entidad_id: id,
+      datos_antes: oldExt,
+      datos_despues: req.body,
+      req
+    });
 
     res.json({ success: true, message: 'Ficha de extintor actualizada' });
   } catch (error) {
@@ -342,26 +367,38 @@ router.put('/:id', authenticate, requireRole([ROLES.ADMIN, ROLES.INSPECTOR]), (r
   }
 });
 
-// DELETE extinguisher (Admin only)
-router.delete('/:id', authenticate, requireRole([ROLES.ADMIN]), (req, res) => {
+// DELETE extinguisher
+router.delete('/:id', authenticate, requirePermiso(PERMISOS.INVENTARIO_ELIMINAR), (req, res) => {
   try {
     const { id } = req.params;
-    const oldExt = db.prepare('SELECT * FROM extinguishers WHERE id = ?').get(id);
+    const orgId = req.user?.organizacion_id || 1;
+    const oldExt = db.prepare('SELECT * FROM extinguishers WHERE id = ? AND organizacion_id = ?').get(id, orgId);
 
     if (!oldExt) {
       return res.status(404).json({ success: false, error: 'Matafuego no encontrado' });
     }
 
-    db.prepare('DELETE FROM extinguishers WHERE id = ?').run(id);
-    logAudit('EXTINGUISHER', id, 'DELETE', (req.user ? req.user.name : 'Admin'), oldExt, null);
+    db.prepare('DELETE FROM extinguishers WHERE id = ? AND organizacion_id = ?').run(id, orgId);
+
+    recordAudit(db, {
+      usuario_id: req.user?.id || null,
+      usuario_nombre_snapshot: req.user?.name || 'Sistema',
+      organizacion_id: orgId,
+      accion: 'ELIMINAR_EXTINTOR',
+      entidad: 'extintor',
+      entidad_id: id,
+      datos_antes: oldExt,
+      req
+    });
+
     res.json({ success: true, message: 'Matafuego eliminado correctamente' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// POST reset to 130 sample extinguishers (Admin only)
-router.post('/reset-seed', authenticate, requireRole([ROLES.ADMIN]), (req, res) => {
+// POST reset to 130 sample extinguishers (Config manager only)
+router.post('/reset-seed', authenticate, requirePermiso(PERMISOS.CONFIG_GESTIONAR), (req, res) => {
   try {
     db.exec('DELETE FROM cases');
     db.exec('DELETE FROM inspections');
