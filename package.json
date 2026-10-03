@@ -33,7 +33,7 @@
   "type": "commonjs",
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
-    "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-table": "^9.2.4",
     "@vitejs/plugin-react": "^6.1.1",
     "argon2": "^0.45.1",
     "cookie-parser": "^1.4.7",
