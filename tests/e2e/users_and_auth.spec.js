@@ -73,6 +73,14 @@ test.describe('E2E Flow: Autenticación, Gestión de Usuarios (RBAC) y Auditorí
     // 6. Verificar que aparece en la lista de usuarios
     await expect(page.getByText(testEmail).first()).toBeVisible();
 
+    // Eliminar el usuario de prueba para verificar la funcionalidad y limpiar la base de datos
+    page.once('dialog', async dialog => {
+      await dialog.accept();
+    });
+    const userRow = page.locator('tr', { hasText: testEmail });
+    await userRow.locator('button[title*="Eliminar"]').click();
+    await expect(page.getByText(testEmail)).not.toBeVisible();
+
     // 7. Navegar al Registro Inmutable de Auditoría
     await navigateToTab(page, 'audit');
     await expect(page.getByRole('heading', { name: /Registro de Auditoría/i })).toBeVisible();

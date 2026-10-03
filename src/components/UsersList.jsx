@@ -12,7 +12,8 @@ import {
   CheckCircle, 
   XCircle, 
   DeviceMobile,
-  ArrowsClockwise
+  ArrowsClockwise,
+  Trash
 } from '@phosphor-icons/react';
 import UserModal from './UserModal';
 
@@ -85,6 +86,35 @@ export default function UsersList({ currentUser }) {
   };
 
   const canCreate = currentUser?.role === 'SUPERADMIN' || currentUser?.role === 'ADMIN';
+
+  const canDeleteUser = (u) => {
+    if (!canCreate) return false;
+    if (u.id === currentUser?.id) return false;
+    if (currentUser?.role === 'ADMIN' && (u.rol === 'SUPERADMIN' || u.rol === 'ADMIN')) return false;
+    return true;
+  };
+
+  const handleDeleteUser = async (u) => {
+    const confirmMsg = `¿Está seguro de que desea eliminar definitivamente al usuario ${u.nombre} ${u.apellido} (${u.email})?\n\nEsta acción eliminará sus sesiones activas, asignaciones sectoriales y no se puede deshacer.`;
+    if (!window.confirm(confirmMsg)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/users/${u.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchUsers();
+      } else {
+        alert(data.error || 'Error al eliminar usuario');
+      }
+    } catch (err) {
+      alert('Error de conexión al eliminar usuario: ' + err.message);
+    }
+  };
 
   return (
     <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '1rem' }}>
@@ -331,6 +361,17 @@ export default function UsersList({ currentUser }) {
                             title="Editar usuario y alcance"
                           >
                             <PencilSimple size={15} />
+                          </button>
+                        )}
+
+                        {canDeleteUser(u) && (
+                          <button
+                            onClick={() => handleDeleteUser(u)}
+                            className="btn btn-secondary btn-sm"
+                            style={{ padding: '0.3rem 0.6rem', color: '#dc2626', borderColor: 'rgba(220, 38, 38, 0.3)' }}
+                            title="Eliminar usuario definitivamente"
+                          >
+                            <Trash size={15} />
                           </button>
                         )}
                       </div>

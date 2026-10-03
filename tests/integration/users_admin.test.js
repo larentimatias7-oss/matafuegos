@@ -9,7 +9,7 @@ describe('FASE 4: API Integration - Gestión de Usuarios y Auditoría (RBAC)', (
   const superadminEmail = 'superadmin.test@milicic.com.ar';
   const adminEmail = 'admin.test@milicic.com.ar';
   const inspectorEmail = 'inspector.test@milicic.com.ar';
-  let superadminId, adminId, inspectorId;
+  let superadminId, adminId, inspectorId, createdUserId;
 
   beforeAll(async () => {
     const crypto = require('crypto');
@@ -93,6 +93,7 @@ describe('FASE 4: API Integration - Gestión de Usuarios y Auditoría (RBAC)', (
 
     expect(res.body.success).toBe(true);
     expect(res.body.data.email).toBe(newUserEmail);
+    createdUserId = res.body.data.id;
 
     const userInDb = db.prepare('SELECT id, rol FROM usuarios WHERE email = ?').get(newUserEmail);
     expect(userInDb).toBeDefined();
@@ -197,5 +198,55 @@ describe('FASE 4: API Integration - Gestión de Usuarios y Auditoría (RBAC)', (
     expect(res.headers['content-type']).toContain('spreadsheetml.sheet');
     expect(Buffer.isBuffer(res.body)).toBe(true);
     expect(res.body.length).toBeGreaterThan(100);
+  });
+
+  it('debe rechazar (403) si un usuario sin permisos intenta eliminar un usuario', async () => {
+    const res = await request(app)
+      .delete(`/api/users/${createdUserId}`)
+      .set('x-user-role', ROLES.INSPECTOR)
+      .expect(403);
+
+    expect(res.body.success).toBe(false);
+  });
+
+  it('debe rechazar (400) si un usuario intenta eliminarse a sí mismo', async () => {
+    const res = await request(app)
+      .delete(`/api/users/${adminId}`)
+      .set('x-user-role', ROLES.ADMIN)
+      .set('x-user-id', adminId)
+      .expect(400);
+
+    expect(res.body.success).toBe(false);
+    expect(res.body.error).toContain('eliminarse a sí mismo');
+  });
+
+  it('debe permitir a ADMIN eliminar definitivamente un usuario con rol inferior y limpiar sus datos', async () => {
+    expect(createdUserId).toBeDefined();
+
+    const res = await request(app)
+      .delete(`/api/users/${createdUserId}`)
+      .set('x-user-role', ROLES.ADMIN)
+      .set('x-user-id', adminId)
+      .expect(200);
+
+    expect(res.body.success).toBe(true);
+    expect(res.body.message).toContain('eliminado exitosamente');
+
+    // Comprobar que ya no existe en la base de datos ni sus sectores
+    const userInDb = db.prepare('SELECT id FROM usuarios WHERE id = ?').get(createdUserId);
+    expect(userInDb).toBeUndefined();
+
+    const sectors = db.prepare('SELECT sector FROM usuarios_sectores WHERE usuario_id = ?').all(createdUserId);
+    expect(sectors.length).toBe(0);
+  });
+
+  it('debe responder 404 al intentar eliminar un usuario inexistente', async () => {
+    const res = await request(app)
+      .delete('/api/users/00000000-9999-9999-9999-000000000000')
+      .set('x-user-role', ROLES.ADMIN)
+      .set('x-user-id', adminId)
+      .expect(404);
+
+    expect(res.body.success).toBe(false);
   });
 });

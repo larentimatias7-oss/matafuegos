@@ -411,4 +411,66 @@ router.post('/:id/sessions/:sessionId/revoke', requirePermiso(PERMISOS.SESION_RE
   }
 });
 
+// 6. DELETE /api/users/:id - Eliminación definitiva de usuario (hard delete)
+router.delete('/:id', requirePermiso(PERMISOS.USUARIO_ELIMINAR), (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const targetUser = db.prepare('SELECT id, nombre, apellido, email, rol, activo FROM usuarios WHERE id = ?').get(id);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, error: 'Usuario no encontrado' });
+    }
+
+    // Regla de seguridad: no se puede eliminar a uno mismo
+    if (req.user.id === id) {
+      return res.status(400).json({
+        success: false,
+        error: 'Operación denegada: No es posible eliminarse a sí mismo mientras está en sesión activa.'
+      });
+    }
+
+    // Regla jerárquica: no se puede eliminar a un usuario con rol >= al propio
+    if (req.user.role !== ROLES.SUPERADMIN && !canManageRole(req.user.role, targetUser.rol)) {
+      return res.status(403).json({
+        success: false,
+        error: `No tiene privilegios para eliminar a un usuario con rol '${targetUser.rol}'.`
+      });
+    }
+
+    // Proteger al último Superadmin activo
+    verifyNotLastSuperadmin(id, undefined, 0);
+
+    const oldValues = {
+      id: targetUser.id,
+      nombre: targetUser.nombre,
+      apellido: targetUser.apellido,
+      email: targetUser.email,
+      rol: targetUser.rol
+    };
+
+    // Eliminación en cascada de sesiones y asignación de sectores
+    db.prepare('DELETE FROM sesiones WHERE usuario_id = ?').run(id);
+    db.prepare('DELETE FROM usuarios_sectores WHERE usuario_id = ?').run(id);
+    db.prepare('DELETE FROM usuarios WHERE id = ?').run(id);
+
+    recordAudit(db, {
+      usuario_id: req.user.id,
+      usuario_nombre_snapshot: req.user.name,
+      accion: 'ELIMINAR_USUARIO',
+      entidad: 'usuario',
+      entidad_id: id,
+      datos_antes: oldValues,
+      req
+    });
+
+    return res.json({
+      success: true,
+      message: `Usuario '${targetUser.nombre} ${targetUser.apellido}' (${targetUser.email}) eliminado exitosamente`
+    });
+  } catch (err) {
+    console.error('[DELETE USER ERROR]', err);
+    return res.status(400).json({ success: false, error: err.message || 'Error al eliminar usuario' });
+  }
+});
+
 module.exports = router;

@@ -59,6 +59,7 @@ Todos los permisos del sistema están definidos como constantes en [`server/conf
 |                       | `usuario:invitar`                |            |       |     ❌     |    ❌     |   ❌    |
 |                       | `usuario:editar`                 |            |       |     ❌     |    ❌     |   ❌    |
 |                       | `usuario:desactivar`             |            |       |     ❌     |    ❌     |   ❌    |
+|                       | `usuario:eliminar`               |            |       |     ❌     |    ❌     |   ❌    |
 |                       | `usuario:editar_alcance`         |            |       |     ❌     |    ❌     |   ❌    |
 | **Sesiones & PIN**    | `sesion:ver`                     |            |       |     ❌     |    ❌     |   ❌    |
 |                       | `sesion:revocar`                 |            |       |     ❌     |    ❌     |   ❌    |
