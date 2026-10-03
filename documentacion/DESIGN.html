@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estándar de Diseño & Design System | FireControl 365 • Milicic S.A.</title>
+  <link rel="stylesheet" href="milicic-ui.css">
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 18mm 14mm 18mm 14mm;
+    }
+    * {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    body {
+      background-color: var(--bg-page);
+      color: var(--slate-text);
+      font-size: 13.5px;
+      line-height: 1.6;
+    }
+    .doc-container {
+      max-width: 960px;
+      margin: 0 auto;
+      background: #ffffff;
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border-color);
+      min-height: 100vh;
+    }
+    .doc-header-bar {
+      background-color: var(--dark-slate);
+      color: #ffffff;
+      padding: 16px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 3px solid var(--primary);
+    }
+    .doc-content {
+      padding: 40px;
+    }
+    .cover-banner {
+      background: linear-gradient(135deg, var(--dark-slate) 0%, var(--slate-lead) 100%);
+      color: #ffffff;
+      padding: 36px 30px;
+      border-radius: var(--radius);
+      border-left: 6px solid var(--primary);
+      margin-bottom: 30px;
+      position: relative;
+    }
+    .category-pill {
+      background-color: var(--primary);
+      color: #ffffff;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 4px 12px;
+      border-radius: var(--radius-full);
+      display: inline-block;
+      margin-bottom: 12px;
+    }
+    .cover-title {
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1.25;
+      margin-bottom: 8px;
+      color: #ffffff;
+    }
+    .cover-subtitle {
+      color: #cbd5e1;
+      font-size: 14px;
+      max-width: 700px;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .meta-item {
+      font-size: 11px;
+    }
+    .meta-label {
+      color: #94a3b8;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+    .meta-value {
+      color: #ffffff;
+      font-weight: 600;
+    }
+    h2.section-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--dark-slate);
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 6px;
+      margin: 32px 0 16px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    h3.subsection-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--primary);
+      margin: 20px 0 8px 0;
+    }
+    .palette-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin: 16px 0 24px 0;
+    }
+    .palette-card {
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    .color-swatch {
+      height: 60px;
+      width: 100%;
+    }
+    .color-info {
+      padding: 10px 12px;
+      background: #ffffff;
+      font-size: 12px;
+    }
+    .color-name {
+      font-weight: 700;
+      color: var(--dark-slate);
+    }
+    .color-hex {
+      font-family: monospace;
+      color: var(--slate-muted);
+      font-size: 11px;
+    }
+    .sample-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 13px;
+    }
+    .sample-table th, .sample-table td {
+      border: 1px solid var(--border-color);
+      padding: 8px 12px;
+      text-align: left;
+    }
+    .sample-table th {
+      background: var(--bg-page);
+      font-weight: 700;
+      color: var(--dark-slate);
+    }
+    .code-box {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 14px 18px;
+      border-radius: var(--radius-sm);
+      font-family: 'JetBrains Mono', Consolas, monospace;
+      font-size: 12px;
+      overflow-x: auto;
+      margin: 12px 0;
+    }
+    @media print {
+      body { background: #ffffff; }
+      .doc-container { box-shadow: none; border: none; max-width: 100%; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="doc-container">
+
+    <!-- Header Corporativo Superior -->
+    <header class="doc-header-bar">
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <img src="logo-milicic.svg" alt="Milicic S.A." height="28" onerror="this.src='logo-milicic.png'">
+        <div style="border-left: 1px solid rgba(255,255,255,0.25); padding-left: 12px;">
+          <div style="font-size: 12px; font-weight: 800; letter-spacing: 0.05em;">MILICIC S.A.</div>
+          <div style="font-size: 10px; color: #94a3b8;">SISTEMA DE DISEÑO INDUSTRIAL • FIRECONTROL 365</div>
+        </div>
+      </div>
+      <div class="no-print" style="display: flex; gap: 8px;">
+        <a href="DESIGN.md" class="btn btn-secondary btn-sm" download style="color: #ffffff; border-color: rgba(255,255,255,0.3);">
+          Descargar Markdown
+        </a>
+        <a href="index.html" class="btn btn-secondary btn-sm" style="color: #ffffff; border-color: rgba(255,255,255,0.3);">
+          ← Volver al Portal
+        </a>
+        <button onclick="window.print()" class="btn btn-primary btn-sm">
+          Imprimir / PDF
+        </button>
+      </div>
+    </header>
+
+    <!-- Contenido del Documento -->
+    <main class="doc-content">
+
+      <!-- Portada Ejecutiva -->
+      <section class="cover-banner">
+        <span class="category-pill">Industrial Safety Design System</span>
+        <h1 class="cover-title">Milicic S.A. | FireControl 365 — Estándar Visual</h1>
+        <p class="cover-subtitle">
+          Especificación técnica de interfaz y tokens corporativos para la plataforma de inspección y control de extintores bajo la Norma IRAM 3517-2.
+        </p>
+        <div class="meta-grid">
+          <div class="meta-item">
+            <div class="meta-label">Organización</div>
+            <div class="meta-value">Milicic S.A.</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Estándar Primario</div>
+            <div class="meta-value">Naranja #EA580C / Slate #0F172A</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Norma Industrial</div>
+            <div class="meta-value">IRAM 3517-2 • WCAG 2.1 AA</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Versión</div>
+            <div class="meta-value">1.0.0 Oficial (2026)</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 1. Identidad Corporativa e Industrial -->
+      <section>
+        <h2 class="section-title">1. Identidad Corporativa e Industrial</h2>
+        <p>
+          El sistema combina el estándar institucional de <strong>Milicic S.A.</strong> con elementos tácticos de herramientas industriales de campo:
+        </p>
+        <ul>
+          <li><strong>Placas de Identificación de Equipo (<code>.milicic-id-plate</code>):</strong> Los códigos de matafuegos (<code>MF-XXX</code>) se presentan como chapas técnicas remachadas con tipografía monoespaciada de alta legibilidad, bisel y metadatos IRAM.</li>
+          <li><strong>Micro-patrón de Seguridad (<code>.hazard-stripes</code>):</strong> En extintores vencidos o cabeceras con fallas críticas, se aplica un rayado diagonal reglamentario de 45° de advertencia.</li>
+          <li><strong>Grilla Heatmap de Sectores (<code>.sector-heatmap</code>):</strong> Tablero interactivo que mapea los ~130 matafuegos en una matriz táctica organizada por sector y piso, permitiendo identificar al instante la cobertura de la ronda mensual.</li>
+          <li><strong>Íconos de Precisión Técnica:</strong> Utilización integral de <strong>Phosphor Icons</strong> (<code>@phosphor-icons/react</code>), garantizando uniformidad geométrica y una estética sobria y profesional.</li>
+        </ul>
+      </section>
+
+      <!-- 2. Tokens Oficiales de Marca -->
+      <section>
+        <h2 class="section-title">2. Tokens Oficiales de Marca (Milicic S.A.)</h2>
+        <h3 class="subsection-title">2.1 Paleta Principal Institucional</h3>
+        
+        <div class="palette-grid">
+          <div class="palette-card">
+            <div class="color-swatch" style="background: #EA580C;"></div>
+            <div class="color-info">
+              <div class="color-name">Naranja Milicic (Primario)</div>
+              <div class="color-hex">#EA580C • rgb(234, 88, 12)</div>
+            </div>
+          </div>
+
+          <div class="palette-card">
+            <div class="color-swatch" style="background: #C2410C;"></div>
+            <div class="color-info">
+              <div class="color-name">Naranja Hover</div>
+              <div class="color-hex">#C2410C • rgb(194, 65, 12)</div>
+            </div>
+          </div>
+
+          <div class="palette-card">
+            <div class="color-swatch" style="background: #FFF7ED; border-bottom: 1px solid #e2e8f0;"></div>
+            <div class="color-info">
+              <div class="color-name">Naranja Suave (Fondos)</div>
+              <div class="color-hex">#FFF7ED • rgb(255, 247, 237)</div>
+            </div>
+          </div>
+
+          <div class="palette-card">
+            <div class="color-swatch" style="background: #0F172A;"></div>
+            <div class="color-info">
+              <div class="color-name">Pizarra Oscura (Slate Dark)</div>
+              <div class="color-hex">#0F172A • rgb(15, 23, 42)</div>
+            </div>
+          </div>
+
+          <div class="palette-card">
+            <div class="color-swatch" style="background: #1E293B;"></div>
+            <div class="color-info">
+              <div class="color-name">Pizarra Títulos (Slate Lead)</div>
+              <div class="color-hex">#1E293B • rgb(30, 41, 59)</div>
+            </div>
+          </div>
+
+          <div class="palette-card">
+            <div class="color-swatch" style="background: #64748B;"></div>
+            <div class="color-info">
+              <div class="color-name">Pizarra Muted</div>
+              <div class="color-hex">#64748B • rgb(100, 116, 139)</div>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="subsection-title">2.2 Semáforo de Seguridad Industrial (Color + Ícono + Etiqueta)</h3>
+        <table class="sample-table">
+          <thead>
+            <tr>
+              <th>Estado Operativo</th>
+              <th>Color Texto / Ícono</th>
+              <th>Fondo</th>
+              <th>Borde</th>
+              <th>Semántica IRAM 3517-2</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong style="color: #16a34a;">● Operativo / Conforme</strong></td>
+              <td><code>#16A34A</code></td>
+              <td><code>#DCFCE7</code></td>
+              <td><code>#86EFAC</code></td>
+              <td>Extintor verificado, manómetro en rango verde, precinto intacto.</td>
+            </tr>
+            <tr>
+              <td><strong style="color: #d97706;">● Pendiente de Ronda</strong></td>
+              <td><code>#D97706</code></td>
+              <td><code>#FEF3C7</code></td>
+              <td><code>#FCD34D</code></td>
+              <td>Falta control en el período mensual vigente.</td>
+            </tr>
+            <tr>
+              <td><strong style="color: #dc2626;">● Falla / Anomalía Crítica</strong></td>
+              <td><code>#DC2626</code></td>
+              <td><code>#FEE2E2</code></td>
+              <td><code>#FCA5A5</code></td>
+              <td>Falla registrada con apertura automática de caso de servicio.</td>
+            </tr>
+            <tr>
+              <td><strong style="color: #991b1b;">● Recarga / PH Vencida</strong></td>
+              <td><code>#991B1B</code></td>
+              <td><code>#FEE2E2</code></td>
+              <td><code>#F87171</code></td>
+              <td>Vencimiento del ciclo de recarga o prueba hidráulica quinquenal.</td>
+            </tr>
+            <tr>
+              <td><strong style="color: #0891b2;">● Sincronizado / M365</strong></td>
+              <td><code>#0891B2</code></td>
+              <td><code>#ECFEFF</code></td>
+              <td><code>#A5F3FC</code></td>
+              <td>Exportación confirmada en SharePoint / Power Automate.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 3. Tipografía & Chapas Técnicas -->
+      <section>
+        <h2 class="section-title">3. Tipografía & Ergonomía</h2>
+        <p>
+          La tipografía se divide estrictamente entre la lectura de interfaces y la rotulación técnica de los equipos:
+        </p>
+        <div class="code-box">
+/* UI General y Formularios */
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", "Helvetica Neue", Arial, sans-serif;
+
+/* Identificación Técnica (Chapas MF-XXX y Serie IRAM) */
+font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        </div>
+      </section>
+
+      <!-- 4. Componentes Clave de Interfaz -->
+      <section>
+        <h2 class="section-title">4. Componentes Clave de Interfaz</h2>
+        <ol>
+          <li>
+            <strong>Tabla de Alto Rendimiento (TanStack Table):</strong>
+            Utilizada en vista escritorio para el inventario de extintores. Columnas ordenables, filtros combinados por sector/tipo/estado y conteo dinámico sin pérdida de foco.
+          </li>
+          <li>
+            <strong>Tablero Heatmap de Planta (Dashboard):</strong>
+            Agrupación por sectores (Taller, Depósito, Administración, etc.). Celdas tácticas clicables con tooltip de estado y navegación directa al equipo seleccionado.
+          </li>
+          <li>
+            <strong>Barra de Acción de Campo (Thumb Zone):</strong>
+            Acceso inmediato al escáner QR y flujo ágil de control en 3 toques, con feedback táctil y áreas mínimas de contacto de 48px para operar con guantes industriales.
+          </li>
+        </ol>
+      </section>
+
+      <!-- Footer Interno -->
+      <footer style="margin-top: 50px; padding-top: 20px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; font-size: 11px; color: var(--slate-muted);">
+        <div>Milicic S.A. • Sistema de Gestión de Higiene y Seguridad</div>
+        <div>DESIGN.md • Edición 2026</div>
+      </footer>
+
+    </main>
+
+  </div>
+
+</body>
+</html>

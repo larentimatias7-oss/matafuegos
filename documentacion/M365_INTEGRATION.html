@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Integración con Microsoft 365 | FireControl 365 • Milicic S.A.</title>
+  <link rel="stylesheet" href="milicic-ui.css">
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 18mm 14mm 18mm 14mm;
+    }
+    * {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    body {
+      background-color: var(--bg-page);
+      color: var(--slate-text);
+      font-size: 13.5px;
+      line-height: 1.6;
+    }
+    .doc-container {
+      max-width: 960px;
+      margin: 0 auto;
+      background: #ffffff;
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border-color);
+      min-height: 100vh;
+    }
+    .doc-header-bar {
+      background-color: var(--dark-slate);
+      color: #ffffff;
+      padding: 16px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 3px solid var(--info);
+    }
+    .doc-content {
+      padding: 40px;
+    }
+    .cover-banner {
+      background: linear-gradient(135deg, var(--dark-slate) 0%, var(--slate-lead) 100%);
+      color: #ffffff;
+      padding: 36px 30px;
+      border-radius: var(--radius);
+      border-left: 6px solid var(--info);
+      margin-bottom: 30px;
+      position: relative;
+    }
+    .category-pill {
+      background-color: var(--info);
+      color: #ffffff;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 4px 12px;
+      border-radius: var(--radius-full);
+      display: inline-block;
+      margin-bottom: 12px;
+    }
+    .cover-title {
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1.25;
+      margin-bottom: 8px;
+      color: #ffffff;
+    }
+    .cover-subtitle {
+      color: #cbd5e1;
+      font-size: 14px;
+      max-width: 700px;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .meta-item {
+      font-size: 11px;
+    }
+    .meta-label {
+      color: #94a3b8;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+    .meta-value {
+      color: #ffffff;
+      font-weight: 600;
+    }
+    h2.section-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--dark-slate);
+      border-bottom: 2px solid var(--info);
+      padding-bottom: 6px;
+      margin: 32px 0 16px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    h3.subsection-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--info-dark);
+      margin: 20px 0 8px 0;
+    }
+    .step-card {
+      background: #ffffff;
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    .code-box {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 14px 18px;
+      border-radius: var(--radius-sm);
+      font-family: 'JetBrains Mono', Consolas, monospace;
+      font-size: 12px;
+      overflow-x: auto;
+      margin: 12px 0;
+    }
+    @media print {
+      body { background: #ffffff; }
+      .doc-container { box-shadow: none; border: none; max-width: 100%; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="doc-container">
+
+    <!-- Header Corporativo Superior -->
+    <header class="doc-header-bar">
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <img src="logo-milicic.svg" alt="Milicic S.A." height="28" onerror="this.src='logo-milicic.png'">
+        <div style="border-left: 1px solid rgba(255,255,255,0.25); padding-left: 12px;">
+          <div style="font-size: 12px; font-weight: 800; letter-spacing: 0.05em;">MILICIC S.A.</div>
+          <div style="font-size: 10px; color: #94a3b8;">INTEGRACIÓN CLOUD • MICROSOFT 365</div>
+        </div>
+      </div>
+      <div class="no-print" style="display: flex; gap: 8px;">
+        <a href="M365_INTEGRATION.md" class="btn btn-secondary btn-sm" download style="color: #ffffff; border-color: rgba(255,255,255,0.3);">
+          Descargar Markdown
+        </a>
+        <a href="index.html" class="btn btn-secondary btn-sm" style="color: #ffffff; border-color: rgba(255,255,255,0.3);">
+          ← Volver al Portal
+        </a>
+        <button onclick="window.print()" class="btn btn-primary btn-sm">
+          Imprimir / PDF
+        </button>
+      </div>
+    </header>
+
+    <!-- Contenido del Documento -->
+    <main class="doc-content">
+
+      <!-- Portada Ejecutiva -->
+      <section class="cover-banner">
+        <span class="category-pill">Enterprise Cloud Integration</span>
+        <h1 class="cover-title">Guía de Integración con Microsoft 365</h1>
+        <p class="cover-subtitle">
+          Vinculación entre el sistema de control mensual de extintores y el ecosistema Microsoft 365 (Entra ID, Power Automate, Teams y SharePoint).
+        </p>
+        <div class="meta-grid">
+          <div class="meta-item">
+            <div class="meta-label">Organización</div>
+            <div class="meta-value">Milicic S.A.</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Identidad Cloud</div>
+            <div class="meta-value">Microsoft Entra ID (OIDC)</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Automatización</div>
+            <div class="meta-value">Power Automate & Teams</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Edición</div>
+            <div class="meta-value">2026 • Producción</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 1. Autenticación con Entra ID -->
+      <section>
+        <h2 class="section-title">1. Autenticación con Microsoft Entra ID (Azure AD)</h2>
+        <p>
+          El sistema soporta autenticación corporativa mediante <strong>OpenID Connect (OIDC)</strong> para restringir el acceso únicamente a colaboradores con cuenta <code>@milicic.com.ar</code> o del dominio institucional configurado.
+        </p>
+        <div class="step-card">
+          <h3 class="subsection-title" style="margin-top: 0;">Pasos de Configuración en Azure Portal</h3>
+          <ol>
+            <li>Acceder a <strong>portal.azure.com</strong> &gt; <strong>Microsoft Entra ID</strong> &gt; <strong>App registrations</strong> &gt; <strong>New registration</strong>.</li>
+            <li><strong>Nombre:</strong> <code>Milicic Control Matafuegos</code>.</li>
+            <li><strong>Tipos de cuenta admitidos:</strong> Solo cuentas de este directorio organizativo (inquilino único).</li>
+            <li><strong>URI de redirección (Web):</strong> <code>https://&lt;TU-DOMINIO&gt;/api/auth/entra/callback</code>.</li>
+            <li>En <strong>Certificates &amp; secrets</strong>, generar un nuevo Client Secret.</li>
+            <li>En <strong>API permissions</strong>, verificar permiso delegado <code>User.Read</code>.</li>
+          </ol>
+        </div>
+        <div class="code-box">
+AUTH_PROVIDER=entra
+MICROSOFT_CLIENT_ID=00000000-0000-0000-0000-000000000000
+MICROSOFT_TENANT_ID=00000000-0000-0000-0000-000000000000
+MICROSOFT_CLIENT_SECRET=tu_client_secret_aqui
+MICROSOFT_REDIRECT_URI=https://matafuegos.milicic.com.ar/api/auth/entra/callback
+        </div>
+      </section>
+
+      <!-- 2. Alertas Inmediatas vía Webhook a Power Automate -->
+      <section>
+        <h2 class="section-title">2. Alertas Inmediatas vía Webhook a Power Automate (Teams)</h2>
+        <p>
+          Cuando un inspector registra una anomalía en campo o la recarga anual está vencida, el sistema despacha automáticamente un webhook HTTP con el detalle del incidente para notificar en tiempo real al canal de Seguridad e Higiene en Microsoft Teams.
+        </p>
+        <div class="step-card">
+          <h3 class="subsection-title" style="margin-top: 0;">Esquema del Webhook Despachado</h3>
+          <div class="code-box">
+{
+  "event": "ANOMALIA_DETECTADA",
+  "extinguisher_code": "MF-042",
+  "location": "Planta Rosario - Taller Central",
+  "floor": "Planta Baja",
+  "area": "Bahía de Mecánica Pesada",
+  "inspector": "Santiago Amaya",
+  "inspection_date": "2026-10-03T10:15:00Z",
+  "passed": false,
+  "case_id": 18,
+  "observations": "Manómetro en zona roja de baja presión. Sin precinto."
+}
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer Interno -->
+      <footer style="margin-top: 50px; padding-top: 20px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; font-size: 11px; color: var(--slate-muted);">
+        <div>Milicic S.A. • Integración Cloud Microsoft 365</div>
+        <div>M365_INTEGRATION.md • Edición 2026</div>
+      </footer>
+
+    </main>
+
+  </div>
+
+</body>
+</html>

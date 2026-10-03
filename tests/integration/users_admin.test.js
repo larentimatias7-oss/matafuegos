@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 const request = require('supertest');
 const { app } = require('../../server/index');
 const { db } = require('../../server/db');
@@ -248,5 +248,15 @@ describe('FASE 4: API Integration - Gestión de Usuarios y Auditoría (RBAC)', (
       .expect(404);
 
     expect(res.body.success).toBe(false);
+  });
+
+  afterAll(() => {
+    try {
+      db.prepare("DELETE FROM sesiones WHERE usuario_id IN (SELECT id FROM usuarios WHERE email LIKE 'operario.nuevo.%' OR email LIKE 'inspector.%')").run();
+      db.prepare("DELETE FROM usuarios_sectores WHERE usuario_id IN (SELECT id FROM usuarios WHERE email LIKE 'operario.nuevo.%' OR email LIKE 'inspector.%')").run();
+      db.prepare("DELETE FROM usuarios WHERE email LIKE 'operario.nuevo.%' OR email LIKE 'inspector.%'").run();
+    } catch {
+      // Ignorar si la tabla no está disponible
+    }
   });
 });

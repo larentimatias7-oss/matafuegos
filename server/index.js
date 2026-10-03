@@ -146,6 +146,21 @@ if (fs.existsSync(docsPath)) {
   app.use('/documentacion', express.static(docsPath));
 }
 
+// Serve raw docs directory
+const rawDocsPath = path.join(__dirname, '../docs');
+if (fs.existsSync(rawDocsPath)) {
+  app.use('/docs', express.static(rawDocsPath));
+}
+
+// Route specifically for DESIGN.md
+app.get('/DESIGN.md', (req, res) => {
+  if (req.accepts('html')) {
+    return res.redirect(302, '/documentacion/DESIGN.html');
+  }
+  const filePath = path.join(__dirname, '../DESIGN.md');
+  return res.type('text/markdown; charset=utf-8').sendFile(filePath);
+});
+
 // Serve frontend in production
 const distPath = path.join(__dirname, '../dist');
 if (fs.existsSync(distPath)) {
@@ -165,7 +180,15 @@ if (fs.existsSync(distPath)) {
 
   // Universal SPA fallback for Express 5
   app.use((req, res, next) => {
-    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/m/') && !req.path.startsWith('/documentacion')) {
+    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/m/') && !req.path.startsWith('/documentacion') && !req.path.startsWith('/docs')) {
+      // Si la URL apunta a un archivo markdown raíz existente
+      if (req.path.endsWith('.md')) {
+        const rootMdPath = path.join(__dirname, '..', req.path);
+        if (fs.existsSync(rootMdPath) && fs.statSync(rootMdPath).isFile()) {
+          return res.type('text/markdown; charset=utf-8').sendFile(rootMdPath);
+        }
+      }
+
       // Si la URL apunta a un archivo específico (ej: .js, .css, .png) y no existió en static, devolver 404
       if (req.path.match(/\.[a-zA-Z0-9]+$/)) {
         return res.status(404).type('text/plain').send('Archivo no encontrado');
