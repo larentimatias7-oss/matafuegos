@@ -1,8 +1,18 @@
 import { test, expect } from '@playwright/test';
+import { ensureInspectorSession } from './helpers.js';
 
 test.describe('E2E Flow 1: Login, Dashboard y Verificación de KPIs', () => {
 
-  test('debe cargar la aplicación, mostrar identidad Milicic y KPIs clave', async ({ page }) => {
+  test('debe solicitar inicio de sesión en un dispositivo nuevo sin credenciales', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('.modal-content')).toBeVisible();
+    await expect(page.getByText('FireControl 365').first()).toBeVisible();
+    await expect(page.getByRole('button', { name: /Ingresar con Microsoft 365/i })).toBeVisible();
+    await expect(page.getByText(/Identificación requerida para operar/i)).toBeVisible();
+  });
+
+  test('con sesión activa debe cargar la aplicación, mostrar identidad Milicic y KPIs clave', async ({ page }) => {
+    await ensureInspectorSession(page);
     await page.goto('/');
 
     // 1. Identidad institucional Milicic

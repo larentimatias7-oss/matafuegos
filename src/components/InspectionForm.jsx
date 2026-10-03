@@ -22,12 +22,14 @@ import { enqueueOfflineInspection, compressImageFile } from '../utils/offlineQue
 
 export default function InspectionForm({ extinguisher, onBack, onSaved, onInspectNext }) {
   const [inspectorName, setInspectorName] = useState(() => {
-    const saved = localStorage.getItem('firecontrol_inspector');
-    if (saved && (saved.includes('Santi ') || saved === 'Santi' || saved.includes('Santi ('))) {
-      localStorage.setItem('firecontrol_inspector', 'Santiago Amaya (Inspector HyS)');
-      return 'Santiago Amaya (Inspector HyS)';
+    try {
+      const u = JSON.parse(localStorage.getItem('firecontrol_user') || 'null');
+      if (u && u.name) return u.name;
+    } catch (_e) {
+      // Ignorar parse error
     }
-    return saved || 'Santiago Amaya (Inspector HyS)';
+    const saved = localStorage.getItem('firecontrol_inspector');
+    return saved || '';
   });
 
   const [checklistItems, setChecklistItems] = useState([]);

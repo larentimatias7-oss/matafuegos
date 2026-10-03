@@ -37,11 +37,15 @@ app.use(
   })
 );
 
-// Strict rate limiter for authentication/login (10 attempts per 15 min)
+// Rate limiter for authentication/login (brute force protection)
 const loginAttemptsMap = new Map();
 app.use('/api/auth/login', (req, res, next) => {
   if (req.method !== 'POST' || process.env.NODE_ENV === 'test') return next();
-  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+  const rawIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+  const ip = String(rawIp).split(',')[0].trim();
+  const isLoopback = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || ip === 'localhost';
+  const limit = isLoopback ? 250 : 15;
+
   const now = Date.now();
   const entry = loginAttemptsMap.get(ip) || { count: 0, resetAt: now + 15 * 60 * 1000 };
   if (now > entry.resetAt) {
@@ -51,10 +55,10 @@ app.use('/api/auth/login', (req, res, next) => {
     entry.count++;
   }
   loginAttemptsMap.set(ip, entry);
-  if (entry.count > 10) {
+  if (entry.count > limit) {
     return res.status(429).json({
       success: false,
-      error: 'Demasiados intentos fallidos de autenticación. Intente nuevamente en 15 minutos.'
+      error: 'Demasiados intentos de autenticación. Intente nuevamente en 15 minutos.'
     });
   }
   next();

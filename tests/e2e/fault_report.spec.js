@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { navigateToTab } from './helpers.js';
+import { navigateToTab, ensureInspectorSession } from './helpers.js';
 
 test.describe('E2E Flow 3: Registro de Anomalía con Foto y Creación de Caso', () => {
 
   test('debe registrar un control con falla y verificar la apertura automática del caso', async ({ page }) => {
+    await ensureInspectorSession(page);
     // Usar extintor pendiente de inspección
     const faultCode = 'MF-055';
     await page.goto(`/?code=${faultCode}#check`);

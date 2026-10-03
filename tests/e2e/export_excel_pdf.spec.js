@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { ensureInspectorSession } from './helpers.js';
 
 test.describe('E2E Flow 6: Exportación de Planilla Excel y Reportes desde Navegador', () => {
+
+  test.beforeEach(async ({ page }) => {
+    await ensureInspectorSession(page);
+  });
 
   test('debe permitir descargar el libro Excel formateado de auditoría', async ({ page }) => {
     // En Playwright, al navegar directamente a una URL con Content-Disposition: attachment,

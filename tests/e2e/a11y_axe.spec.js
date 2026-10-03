@@ -1,8 +1,12 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { navigateToTab } from './helpers.js';
+import { navigateToTab, ensureInspectorSession } from './helpers.js';
 
 test.describe('Fase 4: Auditoría de Accesibilidad (Axe-Core)', () => {
+
+  test.beforeEach(async ({ page }) => {
+    await ensureInspectorSession(page);
+  });
 
   test('Dashboard debe tener cero violaciones críticas o serias de accesibilidad', async ({ page }) => {
     await page.goto('/');

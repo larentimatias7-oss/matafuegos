@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { ensureInspectorSession } from './helpers.js';
 
 test.describe('E2E Flow 2: Flujo Ágil del Inspector (<= 3 Toques)', () => {
 
   test('debe permitir completar un control mensual conforme y pasar al siguiente en 3 toques', async ({ page }) => {
+    await ensureInspectorSession(page);
     // Abrir ficha directamente por código simulando escaneo de QR
     await page.goto('/?code=MF-010#check');
 

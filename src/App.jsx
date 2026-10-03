@@ -35,15 +35,17 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        return parsed;
+        if (parsed && parsed.id) return parsed;
       } catch (_e) {
-        // Fallback al usuario predeterminado
+        // Ignorar JSON corrupto
       }
     }
-    return { name: 'Santiago Amaya (Inspector HyS)', role: 'INSPECTOR', id: '11111111-1111-4111-8111-111111111111' };
+    return null;
   });
 
-  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(() => {
+    return !localStorage.getItem('firecontrol_user');
+  });
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showPinSwitchModal, setShowPinSwitchModal] = useState(false);
 
@@ -75,6 +77,11 @@ export default function App() {
       if (data.authenticated && data.user) {
         setUser(data.user);
         localStorage.setItem('firecontrol_user', JSON.stringify(data.user));
+        setShowLoginModal(false);
+      } else {
+        setUser(null);
+        localStorage.removeItem('firecontrol_user');
+        setShowLoginModal(true);
       }
     } catch (e) {
       console.warn('Error verificando sesión con el servidor:', e);
@@ -210,6 +217,7 @@ export default function App() {
   }, [pendingOfflineCount]);
 
   useEffect(() => {
+    verifySession();
     fetchData();
 
     // Check if URL has ?code=MF-XXX or #check
@@ -494,7 +502,7 @@ export default function App() {
       )}
 
       {/* Login Modal */}
-      {showLoginModal && (
+      {(showLoginModal || !user) && !showPinSwitchModal && (
         <LoginModal 
           onLogin={(u) => {
             setUser(u);
@@ -502,7 +510,7 @@ export default function App() {
             setShowLoginModal(false);
             fetchData();
           }}
-          onClose={() => setShowLoginModal(false)}
+          onClose={user ? () => setShowLoginModal(false) : null}
           onOpenPinSwitch={() => {
             setShowLoginModal(false);
             setShowPinSwitchModal(true);
@@ -523,7 +531,10 @@ export default function App() {
       {/* Quick PIN Switch Modal */}
       {showPinSwitchModal && (
         <QuickPinSwitchModal
-          onClose={() => setShowPinSwitchModal(false)}
+          onClose={() => {
+            setShowPinSwitchModal(false);
+            if (!user) setShowLoginModal(true);
+          }}
           onSwitchSuccess={(newUser) => {
             setUser(newUser);
             localStorage.setItem('firecontrol_user', JSON.stringify(newUser));

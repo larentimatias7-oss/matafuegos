@@ -149,20 +149,9 @@ function authenticate(req, res, next) {
     return next();
   }
 
-  // 4. Usuario predeterminado del sistema (Inspector en campo para offline/local development)
+  // 4. Sin sesión activa ni cabeceras: no autenticado
   req.user = {
-    id: '11111111-1111-4111-8111-111111111111',
-    name: 'Santiago Amaya (Inspector HyS)',
-    nombre: 'Santiago',
-    apellido: 'Amaya',
-    email: 'santiago.amaya@milicic.com.ar',
-    role: ROLES.INSPECTOR,
-    rol: ROLES.INSPECTOR,
-    organizacion_id: 1,
-    activo: 1,
-    sectores: [],
-    isGlobalScope: true,
-    authenticated: true
+    authenticated: false
   };
 
   next();

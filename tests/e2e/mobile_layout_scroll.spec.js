@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { ensureInspectorSession } from './helpers.js';
 
 test.describe('E2E Flow 8: Layout Móvil y Prevención de Scroll Horizontal', () => {
+
+  test.beforeEach(async ({ page }) => {
+    await ensureInspectorSession(page);
+  });
 
   const mobileViewports = [
     { name: 'Pantalla compacta 360x640', width: 360, height: 640 },

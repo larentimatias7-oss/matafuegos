@@ -29,23 +29,19 @@ test.describe('E2E Flow: Autenticación, Gestión de Usuarios (RBAC) y Auditorí
   test('debe permitir login con Superadmin local, navegar a Usuarios y Auditoría', async ({ page }) => {
     await page.goto('/');
 
-    // 1. Si hay una sesión previa activa, cerrar sesión para iniciar con Superadmin
-    const profileBtn = page.locator('button[title*="Perfil"]:visible, button:has-text("Santiago Amaya"):visible').first();
-    await profileBtn.waitFor({ state: 'visible', timeout: 10000 });
-    await profileBtn.click();
-    await page.waitForSelector('.modal-overlay', { state: 'visible' });
-    await page.getByRole('button', { name: /Cerrar Sesión/i }).click();
-
-    // 2. En el modal de Login, abrir formulario de cuenta local
-    const useLocalBtn = page.locator('button:has-text("cuenta local")');
-    await useLocalBtn.waitFor({ state: 'visible', timeout: 5000 });
+    // 1. En el modal de Login obligatorio, abrir formulario de cuenta local
+    const useLocalBtn = page.locator('#btn-use-local');
+    await useLocalBtn.waitFor({ state: 'visible', timeout: 10000 });
     await useLocalBtn.click();
 
-    await page.locator('#login-email').fill('admin.ti@milicic.com.ar');
+    // 2. Completar credenciales de Superadmin local
+    const emailInput = page.locator('#login-email');
+    await emailInput.waitFor({ state: 'visible', timeout: 5000 });
+    await emailInput.fill('admin.ti@milicic.com.ar');
     await page.locator('#login-pass').fill('AdminMilicic2026!');
-    await page.getByRole('button', { name: /Ingresar al Sistema/i }).click();
+    await page.locator('form button[type="submit"]').click();
 
-    // 4. Confirmar que ingresó con Superadmin y los módulos de Usuarios y Auditoría están disponibles
+    // 3. Confirmar que ingresó con Superadmin y los módulos de Usuarios y Auditoría están disponibles
     const isMobile = await page.locator('.mobile-bottom-nav').isVisible().catch(() => false);
 
     if (!isMobile) {
@@ -54,12 +50,12 @@ test.describe('E2E Flow: Autenticación, Gestión de Usuarios (RBAC) y Auditorí
       await expect(page.getByRole('button', { name: /Auditoría/i })).toBeVisible();
     }
 
-    // 5. Navegar a Gestión de Usuarios
+    // 4. Navegar a Gestión de Usuarios
     await navigateToTab(page, 'users');
     await expect(page.getByRole('heading', { name: /Gestión de Usuarios/i })).toBeVisible();
     await expect(page.getByText(/admin.ti@milicic.com.ar/i).first()).toBeVisible();
 
-    // 6. Abrir Modal de Alta de Usuario
+    // 5. Abrir Modal de Alta de Usuario
     await page.getByRole('button', { name: /Nuevo Usuario/i }).click();
     await expect(page.getByRole('heading', { name: /Nuevo Usuario/i })).toBeVisible();
 
@@ -74,10 +70,10 @@ test.describe('E2E Flow: Autenticación, Gestión de Usuarios (RBAC) y Auditorí
     await page.getByRole('button', { name: /Crear Usuario|Guardar/i }).click();
     await page.waitForTimeout(1000);
 
-    // 7. Verificar que aparece en la lista de usuarios
+    // 6. Verificar que aparece en la lista de usuarios
     await expect(page.getByText(testEmail).first()).toBeVisible();
 
-    // 8. Navegar al Registro Inmutable de Auditoría
+    // 7. Navegar al Registro Inmutable de Auditoría
     await navigateToTab(page, 'audit');
     await expect(page.getByRole('heading', { name: /Registro de Auditoría/i })).toBeVisible();
     await expect(page.getByText(/CREAR_USUARIO|LOGIN_EXITOSO/i).first()).toBeVisible();
@@ -86,13 +82,11 @@ test.describe('E2E Flow: Autenticación, Gestión de Usuarios (RBAC) y Auditorí
   test('debe permitir cambio rápido de usuario por PIN (shared device)', async ({ page }) => {
     await page.goto('/');
 
-    // Clic directo en botón de cambio de operario por PIN en la barra de navegación
-    const pinBtn = page.locator('button[title*="PIN"]').first();
-    if (await pinBtn.isVisible()) {
-      await pinBtn.click();
-      await expect(page.getByRole('heading', { name: /Cambio Rápido de Inspector/i })).toBeVisible();
-      await expect(page.getByText(/Dispositivo Compartido/i)).toBeVisible();
-      await page.getByRole('button', { name: /Cancelar/i }).click();
-    }
+    const modalPinBtn = page.locator('.modal-content button:has-text("PIN")');
+    await modalPinBtn.waitFor({ state: 'visible', timeout: 10000 });
+    await modalPinBtn.click();
+
+    await expect(page.getByRole('heading', { name: /Cambio Rápido de Inspector|Cambio de Operador/i })).toBeVisible();
+    await page.getByRole('button', { name: /Cancelar/i }).click();
   });
 });

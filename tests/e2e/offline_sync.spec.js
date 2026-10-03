@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { ensureInspectorSession } from './helpers.js';
 
 test.describe('E2E Flow 7: Modo Sin Conexión (Offline) y Sincronización sin Pérdida', () => {
 
   test('debe encolar inspecciones en modo offline y sincronizarlas al recuperar conexión', async ({ page }) => {
+    await ensureInspectorSession(page);
     // 1. Cargar la ficha técnica
     const offlineExtCode = 'MF-030';
     await page.goto(`/?code=${offlineExtCode}#check`);
