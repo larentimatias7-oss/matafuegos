@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" width="100%" height="100%">
+  <rect width="900" height="300" fill="#f8fafc" rx="12"/>
+  <text x="450" y="30" fill="#0f172a" font-family="system-ui, sans-serif" font-weight="800" font-size="14" text-anchor="middle">HOJA DE RUTA DE EVOLUCIÓN TECNOLÓGICA (3 HORIZONTES)</text>
+
+  <!-- Horizonte 1 -->
+  <g transform="translate(50, 60)">
+    <rect width="250" height="210" rx="10" fill="#ffffff" stroke="#ea580c" stroke-width="2"/>
+    <path d="M 0 10 Q 0 0 10 0 L 240 0 Q 250 0 250 10 L 250 40 L 0 40 Z" fill="#ea580c"/>
+    <text x="125" y="25" fill="#ffffff" font-family="system-ui, sans-serif" font-weight="700" font-size="12" text-anchor="middle">HORIZONTE 1: INMEDIATO (1 M)</text>
+    <text x="15" y="65" fill="#0f172a" font-family="system-ui, sans-serif" font-weight="700" font-size="11">Despliegue y Adopción:</text>
+    <text x="15" y="85" fill="#334155" font-family="system-ui, sans-serif" font-size="10">• Piloto 130 extintores Base Rosario</text>
+    <text x="15" y="105" fill="#334155" font-family="system-ui, sans-serif" font-size="10">• Pegado de etiquetas QR laminadas UV</text>
+    <text x="15" y="125" fill="#334155" font-family="system-ui, sans-serif" font-size="10">• Taller de 20 min para inspectores</text>
+    <text x="15" y="145" fill="#334155" font-family="system-ui, sans-serif" font-size="10">• Alertas por email ante fallas críticas</text>
+    <rect x="15" y="165" width="220" height="30" rx="6" fill="#fff7ed"/>
+    <text x="125" y="185" fill="#c2410c" font-family="system-ui, sans-serif" font-weight="700" font-size="10" text-anchor="middle">Objetivo: 100% Cobertura Digital</text>
+  </g>
+
+  <!-- Horizonte 2 -->
+  <g transform="translate(325, 60)">
+    <rect width="250" height="210" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+    <path d="M 0 10 Q 0 0 10 0 L 240 0 Q 250 0 250 10 L 250 40 L 0 40 Z" fill="#0f172a"/>
+    <text x="125" y="25" fill="#ffffff" font-family="system-ui, sans-serif" font-weight="700" font-size="12" text-anchor="middle">HORIZONTE 2: CORTO (3 M)</text>
+    <text x="15" y="65" fill="#0f172a" font-family="system-ui, sans-serif" font-weight="700" font-size="11">Capacidades Avanzadas:</text>
+    <text x="15" y="85" fill="#334155" font-family="system-ui, sans-serif" font-size="10">• Planos interactivos de planta (SVG)</text>
+    <text x="15" y="105" fill="#334155" font-family="system-ui, sans-serif" font-size="10">• Firma digital tokenizada (Ley 25.506)</text>
+    <text x="15" y="125" fill="#334155" font-family="system-ui, sans-serif" font-size="10">• Replicación continua Azure (Litestream)</text>
+    <text x="15" y="145" fill="#334155" font-family="system-ui, sans-serif" font-size="10">• Notificaciones Web Push en PWA</text>
+    <rect x="15" y="165" width="220" height="30" rx="6" fill="#ecfeff"/>
+    <text x="125" y="185" fill="#0891b2" font-family="system-ui, sans-serif" font-weight="700" font-size="10" text-anchor="middle">Objetivo: Plena Eficacia Pericial</text>
+  </g>
+
+  <!-- Horizonte 3 -->
+  <g transform="translate(600, 60)">
+    <rect width="250" height="210" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+    <path d="M 0 10 Q 0 0 10 0 L 240 0 Q 250 0 250 10 L 250 40 L 0 40 Z" fill="#334155"/>
+    <text x="125" y="25" fill="#ffffff" font-family="system-ui, sans-serif" font-weight="700" font-size="12" text-anchor="middle">HORIZONTE 3: MADUREZ (6-12 M)</text>
+    <text x="15" y="65" fill="#0f172a" font-family="system-ui, sans-serif" font-weight="700" font-size="11">Expansión Patrimonial:</text>
+    <text x="15" y="85" fill="#334155" font-family="system-ui, sans-serif" font-size="10">• Módulo de Hidrantes y Nichos</text>
+    <text x="15" y="105" fill="#334155" font-family="system-ui, sans-serif" font-size="10">• Luces de emergencia y detectores</text>
+    <text x="15" y="125" fill="#334155" font-family="system-ui, sans-serif" font-size="10">• Enlace con inventario y compras SAP</text>
+    <text x="15" y="145" fill="#334155" font-family="system-ui, sans-serif" font-size="10">• Asistente de cálculo de carga de fuego</text>
+    <rect x="15" y="165" width="220" height="30" rx="6" fill="#f1f5f9"/>
+    <text x="125" y="185" fill="#1e293b" font-family="system-ui, sans-serif" font-weight="700" font-size="10" text-anchor="middle">Objetivo: Gestión Integral Activos</text>
+  </g>
+</svg>

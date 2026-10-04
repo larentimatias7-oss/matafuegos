@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" width="100%" height="100%">
+  <defs>
+    <linearGradient id="gradMilicic" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ea580c"/>
+      <stop offset="100%" stop-color="#f97316"/>
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+
+  <rect width="900" height="380" fill="#f8fafc" rx="12"/>
+
+  <!-- Card 1: Inspector -->
+  <g transform="translate(40, 50)" filter="url(#shadow)">
+    <rect width="240" height="280" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+    <path d="M 0 12 Q 0 0 12 0 L 228 0 Q 240 0 240 12 L 240 45 L 0 45 Z" fill="#0f172a"/>
+    <text x="120" y="28" fill="#ffffff" font-family="system-ui, sans-serif" font-weight="700" font-size="14" text-anchor="middle">1. OPERACIÓN EN CAMPO</text>
+    
+    <rect x="20" y="65" width="200" height="50" rx="8" fill="#fff7ed" stroke="#fdba74" stroke-width="1"/>
+    <text x="120" y="88" fill="#c2410c" font-family="system-ui, sans-serif" font-weight="700" font-size="12" text-anchor="middle">Dispositivo Móvil / Tablet</text>
+    <text x="120" y="104" fill="#64748b" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">PWA Offline • Cambio por PIN</text>
+
+    <rect x="20" y="130" width="200" height="50" rx="8" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="120" y="153" fill="#1e293b" font-family="system-ui, sans-serif" font-weight="700" font-size="12" text-anchor="middle">Escaneo QR en Baliza</text>
+    <text x="120" y="169" fill="#64748b" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">Identificación de Puesto (public_id)</text>
+
+    <rect x="20" y="195" width="200" height="50" rx="8" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="120" y="218" fill="#1e293b" font-family="system-ui, sans-serif" font-weight="700" font-size="12" text-anchor="middle">Checklist IRAM 3517-2</text>
+    <text x="120" y="234" fill="#64748b" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">6 Puntos • Foto si hay falla</text>
+
+    <text x="120" y="270" fill="#ea580c" font-family="system-ui, sans-serif" font-weight="700" font-size="11" text-anchor="middle">⏱ &lt; 15 segundos / equipo</text>
+  </g>
+
+  <!-- Flecha 1 -> 2 -->
+  <path d="M 290 190 L 330 190" stroke="#ea580c" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <polygon points="330,185 340,190 330,195" fill="#ea580c"/>
+
+  <!-- Card 2: Servidor Central -->
+  <g transform="translate(345, 50)" filter="url(#shadow)">
+    <rect width="240" height="280" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+    <path d="M 0 12 Q 0 0 12 0 L 228 0 Q 240 0 240 12 L 240 45 L 0 45 Z" fill="#ea580c"/>
+    <text x="120" y="28" fill="#ffffff" font-family="system-ui, sans-serif" font-weight="700" font-size="14" text-anchor="middle">2. FIRECONTROL 365 SERVER</text>
+    
+    <rect x="20" y="65" width="200" height="50" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="120" y="88" fill="#0f172a" font-family="system-ui, sans-serif" font-weight="700" font-size="12" text-anchor="middle">Node.js Express / Docker</text>
+    <text x="120" y="104" fill="#64748b" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">API REST • RBAC • Inmutabilidad</text>
+
+    <rect x="20" y="130" width="200" height="50" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="120" y="153" fill="#0f172a" font-family="system-ui, sans-serif" font-weight="700" font-size="12" text-anchor="middle">SQLite en Modo WAL</text>
+    <text x="120" y="169" fill="#64748b" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">Concurrencia ACID • Backups VACUUM</text>
+
+    <rect x="20" y="195" width="200" height="50" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="120" y="218" fill="#0f172a" font-family="system-ui, sans-serif" font-weight="700" font-size="12" text-anchor="middle">Bitácora Append-Only</text>
+    <text x="120" y="234" fill="#64748b" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">Auditoría inalterable de cada evento</text>
+
+    <text x="120" y="270" fill="#16a34a" font-family="system-ui, sans-serif" font-weight="700" font-size="11" text-anchor="middle">🔒 Inmutable (HTTP 405 en edición)</text>
+  </g>
+
+  <!-- Flecha 2 -> 3 -->
+  <path d="M 595 190 L 635 190" stroke="#ea580c" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <polygon points="635,185 645,190 635,195" fill="#ea580c"/>
+
+  <!-- Card 3: Salidas y Decisión -->
+  <g transform="translate(650, 50)" filter="url(#shadow)">
+    <rect width="220" height="280" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+    <path d="M 0 12 Q 0 0 12 0 L 208 0 Q 220 0 220 12 L 220 45 L 0 45 Z" fill="#0f172a"/>
+    <text x="110" y="28" fill="#ffffff" font-family="system-ui, sans-serif" font-weight="700" font-size="14" text-anchor="middle">3. TOMA DE DECISIONES</text>
+    
+    <rect x="15" y="65" width="190" height="50" rx="8" fill="#ecfeff" stroke="#a5f3fc" stroke-width="1"/>
+    <text x="105" y="88" fill="#0891b2" font-family="system-ui, sans-serif" font-weight="700" font-size="12" text-anchor="middle">Tablero de Gerencia</text>
+    <text x="105" y="104" fill="#64748b" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">12 KPIs • ISPCI (0-100) • Heatmap</text>
+
+    <rect x="15" y="130" width="190" height="50" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="105" y="153" fill="#1e293b" font-family="system-ui, sans-serif" font-weight="700" font-size="12" text-anchor="middle">Reporte Mensual PDF</text>
+    <text x="105" y="169" fill="#64748b" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">Código verificable para ART</text>
+
+    <rect x="15" y="195" width="190" height="50" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="105" y="218" fill="#1e293b" font-family="system-ui, sans-serif" font-weight="700" font-size="12" text-anchor="middle">Conector Power BI / Excel</text>
+    <text x="105" y="234" fill="#64748b" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">Datasets OData protegidos por token</text>
+
+    <text x="110" y="270" fill="#0284c7" font-family="system-ui, sans-serif" font-weight="700" font-size="11" text-anchor="middle">📊 Información en tiempo real</text>
+  </g>
+</svg>

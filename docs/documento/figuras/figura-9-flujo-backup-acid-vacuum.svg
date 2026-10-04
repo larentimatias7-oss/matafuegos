@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 300" width="100%" height="100%">
+  <rect width="880" height="300" fill="#f8fafc" rx="12"/>
+  <text x="440" y="30" fill="#0f172a" font-family="system-ui, sans-serif" font-weight="800" font-size="14" text-anchor="middle">RESPALDO ATÓMICO EN CALIENTE: SQLITE VACUUM INTO &amp; INTEGRITY CHECK</text>
+
+  <!-- Paso 1 -->
+  <g transform="translate(60, 60)">
+    <rect width="210" height="150" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+    <rect x="0" y="0" width="210" height="35" rx="10" fill="#0f172a"/>
+    <text x="105" y="22" fill="#ffffff" font-family="system-ui, sans-serif" font-weight="700" font-size="12" text-anchor="middle">1. BASE VIVA OPERATIVA</text>
+    <text x="15" y="55" fill="#334155" font-family="system-ui, sans-serif" font-size="11">data/matafuegos.db</text>
+    <text x="15" y="75" fill="#64748b" font-family="system-ui, sans-serif" font-size="10">Usuarios operando en campo.</text>
+    <text x="15" y="95" fill="#64748b" font-family="system-ui, sans-serif" font-size="10">Sin detención del servicio.</text>
+    <text x="15" y="125" fill="#16a34a" font-family="system-ui, sans-serif" font-weight="700" font-size="10">Cero bloqueos de lectura/escritura</text>
+  </g>
+
+  <!-- Flecha VACUUM INTO -->
+  <path d="M 270 135 L 340 135" stroke="#ea580c" stroke-width="2.5" fill="none"/>
+  <polygon points="340,130 350,135 340,140" fill="#ea580c"/>
+  <text x="310" y="125" fill="#ea580c" font-family="Courier, monospace" font-weight="700" font-size="9" text-anchor="middle">VACUUM INTO</text>
+
+  <!-- Paso 2 -->
+  <g transform="translate(350, 60)">
+    <rect width="210" height="150" rx="10" fill="#fff7ed" stroke="#fdba74" stroke-width="2"/>
+    <rect x="0" y="0" width="210" height="35" rx="10" fill="#ea580c"/>
+    <text x="105" y="22" fill="#ffffff" font-family="system-ui, sans-serif" font-weight="700" font-size="12" text-anchor="middle">2. COPIA ATÓMICA GENERADA</text>
+    <text x="15" y="55" fill="#c2410c" font-family="system-ui, sans-serif" font-weight="600" font-size="10">firecontrol-backup-*.sqlite</text>
+    <text x="15" y="75" fill="#334155" font-family="system-ui, sans-serif" font-size="10">Archivo compactado y consistente.</text>
+    <text x="15" y="95" fill="#334155" font-family="system-ui, sans-serif" font-size="10">Ejecución inmediata de:</text>
+    <text x="15" y="115" fill="#0f172a" font-family="Courier, monospace" font-weight="700" font-size="10">PRAGMA integrity_check;</text>
+    <text x="15" y="135" fill="#16a34a" font-family="system-ui, sans-serif" font-weight="700" font-size="10">Si check != 'ok' ➔ Se borra</text>
+  </g>
+
+  <!-- Flecha Aprobado -->
+  <path d="M 560 135 L 630 135" stroke="#16a34a" stroke-width="2.5" fill="none"/>
+  <polygon points="630,130 640,135 630,140" fill="#16a34a"/>
+  <text x="600" y="125" fill="#16a34a" font-family="system-ui, sans-serif" font-weight="700" font-size="9" text-anchor="middle">check == 'ok'</text>
+
+  <!-- Paso 3 -->
+  <g transform="translate(640, 60)">
+    <rect width="180" height="150" rx="10" fill="#dcfce7" stroke="#86efac" stroke-width="1.5"/>
+    <rect x="0" y="0" width="180" height="35" rx="10" fill="#16a34a"/>
+    <text x="90" y="22" fill="#ffffff" font-family="system-ui, sans-serif" font-weight="700" font-size="12" text-anchor="middle">3. REPOSITORIO LISTO</text>
+    <text x="15" y="55" fill="#166534" font-family="system-ui, sans-serif" font-size="10">Retención: 7 copias.</text>
+    <text x="15" y="75" fill="#166534" font-family="system-ui, sans-serif" font-size="10">Purga &gt; 30 días.</text>
+    <text x="15" y="105" fill="#166534" font-family="system-ui, sans-serif" font-weight="700" font-size="11">RTO: 15 minutos</text>
+    <text x="15" y="125" fill="#166534" font-family="system-ui, sans-serif" font-weight="700" font-size="11">RPO: &lt; 24 horas</text>
+  </g>
+
+  <rect x="60" y="235" width="760" height="40" rx="8" fill="#ffffff" stroke="#e2e8f0"/>
+  <text x="440" y="260" fill="#334155" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">Comandos CLI automatizados: npm run backup (disparo programado) y npm run restore (contingencia rápida).</text>
+</svg>

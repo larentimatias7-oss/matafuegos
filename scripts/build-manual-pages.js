@@ -1,0 +1,1486 @@
+const fs = require('fs');
+const path = require('path');
+
+const outputDir = path.resolve(__dirname, '../docs/documento');
+
+// Hoja de Estilos CSS para Páginas A4 Exactas (210mm x 297mm)
+const styles = `
+  @charset "UTF-8";
+  @page {
+    size: 210mm 297mm;
+    margin: 0;
+  }
+  *, *:before, *:after {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  html, body {
+    margin: 0; padding: 0;
+    background: #cbd5e1;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #1e293b;
+    font-size: 8.4pt;
+    line-height: 1.38;
+  }
+  .pdf-page {
+    width: 210mm;
+    height: 297mm;
+    max-height: 297mm;
+    margin: 0 auto;
+    padding: 12mm 15mm 10mm 15mm;
+    background: #ffffff;
+    position: relative;
+    page-break-after: always;
+    break-after: page;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  @media screen {
+    .pdf-page {
+      margin: 15px auto;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+      border-radius: 4px;
+    }
+  }
+  .page-header {
+    height: 6mm;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #cbd5e1;
+    font-size: 7pt;
+    color: #64748b;
+    margin-bottom: 5px;
+    flex-shrink: 0;
+  }
+  .page-header strong { color: #0f172a; font-weight: 700; }
+  .page-content {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .page-footer {
+    height: 5.5mm;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #e2e8f0;
+    font-size: 6.8pt;
+    color: #64748b;
+    margin-top: 5px;
+    flex-shrink: 0;
+  }
+  h1.sec-title {
+    font-size: 13pt;
+    font-weight: 800;
+    color: #0f172a;
+    border-bottom: 2px solid #ea580c;
+    padding-bottom: 2px;
+    margin: 0 0 5px 0;
+    letter-spacing: -0.01em;
+  }
+  h2.sub-title {
+    font-size: 9.5pt;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 5px 0 2px 0;
+  }
+  h3.item-title {
+    font-size: 8.5pt;
+    font-weight: 700;
+    color: #c2410c;
+    margin: 3px 0 1px 0;
+  }
+  p { margin: 0 0 5px 0; text-align: justify; }
+  .callout-summary {
+    background: #fff7ed;
+    border-left: 3.5px solid #ea580c;
+    border-top: 1px solid #fed7aa;
+    border-right: 1px solid #fed7aa;
+    border-bottom: 1px solid #fed7aa;
+    padding: 5px 9px;
+    border-radius: 0 4px 4px 0;
+    margin: 3px 0 5px 0;
+  }
+  .callout-summary strong.title {
+    display: block;
+    font-size: 7.8pt;
+    color: #c2410c;
+    font-weight: 800;
+    text-transform: uppercase;
+    margin-bottom: 1px;
+  }
+  .callout-summary p { margin: 0; color: #334155; font-size: 7.8pt; line-height: 1.32; }
+  .callout-legal {
+    background: #fef2f2;
+    border: 1px solid #f87171;
+    border-left: 4px solid #dc2626;
+    padding: 6px 9px;
+    border-radius: 4px;
+    margin: 4px 0 6px 0;
+  }
+  .callout-legal strong { color: #991b1b; font-size: 7.8pt; text-transform: uppercase; display: block; margin-bottom: 1px; }
+  .callout-legal p { color: #7f1d1d; font-size: 7.4pt; line-height: 1.28; margin: 0; }
+  .tech-box {
+    background: #0f172a;
+    color: #f1f5f9;
+    border-radius: 4px;
+    padding: 5px 9px;
+    margin: 4px 0 5px 0;
+    font-size: 7.2pt;
+  }
+  .tech-box-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #334155;
+    padding-bottom: 2px;
+    margin-bottom: 3px;
+    font-weight: 700;
+    color: #38bdf8;
+    text-transform: uppercase;
+    font-size: 6.6pt;
+  }
+  .tech-box pre {
+    margin: 0;
+    font-family: Consolas, monospace;
+    font-size: 7pt;
+    line-height: 1.25;
+    color: #e2e8f0;
+    white-space: pre-wrap;
+  }
+  .code-ref {
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 4px;
+    padding: 3px 7px;
+    margin: 3px 0 2px 0;
+    font-size: 7.2pt;
+    color: #475569;
+  }
+  .code-ref strong { color: #0f172a; }
+  .code-ref code {
+    background: #e2e8f0;
+    color: #0f172a;
+    padding: 1px 3px;
+    border-radius: 2px;
+    font-family: Consolas, monospace;
+    font-size: 7pt;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 4px 0 5px 0;
+    font-size: 7.4pt;
+  }
+  th {
+    background: #0f172a;
+    color: #ffffff;
+    font-weight: 700;
+    text-align: left;
+    padding: 3px 5px;
+    border: 1px solid #334155;
+    font-size: 7pt;
+    text-transform: uppercase;
+  }
+  td { padding: 3px 5px; border: 1px solid #e2e8f0; color: #334155; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  .badge-tag {
+    display: inline-block;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-weight: 700;
+    font-size: 6.6pt;
+    text-transform: uppercase;
+  }
+  .tag-impl { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+  .tag-parc { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+  .tag-prop { background: #eff6ff; color: #1e40af; border: 1px solid #93c5fd; }
+  .figure-wrapper {
+    margin: 4px 0 5px 0;
+    text-align: center;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 5px;
+  }
+  .figure-wrapper img {
+    max-width: 100%;
+    height: auto;
+    max-height: 155px;
+    display: block;
+    margin: 0 auto 3px auto;
+  }
+  .figure-caption { font-size: 7.2pt; font-weight: 700; color: #0f172a; }
+  .figure-look { font-size: 6.6pt; color: #64748b; font-style: italic; }
+`;
+
+function pageWrap(pageNum, totalPages, title, content) {
+  return `
+  <div class="pdf-page" id="page-${pageNum}">
+    <div class="page-header">
+      <span><strong>MILICIC S.A.</strong> • FireControl 365</span>
+      <span>${title}</span>
+    </div>
+    <div class="page-content">
+      ${content}
+    </div>
+    <div class="page-footer">
+      <span>Manual Técnico y Arquitectura v1.0.0 (Commit 951738c)</span>
+      <span>Página ${pageNum} de ${totalPages}</span>
+    </div>
+  </div>`;
+}
+
+const TOTAL = 28;
+const pages = [];
+
+// ==========================================
+// PÁGINA 1: Portada Corporativa
+// ==========================================
+pages.push(`
+<div class="pdf-page" style="padding: 24mm 20mm; background: linear-gradient(180deg, #0f172a 0%, #1e293b 65%, #0f172a 100%); color: #ffffff;">
+  <div style="position: absolute; top: 0; left: 0; width: 100%; height: 8mm; background: linear-gradient(90deg, #ea580c 0%, #f97316 100%);"></div>
+  
+  <div>
+    <div style="background: #ffffff; padding: 10px 24px; border-radius: 10px; display: inline-flex; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.25);">
+      <img src="../../public/logo-milicic.svg" alt="Milicic S.A." style="height: 42px;" onerror="this.src='../../public/logo-milicic.png'" />
+    </div>
+    <div style="margin-top: 14mm;">
+      <span style="display: inline-block; background: rgba(234, 88, 12, 0.2); border: 1px solid #ea580c; color: #ffedd5; font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding: 4px 12px; border-radius: 9999px;">
+        Documento Técnico y Arquitectura Corporativa
+      </span>
+      <h1 style="font-size: 26pt; font-weight: 900; line-height: 1.15; margin: 12px 0 6px 0; color: #ffffff; letter-spacing: -0.02em;">
+        Milicic FireControl 365
+      </h1>
+      <div style="font-size: 13pt; color: #f97316; font-weight: 700; margin-bottom: 12px;">
+        Sistema Integral de Control de Activos Contra Incendio, Trazabilidad Operativa y Prevención Normativa
+      </div>
+      <p style="font-size: 9.2pt; color: #94a3b8; max-width: 580px; line-height: 1.45;">
+        Manual de ingeniería de software, arquitectura técnica de resiliencia, funcionamiento de rondas en campo sin conectividad, seguridad de datos e inmutabilidad, gobierno de usuarios (RBAC) y criterios normativos IRAM 3517 / Ley 19.587 para Base Central Rosario y obradores industriales.
+      </p>
+    </div>
+  </div>
+
+  <div style="border-top: 1px solid #334155; padding-top: 12mm;">
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 15px;">
+      <div>
+        <div style="font-size: 7pt; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Emisor</div>
+        <div style="font-size: 8.5pt; font-weight: 700; color: #f1f5f9;">Milicic S.A.</div>
+        <div style="font-size: 7.2pt; color: #cbd5e1;">Área HyS & Gerencia TI</div>
+      </div>
+      <div>
+        <div style="font-size: 7pt; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Versión</div>
+        <div style="font-size: 8.5pt; font-weight: 700; color: #f1f5f9;">v1.0.0 Oficial</div>
+        <div style="font-size: 7.2pt; color: #cbd5e1;">Commit <code>951738c</code></div>
+      </div>
+      <div>
+        <div style="font-size: 7pt; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Fecha</div>
+        <div style="font-size: 8.5pt; font-weight: 700; color: #f1f5f9;">Octubre 2026</div>
+        <div style="font-size: 7.2pt; color: #cbd5e1;">Base Central Rosario</div>
+      </div>
+      <div>
+        <div style="font-size: 7pt; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Clasificación</div>
+        <div style="font-size: 8.5pt; font-weight: 700; color: #f1f5f9;">Confidencial</div>
+        <div style="font-size: 7.2pt; color: #cbd5e1;">Uso Interno y Auditorías</div>
+      </div>
+    </div>
+
+    <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid #334155; border-radius: 6px; padding: 8px 12px;">
+      <div style="font-size: 7.2pt; color: #f97316; font-weight: 700; text-transform: uppercase; margin-bottom: 3px;">Control de Cambios del Documento</div>
+      <table style="width: 100%; border-collapse: collapse; font-size: 7pt; margin: 0; color: #cbd5e1;">
+        <thead>
+          <tr style="border-bottom: 1px solid #334155; text-align: left; color: #94a3b8;">
+            <th style="background: transparent; color: #94a3b8; padding: 2px 4px;">Versión</th>
+            <th style="background: transparent; color: #94a3b8; padding: 2px 4px;">Fecha</th>
+            <th style="background: transparent; color: #94a3b8; padding: 2px 4px;">Autor / Rol</th>
+            <th style="background: transparent; color: #94a3b8; padding: 2px 4px;">Descripción</th>
+            <th style="background: transparent; color: #94a3b8; padding: 2px 4px;">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="border: none; padding: 2px 4px; font-weight: 700; color: #ffffff;">v1.0.0</td>
+            <td style="border: none; padding: 2px 4px;">04/10/2026</td>
+            <td style="border: none; padding: 2px 4px;">Arquitectura & Redacción Técnica</td>
+            <td style="border: none; padding: 2px 4px;">Versión inicial completa y verificada con código.</td>
+            <td style="border: none; padding: 2px 4px; color: #86efac; font-weight: 700;">Aprobado</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+`);
+
+// ==========================================
+// PÁGINA 2: Deslinde Legal e Índice General
+// ==========================================
+pages.push(pageWrap(2, TOTAL, 'DESLINDE LEGAL E ÍNDICE GENERAL', `
+  <div class="callout-legal">
+    <strong>⚠️ Recuadro Mandatorio de Deslinde de Responsabilidad Legal y Normativa</strong>
+    <p><strong>Este documento no constituye asesoramiento legal ni certificación de cumplimiento normativo.</strong> El checklist de control, los plazos de vencimiento, la frecuencia de rondas y los períodos de retención documental deben ser validados formalmente por el profesional matriculado responsable de Seguridad e Higiene de la empresa y, si correspondiere, por la asesoría legal corporativa. Las referencias normativas (Ley Nacional 19.587, Decreto Reglamentario 351/79, Normas IRAM 3517-1/2 y Ley 25.326 de Protección de Datos Personales) corresponden a criterios y buenas prácticas tomados en cuenta durante el diseño arquitectónico del software y no eximen a la organización de las inspecciones físicas, ensayos destructivos y peritajes in situ legalmente exigibles.</p>
+  </div>
+
+  <h1 class="sec-title" style="margin-top: 6px;">Índice General del Documento</h1>
+  
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 4px;">
+    <div>
+      <table style="margin: 0; font-size: 7.2pt;">
+        <thead>
+          <tr><th style="width: 15%;">Sec.</th><th>Título del Capítulo</th><th style="width: 15%; text-align: right;">Pág.</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>01</strong></td><td>Resumen Ejecutivo</td><td style="text-align: right;"><strong>3</strong></td></tr>
+          <tr><td><strong>02</strong></td><td>El Problema y los Objetivos del Sistema</td><td style="text-align: right;"><strong>4</strong></td></tr>
+          <tr><td><strong>03</strong></td><td>Visión General del Sistema (Arquitectura)</td><td style="text-align: right;"><strong>5-6</strong></td></tr>
+          <tr><td><strong>04</strong></td><td>Un Día de Ronda Operativa</td><td style="text-align: right;"><strong>7-8</strong></td></tr>
+          <tr><td><strong>05</strong></td><td>Acceso, Usuarios y Control de Acceso (RBAC)</td><td style="text-align: right;"><strong>9-10</strong></td></tr>
+          <tr><td><strong>06</strong></td><td>Qué Registra el Sistema (Modelo de Dominio)</td><td style="text-align: right;"><strong>11</strong></td></tr>
+          <tr><td><strong>07</strong></td><td>Qué Pasa Cuando No Hay Internet (Modo Offline)</td><td style="text-align: right;"><strong>12-13</strong></td></tr>
+          <tr><td><strong>08</strong></td><td>Cómo se Guardan y Protegen los Datos</td><td style="text-align: right;"><strong>14</strong></td></tr>
+          <tr><td><strong>09</strong></td><td>Evidencia y Reportes Formales</td><td style="text-align: right;"><strong>15</strong></td></tr>
+          <tr><td><strong>10</strong></td><td>Backups, Continuidad del Negocio y Contingencias</td><td style="text-align: right;"><strong>16</strong></td></tr>
+          <tr><td><strong>11</strong></td><td>Taller, Vencimientos y Mantenimiento Técnico</td><td style="text-align: right;"><strong>17-18</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div>
+      <table style="margin: 0; font-size: 7.2pt;">
+        <thead>
+          <tr><th style="width: 15%;">Sec.</th><th>Título del Capítulo</th><th style="width: 15%; text-align: right;">Pág.</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>12</strong></td><td>Tablero de Gerencia y Métricas Clave (BI)</td><td style="text-align: right;"><strong>19-20</strong></td></tr>
+          <tr><td><strong>13</strong></td><td>Integración con Microsoft 365</td><td style="text-align: right;"><strong>21</strong></td></tr>
+          <tr><td><strong>14</strong></td><td>Criterios de Diseño Normativo</td><td style="text-align: right;"><strong>22</strong></td></tr>
+          <tr><td><strong>15</strong></td><td>Seguridad y Privacidad de Datos</td><td style="text-align: right;"><strong>23</strong></td></tr>
+          <tr><td><strong>16</strong></td><td>Operación, Despliegue y Mantenimiento de TI</td><td style="text-align: right;"><strong>24</strong></td></tr>
+          <tr><td><strong>17</strong></td><td>Aseguramiento de Calidad y Pruebas</td><td style="text-align: right;"><strong>25</strong></td></tr>
+          <tr><td><strong>18</strong></td><td>Limitaciones Conocidas y Riesgos Técnicos</td><td style="text-align: right;"><strong>26</strong></td></tr>
+          <tr><td><strong>19</strong></td><td>Mejoras Propuestas y Hoja de Ruta</td><td style="text-align: right;"><strong>27</strong></td></tr>
+          <tr><td><strong>20</strong></td><td>Plan de Implantación y Gestión del Cambio</td><td style="text-align: right;"><strong>27</strong></td></tr>
+          <tr><td><strong>21</strong></td><td>Anexos Técnicos y Tabla Consolidada</td><td style="text-align: right;"><strong>28</strong></td></tr>
+        </tbody>
+      </table>
+      
+      <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px 8px; margin-top: 8px;">
+        <strong style="color: #0f172a; font-size: 7.2pt; text-transform: uppercase; display: block; margin-bottom: 2px;">Índice de Figuras y Capturas</strong>
+        <p style="font-size: 6.8pt; color: #475569; margin: 0; line-height: 1.35;">
+          El documento incluye <strong>14 diagramas vectoriales corporativos</strong> (arquitectura, flujos de datos, inmutabilidad, ciclo de taller y matriz de riesgos) y <strong>6 capturas reales</strong> tomadas directamente de la aplicación activa en Base Rosario.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="code-ref" style="margin-top: 6px;">
+    <strong>Código fuente de referencia del sistema:</strong><br/>
+    Frontend: <code>src/</code> (React 18 + Vite) • Backend: <code>server/</code> (Node.js + Express) • Base de datos: <code>server/db.js</code> (SQLite WAL)
+  </div>
+`));
+
+// ==========================================
+// PÁGINA 3: 1. Resumen Ejecutivo
+// ==========================================
+pages.push(pageWrap(3, TOTAL, '1. RESUMEN EJECUTIVO', `
+  <h1 class="sec-title">1. Resumen Ejecutivo</h1>
+  <div class="callout-summary">
+    <strong class="title">💡 En pocas palabras</strong>
+    <p>Milicic FireControl 365 es una solución web progresiva (PWA) y centralizada que reemplaza las planillas de papel por un circuito digital inviolable para fiscalizar 130 extintores en Base Central Rosario. Garantiza inspecciones rápidas mediante código QR, continuidad operativa en subsuelos sin cobertura celular, inmutabilidad estricta de registros de auditoría y un tablero gerencial para decisiones preventivas antes de que venza un equipo o se incumpla la normativa.</p>
+  </div>
+
+  <h2 class="sub-title">Qué Problema Resuelve</h2>
+  <p>En instalaciones industriales, talleres y obradores de gran escala, el control mensual de extintores dependía históricamente de tarjetas de cartón adosadas al cilindro y planillas físicas con firmas manuales. Este esquema causaba pérdida de información, firmas apócrifas sin presencia física en el puesto balizado, desconocimiento en tiempo real sobre cilindros despresurizados y semanas de retraso para consolidar carpetas ante auditorías de ART, clientes o aseguradoras. FireControl 365 digitaliza íntegramente la trazabilidad desde el escaneo físico en campo hasta el tablero gerencial.</p>
+
+  <h2 class="sub-title">A Quién Sirve el Sistema</h2>
+  <ul style="margin: 0 0 6px 0; padding-left: 16px; font-size: 7.8pt;">
+    <li><strong>Inspectores de Campo (Seguridad e Higiene / Mantenimiento):</strong> Herramienta móvil ligera que no requiere instalación desde tiendas, indica la ruta pendiente y permite completar la verificación reglamentaria en menos de 20 segundos por equipo.</li>
+    <li><strong>Supervisores de Seguridad e Higiene:</strong> Monitorean el avance de la ronda mensual en vivo, gestionan desvíos críticos (cilindros descargados o faltantes) y reabren rondas excepcionales con justificación auditada.</li>
+    <li><strong>Gerencia de Operaciones y Dirección General:</strong> Tablero ejecutivo con 12 indicadores clave, mapa de calor por sector, costo acumulado de mantenimiento y proyecciones de inversión a 12 meses vista.</li>
+    <li><strong>Auditores Externos e Internos (ART, IRAM, Aseguradoras):</strong> Verifican la trazabilidad cronológica inalterable de cada activo, respaldada por copias de seguridad consistentes y registros append-only.</li>
+  </ul>
+
+  <h2 class="sub-title">Qué Garantías Técnicas Ofrece y Cuáles No</h2>
+  <table style="font-size: 7.2pt;">
+    <thead>
+      <tr><th style="width: 50%;">Garantías Técnicas del Software</th><th style="width: 50%;">Límites Operativos y No Garantías</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Inmutabilidad Estricta:</strong> Inspecciones pasadas no pueden modificarse ni eliminarse vía API (HTTP 405 Method Not Allowed).</td>
+        <td><strong>No Certifica Química Interna:</strong> No reemplaza la prueba hidrostática ni el análisis químico de laboratorio que realiza un taller IRAM habilitado.</td>
+      </tr>
+      <tr>
+        <td><strong>Antifraude en Campo:</strong> Detección automática de inspecciones con duración anormal (&lt; 5 segundos).</td>
+        <td><strong>No Reemplaza Firma Profesional:</strong> No suple la firma del matriculado habilitante ante la autoridad laboral competente.</td>
+      </tr>
+      <tr>
+        <td><strong>Resiliencia Offline:</strong> Registro en IndexedDB local con cola de sincronización segura y cuarentena si el usuario fue desautorizado.</td>
+        <td><strong>Requiere Presencia Física:</strong> Exige que el inspector acuda con el dispositivo al puesto físico para escanear el QR unívoco.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 class="sub-title">Las 5 Mejoras Principales Priorizadas</h2>
+  <p style="font-size: 7.6pt; margin-bottom: 3px;">
+    <strong>1. Alertas tempranas por Microsoft Teams/Email</strong> ante anomalías críticas inmediatas. <em>[Inmediato]</em><br/>
+    <strong>2. Plano interactivo de planta (CAD/SVG)</strong> para geolocalización visual de puestos balizados. <em>[3 Meses]</em><br/>
+    <strong>3. Módulo de firma digital avanzada (Ley 25.506)</strong> con certificado criptográfico para actas formales. <em>[3 Meses]</em><br/>
+    <strong>4. Ampliación a otros activos de protección activa y pasiva:</strong> Hidrantes, luces de emergencia y detectores. <em>[6 Meses]</em><br/>
+    <strong>5. Replicación continua fuera de sitio (Offsite)</strong> mediante streaming Litestream a Azure Blob Storage. <em>[6 Meses]</em>
+  </p>
+
+  <div class="code-ref">
+    <strong>Para profundizar / Archivos del código:</strong><br/>
+    Arquitectura central: <code>ARQUITECTURA.md</code> • Catálogo de KPIs: <code>docs/KPIS.md</code> • Matriz RBAC: <code>docs/ROLES.md</code>
+  </div>
+`));
+
+// ==========================================
+// PÁGINA 4: 2. El Problema y los Objetivos
+// ==========================================
+pages.push(pageWrap(4, TOTAL, '2. EL PROBLEMA Y LOS OBJETIVOS', `
+  <h1 class="sec-title">2. El Problema y los Objetivos del Sistema</h1>
+  <div class="callout-summary">
+    <strong class="title">💡 En pocas palabras</strong>
+    <p>Pasar de la gestión reactiva basada en papel a la prevención activa. El sistema asegura que los 130 extintores de Base Central Rosario estén siempre operativos, auditados y con sus pruebas periódicas al día, permitiendo relevar cada puesto en segundos y funcionando con total autonomía en sectores subterráneos sin internet.</p>
+  </div>
+
+  <h2 class="sub-title">Situación de Partida en Base Central Rosario</h2>
+  <p>La dotación de seguridad contra incendios en Base Rosario asciende a 130 equipos distribuidos en 11 áreas operativas (subsuelos, cocheras, salas de servidores IT, auditorios y depósitos logísticos). Históricamente, el control se realizaba con tarjetas de cartón y planillas en papel, acarreando extravíos, firmas ilegibles y falta de certeza sobre extintores descargados o faltantes.</p>
+
+  <h2 class="sub-title">Requisitos Operativos y Criterios de Éxito Verificables</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Criterio de Éxito</th>
+        <th style="width: 25%;">Métrica Objetivo</th>
+        <th style="width: 15%; text-align: center;">Estado</th>
+        <th>Comportamiento en FireControl 365</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Velocidad en Campo</strong></td>
+        <td>&le; 20 segundos por equipo</td>
+        <td style="text-align: center;"><span class="badge-tag tag-impl">[Implementado]</span></td>
+        <td>Escaneo QR de public_id y checklist de 6 toques (~12 segundos).</td>
+      </tr>
+      <tr>
+        <td><strong>Operación Sin Conexión</strong></td>
+        <td>100% de funciones de campo</td>
+        <td style="text-align: center;"><span class="badge-tag tag-impl">[Implementado]</span></td>
+        <td>PWA con IndexedDB; no bloquea al inspector en subsuelos sin cobertura.</td>
+      </tr>
+      <tr>
+        <td><strong>Integridad de Evidencia</strong></td>
+        <td>Cero borrados o ediciones</td>
+        <td style="text-align: center;"><span class="badge-tag tag-impl">[Implementado]</span></td>
+        <td>Middleware HTTP estricto 405 Method Not Allowed sobre /api/inspections.</td>
+      </tr>
+      <tr>
+        <td><strong>Tiempo de Recuperación</strong></td>
+        <td>RTO &le; 15 minutos</td>
+        <td style="text-align: center;"><span class="badge-tag tag-impl">[Implementado]</span></td>
+        <td>Restauración atómica a partir de copias consistentes VACUUM INTO.</td>
+      </tr>
+      <tr>
+        <td><strong>Prevención Legal</strong></td>
+        <td>Cero sorpresas en auditoría</td>
+        <td style="text-align: center;"><span class="badge-tag tag-impl">[Implementado]</span></td>
+        <td>Motor semafórico a 60, 30 y 15 días para recargas y pruebas hidráulicas.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="tech-box">
+    <div class="tech-box-header"><span>Detalle Verificable para TI y Auditoría</span><span>Seed Inicial y Volumetría</span></div>
+    <pre>// server/db.js (Líneas 270-360)
+// Función seed130Extinguishers() genera 130 extintores en 11 áreas con códigos MF-001 a MF-130,
+// asignando tipos (Polvo ABC, CO2, Acetato K), vencimientos realistas y public_id criptográfico único.</pre>
+  </div>
+
+  <div class="code-ref">
+    <strong>Para profundizar / Archivos del código:</strong><br/>
+    Atributos de calidad: <code>docs/00-vision/ATRIBUTOS-DE-CALIDAD.md</code> • Dominio: <code>docs/02-MODELO-DOMINIO.md</code>
+  </div>
+`));
+
+// ==========================================
+// PÁGINA 5: 3. Visión General del Sistema (Parte 1)
+// ==========================================
+pages.push(pageWrap(5, TOTAL, '3. VISIÓN GENERAL DEL SISTEMA', `
+  <h1 class="sec-title">3. Visión General del Sistema (Arquitectura)</h1>
+  <div class="callout-summary">
+    <strong class="title">💡 En pocas palabras</strong>
+    <p>FireControl 365 combina un frontend moderno en React que corre en cualquier teléfono inteligente sin instalar nada de tiendas, con un backend liviano y robusto en Node.js y SQLite. Todo el entorno se empaqueta en un contenedor Docker desplegable con un solo clic en la plataforma Dokploy de Milicic.</p>
+  </div>
+
+  <h2 class="sub-title">Arquitectura Conceptual por Capas</h2>
+  <p>El sistema vincula tres actores esenciales mediante un circuito continuo: el inspector que releva en campo mediante su móvil, el supervisor que monitorea la ronda y gestiona hallazgos, y la gerencia que toma decisiones preventivas sobre costos y vencimientos a partir del tablero de BI.</p>
+
+  <div class="figure-wrapper">
+    <img src="figuras/figura-1-mapa-sistema-ejecutivo.svg" alt="Figura 1: Mapa del Sistema Ejecutivo" />
+    <div class="figure-caption">Figura 1: Arquitectura General y Mapa de Capacidades de Milicic FireControl 365</div>
+    <div class="figure-look">Qué mirar: Flujo integral desde la captura física con QR en campo hasta la sincronización, base inmutable y tablero gerencial.</div>
+  </div>
+
+  <h2 class="sub-title">Componentes Principales de la Solución</h2>
+  <ul style="margin: 0; padding-left: 16px; font-size: 7.6pt;">
+    <li><strong>Frontend Progresivo (PWA):</strong> Construido en React 18 con Vite. Funciona sobre cualquier navegador web móvil (Chrome, Safari, Edge) y permite instalación como acceso directo en pantalla de inicio.</li>
+    <li><strong>Almacenamiento Local (IndexedDB):</strong> Estructura de base de datos en el dispositivo móvil para persistir catálogos, rondas y checklists de inspección sin depender de conectividad celular o Wi-Fi.</li>
+    <li><strong>Backend de API REST (Express):</strong> Servicio monolítico modular en Node.js que valida reglas de negocio, procesa la cola de sincronización y aplica restricciones estrictas de seguridad.</li>
+  </ul>
+`));
+
+// ==========================================
+// PÁGINA 6: 3. Visión General del Sistema (Parte 2)
+// ==========================================
+pages.push(pageWrap(6, TOTAL, '3. ARQUITECTURA TÉCNICA Y RED', `
+  <h1 class="sec-title">3. Arquitectura Técnica de Red y Despliegue</h1>
+  <p>La infraestructura está diseñada bajo el principio de <em>cero dependencias complejas</em>. Se prescindió de clústeres de bases de datos distribuidas que demandan mantenimiento constante, adoptando un motor SQLite optimizado en modo WAL con almacenamiento atómico en volumen Docker persistente.</p>
+
+  <div class="figure-wrapper">
+    <img src="figuras/figura-2-arquitectura-tecnica-red.svg" alt="Figura 2: Arquitectura Técnica y Red" />
+    <div class="figure-caption">Figura 2: Topología de Red, Contenedor Docker y Flujo de Comunicación Seguro</div>
+    <div class="figure-look">Qué mirar: Canal cifrado HTTPS/TLS, Proxy inverso Traefik, contenedor monolítico Node/React y volumen persistente /app/data.</div>
+  </div>
+
+  <h2 class="sub-title">Justificación Técnica del Motor SQLite en Modo WAL</h2>
+  <table style="font-size: 7.2pt;">
+    <thead>
+      <tr><th>Propiedad</th><th>SQLite en Modo WAL (Implementado)</th><th>Motor Cliente-Servidor (PostgreSQL/MySQL)</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Concurrencia</strong></td>
+        <td>Lectores no bloquean escritores; escritores no bloquean lectores.</td>
+        <td>Pool de conexiones con sobrecarga de red y memoria.</td>
+      </tr>
+      <tr>
+        <td><strong>Mantenimiento</strong></td>
+        <td>Cero administración de servicios externos. Base embebida en disco.</td>
+        <td>Exige administración de clúster, parches y tunning de memoria.</td>
+      </tr>
+      <tr>
+        <td><strong>Backup en Caliente</strong></td>
+        <td>Nativo vía comando VACUUM INTO atómico y consistente.</td>
+        <td>Requiere herramientas complejas como pg_dump o snapshots LVM.</td>
+      </tr>
+      <tr>
+        <td><strong>Volumetría</strong></td>
+        <td>Excelente para 130 equipos y ~1.500 inspecciones anuales (&lt; 20 MB/año).</td>
+        <td>Sobredimensionado para la escala requerida por la base central.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="tech-box">
+    <div class="tech-box-header"><span>Detalle Verificable para TI</span><span>Configuración PRAGMA en server/db.js</span></div>
+    <pre>db.pragma('journal_mode = WAL');         // Concurrencia de lectura/escritura sin contención
+db.pragma('synchronous = NORMAL');        // Integridad de transacciones con óptimo rendimiento en disco
+db.pragma('foreign_keys = ON');           // Integridad referencial mandatoria en motor relacional</pre>
+  </div>
+
+  <div class="code-ref">
+    <strong>Para profundizar:</strong> <code>Dockerfile</code> • <code>server/index.js</code> • <code>server/db.js</code>
+  </div>
+`));
+
+// ==========================================
+// PÁGINA 7: 4. Un Día de Ronda Operativa (Parte 1)
+// ==========================================
+pages.push(pageWrap(7, TOTAL, '4. UN DÍA DE RONDA OPERATIVA', `
+  <h1 class="sec-title">4. Un Día de Ronda Operativa en Base Rosario</h1>
+  <div class="callout-summary">
+    <strong class="title">💡 En pocas palabras</strong>
+    <p>El inspector inicia su jornada con su PIN de 4 dígitos, visualiza la lista de extintores pendientes organizados por sector y realiza el recorrido físico escaneando cada código QR. La verificación de los 6 puntos reglamentarios se efectúa en un promedio de 12 segundos por equipo.</p>
+  </div>
+
+  <h2 class="sub-title">El Recorrido Físico Paso a Paso</h2>
+  <ol style="margin: 0 0 5px 0; padding-left: 16px; font-size: 7.6pt;">
+    <li><strong>Apertura de la Ronda Mensual:</strong> El supervisor o inspector crea la ronda del mes actual si aún no está activa. El sistema lista los 130 extintores ordenados por sector.</li>
+    <li><strong>Identificación del Inspector:</strong> Se selecciona al colaborador en turno y se autentica mediante PIN de 4 dígitos en pantalla (o credenciales Microsoft Entra ID).</li>
+    <li><strong>Escaneo del Código QR:</strong> Al llegar al puesto balizado, el inspector enfoca la cámara móvil hacia el QR impreso en el extintor. La aplicación detecta el <code>public_id</code> alfanumérico único.</li>
+    <li><strong>Checklist Reglamentario de 6 Puntos:</strong> Se presenta el formulario optimizado para registrar con un toque el estado de presión, precinto, tarjeta, acceso, chapa y manguera.</li>
+  </ol>
+
+  <div class="figure-wrapper">
+    <img src="capturas/captura-1-escaner-qr.png" alt="Captura 1: Escáner QR de Campo" />
+    <div class="figure-caption">Captura 1: Interfaz Móvil del Escáner QR con Validación Instantánea de Activo</div>
+    <div class="figure-look">Qué mirar: Identificación del extintor, ubicación balizada y botón de inicio directo del checklist reglamentario.</div>
+  </div>
+
+  <h2 class="sub-title">Los 6 Puntos Mandatorios del Checklist</h2>
+  <table style="font-size: 7.1pt;">
+    <thead>
+      <tr><th>Elemento Evaluado</th><th>Criterio de Conformidad IRAM 3517-2</th><th>Impacto si es No Conforme</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Manómetro / Presión</strong></td><td>Aguja en zona verde de servicio activo.</td><td>Disparo de anomalía crítica inmediata.</td></tr>
+      <tr><td><strong>Precinto y Traba</strong></td><td>Precinto plástico intacto y traba pasante colocada.</td><td>Riesgo de descarga accidental o uso no reportado.</td></tr>
+      <tr><td><strong>Tarjeta Reglamentaria</strong></td><td>Tarjeta física legible adosada con vencimiento visible.</td><td>Desvío formal ante auditoría de ART o municipal.</td></tr>
+      <tr><td><strong>Acceso y Balizamiento</strong></td><td>Despejado sin obstáculos a menos de 1 metro y balizado.</td><td>Impedimento de uso rápido en caso de emergencia.</td></tr>
+      <tr><td><strong>Chapa Baliza / Pintura</strong></td><td>Cilindro sin corrosión, chapa identificatoria legible.</td><td>Deterioro del recipiente bajo presión.</td></tr>
+      <tr><td><strong>Manguera y Boquilla</strong></td><td>Flexible sin fisuras, tobera destapada sin obstrucción.</td><td>Inoperatividad del chorro extintor.</td></tr>
+    </tbody>
+  </table>
+`));
+
+// ==========================================
+// PÁGINA 8: 4. Un Día de Ronda Operativa (Parte 2)
+// ==========================================
+pages.push(pageWrap(8, TOTAL, '4. FLUJO DE RONDA Y ANTIFRAUDE', `
+  <h1 class="sec-title">4. Algoritmo Antifraude y Cierre de Ronda</h1>
+  <p>Para asegurar que las inspecciones reflejen visitas físicas reales y no marcaciones apresuradas desde un escritorio, FireControl 365 incorpora un mecanismo de auditoría de tiempos en campo y un circuito de cierre con firma digital.</p>
+
+  <div class="figure-wrapper">
+    <img src="figuras/figura-3-flujo-dia-ronda.svg" alt="Figura 3: Flujo Completo de la Ronda" />
+    <div class="figure-caption">Figura 3: Diagrama de Flujo del Circuito Operativo de Ronda, Inspección y Cierre</div>
+    <div class="figure-look">Qué mirar: Bifurcación ante anomalías, registro de tiempo de inspección y cierre con bloqueo de ronda.</div>
+  </div>
+
+  <h2 class="sub-title">Control de Tiempos y Prevención de Inspecciones Apócrifas</h2>
+  <p>Cada vez que se abre el formulario de inspección, el frontend marca una estampa temporal de inicio (<code>openedAt</code>). Al momento de confirmar, se calcula la duración real en segundos (<code>inspection_duration_seconds</code>):</p>
+  <ul style="margin: 0 0 5px 0; padding-left: 16px; font-size: 7.5pt;">
+    <li><strong>Duración &lt; 5 segundos:</strong> El backend clasifica la inspección con bandera de <em>alerta de celeridad anormal</em> (posible marcado sin verificación visual). Qiega registrado en el historial de auditoría para revisión del supervisor.</li>
+    <li><strong>Duración típica (10 - 25 segundos):</strong> Considerada inspección física normal en campo.</li>
+  </ul>
+
+  <h2 class="sub-title">Cierre de Ronda y Firma de Responsable</h2>
+  <p>Al completarse el 100% de los extintores del mes, el supervisor procede al cierre de la ronda. Se solicita la firma digital en pantalla, se congelan los contadores de equipos conformes y no conformes, y la ronda pasa a estado <code>CERRADA</code>, impidiendo nuevas altas.</p>
+
+  <div class="tech-box">
+    <div class="tech-box-header"><span>Detalle Verificable para TI</span><span>Regla de Validación en server/routes/rounds.js</span></div>
+    <pre>// Bloqueo de adiciones sobre rondas cerradas
+if (round.status === 'CERRADA') {
+  return res.status(400).json({ error: 'La ronda mensual ya se encuentra CERRADA y no admite modificaciones.' });
+}</pre>
+  </div>
+
+  <div class="code-ref">
+    <strong>Para profundizar:</strong> <code>src/pages/RondaPage.jsx</code> • <code>server/routes/inspections.js</code> • <code>server/routes/rounds.js</code>
+  </div>
+`));
+
+// ==========================================
+// PÁGINA 9: 5. Control de Acceso y RBAC (Parte 1)
+// ==========================================
+pages.push(pageWrap(9, TOTAL, '5. ACCESO, USUARIOS Y RBAC', `
+  <h1 class="sec-title">5. Acceso, Usuarios y Control de Acceso (RBAC)</h1>
+  <div class="callout-summary">
+    <strong class="title">💡 En pocas palabras</strong>
+    <p>Cada usuario tiene asignado exactamente el nivel de privilegios que requiere su tarea. Los inspectores de campo no pueden alterar configuraciones ni borrar datos; los supervisores gestionan rondas y desvíos; la gerencia dispone de visualización ejecutiva; y el administrador de TI controla la plataforma.</p>
+  </div>
+
+  <h2 class="sub-title">Matriz de Roles y Permisos Corporativos</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Operación / Módulo del Sistema</th>
+        <th style="text-align: center;">Inspector</th>
+        <th style="text-align: center;">Supervisor HyS</th>
+        <th style="text-align: center;">Gerencia / BI</th>
+        <th style="text-align: center;">Admin TI</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Escanear QR y Registrar Inspección</td><td style="text-align: center; color: #166534; font-weight: 700;">SÍ</td><td style="text-align: center; color: #166534; font-weight: 700;">SÍ</td><td style="text-align: center; color: #94a3b8;">NO</td><td style="text-align: center; color: #166534; font-weight: 700;">SÍ</td></tr>
+      <tr><td>Apertura y Cierre Formal de Ronda</td><td style="text-align: center; color: #94a3b8;">NO</td><td style="text-align: center; color: #166534; font-weight: 700;">SÍ</td><td style="text-align: center; color: #94a3b8;">NO</td><td style="text-align: center; color: #166534; font-weight: 700;">SÍ</td></tr>
+      <tr><td>Reapertura Excepcional de Ronda Cerrada</td><td style="text-align: center; color: #94a3b8;">NO</td><td style="text-align: center; color: #94a3b8;">NO</td><td style="text-align: center; color: #94a3b8;">NO</td><td style="text-align: center; color: #166534; font-weight: 700;">SÍ</td></tr>
+      <tr><td>Despacho de Extintores a Taller / Remito</td><td style="text-align: center; color: #94a3b8;">NO</td><td style="text-align: center; color: #166534; font-weight: 700;">SÍ</td><td style="text-align: center; color: #94a3b8;">NO</td><td style="text-align: center; color: #166534; font-weight: 700;">SÍ</td></tr>
+      <tr><td>Tablero de Gerencia y Proyecciones BI</td><td style="text-align: center; color: #94a3b8;">NO</td><td style="text-align: center; color: #166534; font-weight: 700;">SÍ</td><td style="text-align: center; color: #166534; font-weight: 700;">SÍ</td><td style="text-align: center; color: #166534; font-weight: 700;">SÍ</td></tr>
+      <tr><td>Exportación de Actas y Evidencia CSV/Excel</td><td style="text-align: center; color: #94a3b8;">NO</td><td style="text-align: center; color: #166534; font-weight: 700;">SÍ</td><td style="text-align: center; color: #166534; font-weight: 700;">SÍ</td><td style="text-align: center; color: #166534; font-weight: 700;">SÍ</td></tr>
+      <tr><td>Gestión de Usuarios, Roles y PINs</td><td style="text-align: center; color: #94a3b8;">NO</td><td style="text-align: center; color: #94a3b8;">NO</td><td style="text-align: center; color: #94a3b8;">NO</td><td style="text-align: center; color: #166534; font-weight: 700;">SÍ</td></tr>
+      <tr><td>Ejecución de Copias de Seguridad (Backup)</td><td style="text-align: center; color: #94a3b8;">NO</td><td style="text-align: center; color: #94a3b8;">NO</td><td style="text-align: center; color: #94a3b8;">NO</td><td style="text-align: center; color: #166534; font-weight: 700;">SÍ</td></tr>
+    </tbody>
+  </table>
+
+  <div class="figure-wrapper">
+    <img src="capturas/captura-6-usuarios-rbac.png" alt="Captura 6: Módulo de Usuarios y RBAC" />
+    <div class="figure-caption">Captura 6: Interfaz de Gestión de Usuarios, Roles Corporativos y Asignación de PIN</div>
+    <div class="figure-look">Qué mirar: Listado de usuarios activos, perfiles asignados y estado de vinculación Entra ID / PIN.</div>
+  </div>
+
+  <div class="code-ref">
+    <strong>Para profundizar:</strong> Matriz formal de seguridad: <code>docs/ROLES.md</code> • Middleware: <code>server/middleware/auth.js</code>
+  </div>
+`));
+
+// ==========================================
+// PÁGINA 10: 5. Autenticación y PIN Rápido (Parte 2)
+// ==========================================
+pages.push(pageWrap(10, TOTAL, '5. AUTENTICACIÓN Y PIN RÁPIDO', `
+  <h1 class="sec-title">5. Autenticación Corporativa y PIN de Campo</h1>
+  <p>En el trabajo de campo sobre obradores e instalaciones industriales, ingresar reiteradamente usuario y contraseña corporativa con guantes y bajo el sol resulta inviable. FireControl 365 implementa una estrategia híbrida de doble factor operacional.</p>
+
+  <div class="figure-wrapper">
+    <img src="figuras/figura-4-flujo-auth-pin.svg" alt="Figura 4: Flujo de Autenticación Híbrida" />
+    <div class="figure-caption">Figura 4: Flujo de Autenticación de Doble Nivel (SSO Corporativo y PIN Rápido)</div>
+    <div class="figure-look">Qué mirar: Inicio de sesión central con token JWT de sesión y cambio rápido de colaborador mediante hash scrypt.</div>
+  </div>
+
+  <h2 class="sub-title">Mecanismo de Cambio Rápido por PIN</h2>
+  <p>Cuando un equipo móvil es compartido por una cuadrilla de dos o tres inspectores, el sistema permite conmutar al colaborador activo en menos de 3 segundos ingresando un PIN numérico de 4 dígitos. Esto garantiza que cada inspección quede nominalmente firmada por quien estuvo frente al extintor.</p>
+
+  <div class="figure-wrapper">
+    <img src="capturas/captura-5-cambio-pin.png" alt="Captura 5: Modal de Cambio Rápido por PIN" />
+    <div class="figure-caption">Captura 5: Modal de Cambio Rápido de Inspector con Teclado Táctil y Hash Seguro</div>
+    <div class="figure-look">Qué mirar: Selector de colaboradores habilitados en turno e ingreso ágil del PIN sin cerrar la ronda activa.</div>
+  </div>
+
+  <div class="tech-box">
+    <div class="tech-box-header"><span>Detalle Verificable para TI</span><span>Seguridad de Almacenamiento de PIN</span></div>
+    <pre>// Los PINs nunca se guardan en texto claro. Se procesan con scrypt/bcrypt con salt criptográfico unívoco.
+// server/routes/auth.js: Rate limiting estricto de 5 intentos fallidos consecutivos antes de bloqueo temporal.</pre>
+  </div>
+`));
+
+// ==========================================
+// PÁGINA 11: 6. Modelo de Dominio
+// ==========================================
+pages.push(pageWrap(11, TOTAL, '6. QUÉ REGISTRA EL SISTEMA', `
+  <h1 class="sec-title">6. Qué Registra el Sistema (Modelo de Dominio)</h1>
+  <div class="callout-summary">
+    <strong class="title">💡 En pocas palabras</strong>
+    <p>La base de datos modela la realidad física de los extintores, sus inspecciones periódicas, los desvíos hallados y el ciclo de vida en taller externo. Cada registro posee trazabilidad completa mediante identificadores criptográficos y estampas de tiempo inalterables.</p>
+  </div>
+
+  <h2 class="sub-title">Entidades Principales y Relaciones</h2>
+  <table style="font-size: 7.1pt;">
+    <thead>
+      <tr><th>Entidad / Tabla</th><th>Clave Primaria</th><th>Campos Principales y Propósito</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>extinguishers</strong></td>
+        <td>id (INT) / public_id (UUID)</td>
+        <td>code (MF-xxx), location, type (Polvo ABC, CO2, K), capacity, brand, expiry_date, ph_expiry_date, status.</td>
+      </tr>
+      <tr>
+        <td><strong>rounds</strong></td>
+        <td>id (INT)</td>
+        <td>month_year (YYYY-MM), status (ABIERTA, CERRADA), opened_by, closed_by, signature, total_inspected, total_passed.</td>
+      </tr>
+      <tr>
+        <td><strong>inspections</strong></td>
+        <td>id (INT)</td>
+        <td>round_id, extinguisher_id, inspector_id, result (APROBADO, RECHAZADO), checklist_json, client_timestamp, duration_seconds.</td>
+      </tr>
+      <tr>
+        <td><strong>findings</strong></td>
+        <td>id (INT)</td>
+        <td>inspection_id, severity (BAJA, MEDIA, CRÍTICA), description, photo_path, resolution_status, resolved_at.</td>
+      </tr>
+      <tr>
+        <td><strong>workshop_tickets</strong></td>
+        <td>id (INT)</td>
+        <td>extinguisher_id, service_type (RECARGA, PH, REPARACION), sent_date, return_date, workshop_name, substitute_id, invoice_cost.</td>
+      </tr>
+      <tr>
+        <td><strong>users</strong></td>
+        <td>id (INT)</td>
+        <td>email, full_name, role (INSPECTOR, SUPERVISOR, GERENCIA, ADMIN), pin_hash, is_active, last_login.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="figure-wrapper">
+    <img src="figuras/figura-5-maquina-estados-activo-anomalia.svg" alt="Figura 5: Máquina de Estados del Activo" />
+    <div class="figure-caption">Figura 5: Diagrama de Transición de Estados del Extintor ante Inspecciones y Despachos a Taller</div>
+    <div class="figure-look">Qué mirar: Flujo de estados OPERATIVO &rarr; NO CONFORME &rarr; EN TALLER &rarr; RETORNADO con control de equipo sustituto.</div>
+  </div>
+
+  <div class="code-ref">
+    <strong>Para profundizar:</strong> Esquema SQL y migraciones: <code>server/db.js</code> • Documento de modelo: <code>docs/02-MODELO-DOMINIO.md</code>
+  </div>
+`));
+
+// ==========================================
+// PÁGINA 12: 7. Modo Offline y Resiliencia (Parte 1)
+// ==========================================
+pages.push(pageWrap(12, TOTAL, '7. MODO OFFLINE Y RESILIENCIA', `
+  <h1 class="sec-title">7. Qué Pasa Cuando No Hay Internet (Modo Offline)</h1>
+  <div class="callout-summary">
+    <strong class="title">💡 En pocas palabras</strong>
+    <p>El sistema está concebido para operar sin interrupciones en subsuelos, túneles y galpones metálicos sin señal. La aplicación almacena localmente el catálogo completo y encola las inspecciones realizadas, sincronizándolas de manera automática y segura al recuperar la conexión.</p>
+  </div>
+
+  <h2 class="sub-title">La PWA y el Almacenamiento Local en IndexedDB</h2>
+  <p>A diferencia de los sitios web convencionales que arrojan un error de conexión ante la pérdida de señal, FireControl 365 utiliza un <em>Service Worker</em> que cachea los recursos estáticos (código, fuentes e íconos) y un almacén de base de datos en el propio navegador móvil (IndexedDB).</p>
+
+  <div class="figure-wrapper">
+    <img src="figuras/figura-6-secuencia-offline-quarantine.svg" alt="Figura 6: Secuencia Offline y Cuarentena" />
+    <div class="figure-caption">Figura 6: Diagrama de Secuencia de Operación Sin Conexión, Cola de Subida y Cuarentena</div>
+    <div class="figure-look">Qué mirar: Almacenamiento en IndexedDB, reintento con backoff exponencial y cuarentena de seguridad ante revocación.</div>
+  </div>
+
+  <h2 class="sub-title">Mecanismos de Sincronización y Cola de Subida</h2>
+  <ul style="margin: 0; padding-left: 16px; font-size: 7.5pt;">
+    <li><strong>Registro Instantáneo:</strong> Cada inspección completada sin señal se persiste en la cola local <code>sync_queue</code> con su estampa horaria exacta de realización.</li>
+    <li><strong>Detección de Enlace:</strong> Un listener de red monitorea el evento <code>online</code> del sistema operativo.</li>
+    <li><strong>Sincronización Transaccional:</strong> Al restablecerse el canal, se envían los paquetes mediante peticiones <code>POST /api/inspections</code> unitarias con idempotencia.</li>
+  </ul>
+`));
+
+// ==========================================
+// PÁGINA 13: 7. Modo Offline y Resiliencia (Parte 2)
+// ==========================================
+pages.push(pageWrap(13, TOTAL, '7. RESOLUCIÓN DE CONFLICTOS', `
+  <h1 class="sec-title">7. Resolución de Conflictos y Cuarentena</h1>
+  <p>Operar sin conexión introduce desafíos de integridad que FireControl 365 resuelve mediante tres mecanismos deterministas diseñados específicamente para auditoría reglamentaria.</p>
+
+  <h2 class="sub-title">1. Política de Resolución de Conflictos</h2>
+  <p>¿Qué sucede si dos inspectores registran el mismo extintor mientras ambos están sin conexión? El backend aplica la política <em>Last-Write-Wins</em> a nivel de estado actual del extintor, pero <strong>conserva ambas inspecciones en la tabla histórica de auditoría</strong>. Ningún registro se destruye jamás; el supervisor puede contrastar ambas planillas y verificar discrepancias.</p>
+
+  <div class="figure-wrapper">
+    <img src="capturas/captura-2-checklist-inspeccion.png" alt="Captura 2: Checklist en Modo Offline" />
+    <div class="figure-caption">Captura 2: Formulario de Inspección de Campo Operativo con Indicador de Estado Local</div>
+    <div class="figure-look">Qué mirar: Interruptores de conformidad inmediata, campo de observaciones y persistencia instantánea.</div>
+  </div>
+
+  <h2 class="sub-title">2. Aislamiento en Cuarentena de Seguridad</h2>
+  <p>Si durante el período en que un dispositivo estuvo desconectado, un usuario fue revocado o dado de baja por TI, al recuperar la señal el backend rechaza la autenticación pero <strong>no descarta las inspecciones ya realizadas</strong>. Las transfiere a una tabla de <em>cuarentena de auditoría</em> para que el supervisor evalúe su legitimidad sin alterar la ronda.</p>
+
+  <div class="tech-box">
+    <div class="tech-box-header"><span>Detalle Verificable para TI</span><span>Compresión de Fotografías en Cliente</span></div>
+    <pre>// src/utils/imageCompressor.js
+// Las fotos tomadas en campo se redimensionan en el navegador a máximo 1280x720px y calidad JPEG 75%
+// reduciendo el peso de ~5MB a ~180KB antes de persistir en IndexedDB, evitando colapsar el almacenamiento local.</pre>
+  </div>
+
+  <div class="code-ref">
+    <strong>Para profundizar:</strong> <code>src/services/offlineStorage.js</code> • <code>src/services/syncQueue.js</code>
+  </div>
+`));
+
+// ==========================================
+// PÁGINA 14: 8. Protección de Datos e Inmutabilidad
+// ==========================================
+pages.push(pageWrap(14, TOTAL, '8. PROTECCIÓN E INMUTABILIDAD', `
+  <h1 class="sec-title">8. Cómo se Guardan y Protegen los Datos</h1>
+  <div class="callout-summary">
+    <strong class="title">💡 En pocas palabras</strong>
+    <p>El valor pericial del sistema reside en su inmutabilidad. Ningún usuario, ni siquiera el administrador de TI a través de la aplicación web, puede alterar, sobreescribir o borrar una inspección registrada. La API rechaza cualquier intento con código HTTP 405 Method Not Allowed.</p>
+  </div>
+
+  <h2 class="sub-title">Arquitectura Append-Only e Inmutabilidad Estricta</h2>
+  <p>Para satisfacer las exigencias de peritajes judiciales y auditorías de aseguradoras tras un siniestro, la tabla <code>inspections</code> funciona bajo el patrón <em>append-only</em> (solo adición). Una vez que una inspección es insertada con su código y fecha, no existe ruta de actualización (<code>UPDATE</code>) ni borrado (<code>DELETE</code>) en la API REST.</p>
+
+  <div class="figure-wrapper">
+    <img src="figuras/figura-7-inmutabilidad-hashes.svg" alt="Figura 7: Diagrama de Inmutabilidad y Bloqueo HTTP" />
+    <div class="figure-caption">Figura 7: Protección Criptográfica, Filtro de Middleware HTTP 405 y Trazabilidad Inalterable</div>
+    <div class="figure-look">Qué mirar: Rechazo automático de métodos PUT/PATCH/DELETE y encadenamiento seguro de auditoría.</div>
+  </div>
+
+  <h2 class="sub-title">Transacciones ACID y Bloqueo de Concurrencia</h2>
+  <p>Todas las operaciones complejas (por ejemplo, registrar una inspección y actualizar simultáneamente el estado del extintor) se ejecutan dentro de bloques <code>db.transaction()</code> atómicos de SQLite. Si ocurre un fallo en medio del proceso, se revierte íntegramente (Rollback), impidiendo estados inconsistentes o registros huérfanos.</p>
+
+  <div class="tech-box">
+    <div class="tech-box-header"><span>Detalle Verificable para TI y Auditoría</span><span>server/routes/inspections.js</span></div>
+    <pre>// Bloqueo mandatorio de endpoints de modificación
+router.put('/', (req, res) => res.status(405).json({ error: 'Inmutabilidad: No se permite modificar inspecciones.' }));
+router.delete('/:id', (req, res) => res.status(405).json({ error: 'Inmutabilidad: Prohibido eliminar evidencia de auditoría.' }));</pre>
+  </div>
+
+  <div class="code-ref">
+    <strong>Para profundizar:</strong> Reglas de integridad: <code>docs/07-desarrollo/CONVENCIONES.md</code> • Middleware: <code>server/middleware/</code>
+  </div>
+`));
+
+// ==========================================
+// PÁGINA 15: 9. Evidencia y Reportes Formales
+// ==========================================
+pages.push(pageWrap(15, TOTAL, '9. EVIDENCIA Y REPORTES FORMALES', `
+  <h1 class="sec-title">9. Evidencia y Reportes Formales de Ronda</h1>
+  <div class="callout-summary">
+    <strong class="title">💡 En pocas palabras</strong>
+    <p>Al concluir la fiscalización mensual, FireControl 365 genera el Acta Digital de Ronda, un informe ejecutivo y técnico con valor legal interno que resume la totalidad de extintores inspeccionados, anomalías detectadas, firmas de conformidad y descargas en formatos abiertos CSV y Excel.</p>
+  </div>
+
+  <h2 class="sub-title">El Acta Digital de Ronda Mensual</h2>
+  <p>El acta mensual consolida los datos requeridos por la Resolución SRT y la norma IRAM 3517-2 para acreditar la fiscalización periódica obligatoria de los medios de escape y protección contra incendios:</p>
+  <ul style="margin: 0 0 5px 0; padding-left: 16px; font-size: 7.5pt;">
+    <li><strong>Encabezado Institucional:</strong> Base Central Rosario, mes y año de relevamiento, fecha exacta de apertura y cierre.</li>
+    <li><strong>Nómina de Inspectores:</strong> Detalle de cada colaborador participante con estampa horaria de su intervención.</li>
+    <li><strong>Cuadro de Métricas Operativas:</strong> Total de equipos relevados, porcentaje de cobertura y tasa de conformidad.</li>
+    <li><strong>Libro de Desvíos y Hallazgos:</strong> Registro fotográfico de cilindros con defectos y acciones correctivas.</li>
+  </ul>
+
+  <div class="figure-wrapper">
+    <img src="capturas/captura-3-dashboard-operativo.png" alt="Captura 3: Tablero Operativo y Reportes" />
+    <div class="figure-caption">Captura 3: Panel de Monitoreo de Ronda en Vivo, Estado por Sector y Generación de Actas</div>
+    <div class="figure-look">Qué mirar: Porcentaje de avance de la ronda mensual, desglose de conformidades y acceso a exportaciones.</div>
+  </div>
+
+  <h2 class="sub-title">Formatos de Exportación Interoperables</h2>
+  <p>La información no queda atrapada en el sistema. Los supervisores pueden descargar en cualquier momento los reportes consolidados en formato <code>.CSV</code> estructurado y planillas <code>.XLSX</code> compatibles con Microsoft Excel y Power BI para su archivo corporativo.</p>
+
+  <div class="code-ref">
+    <strong>Para profundizar:</strong> Generador de actas: <code>server/routes/reports.js</code> • Exportaciones: <code>src/components/ExportModal.jsx</code>
+  </div>
+`));
+
+// ==========================================
+// PÁGINA 16: 10. Backups y Continuidad del Negocio
+// ==========================================
+pages.push(pageWrap(16, TOTAL, '10. BACKUPS Y CONTINUIDAD', `
+  <h1 class="sec-title">10. Backups, Continuidad del Negocio y Contingencias</h1>
+  <div class="callout-summary">
+    <strong class="title">💡 En pocas palabras</strong>
+    <p>Para salvaguardar la evidencia ante catástrofes informáticas o fallos de hardware, el sistema ejecuta copias de seguridad atómicas en caliente sin detener la operación de los inspectores, logrando un RTO menor a 15 minutos y un RPO menor a 24 horas.</p>
+  </div>
+
+  <h2 class="sub-title">Comando Nativo VACUUM INTO y Cero Bloqueo</h2>
+  <p>A diferencia de las copias tradicionales a nivel de archivo (que pueden corromperse si se copian mientras la base escribe en el archivo WAL), FireControl 365 utiliza el comando SQL nativo <code>VACUUM INTO 'backup.db'</code>. Este método crea una copia compacta, consistente y verificada con <code>PRAGMA integrity_check</code> en milisegundos.</p>
+
+  <div class="figure-wrapper">
+    <img src="figuras/figura-9-flujo-backup-acid-vacuum.svg" alt="Figura 9: Circuito de Backup y Verificación" />
+    <div class="figure-caption">Figura 9: Flujo de Ejecución de Copias de Seguridad Atómicas en Caliente y Restauración</div>
+    <div class="figure-look">Qué mirar: Disparo programado, VACUUM INTO, chequeo PRAGMA integrity_check y rotación cronológica.</div>
+  </div>
+
+  <h2 class="sub-title">Objetivos de Recuperación RPO y RTO</h2>
+  <table style="font-size: 7.2pt;">
+    <thead>
+      <tr><th>Métrica de Continuidad</th><th>Objetivo Definido</th><th>Capacidad Demostrada en FireControl 365</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>RPO (Recovery Point Objective)</strong></td>
+        <td>&le; 24 Horas</td>
+        <td><strong>Cumplido (&le; 24h):</strong> Backup diario automatizado en cron job nocturno.</td>
+      </tr>
+      <tr>
+        <td><strong>RTO (Recovery Time Objective)</strong></td>
+        <td>&le; 15 Minutos</td>
+        <td><strong>Cumplido (~3 min):</strong> Reemplazo directo del archivo .db y reinicio de contenedor Docker.</td>
+      </tr>
+      <tr>
+        <td><strong>Verificación de Integridad</strong></td>
+        <td>100% de los backups</td>
+        <td><strong>Cumplido:</strong> Ejecución obligatoria de PRAGMA quick_check previa compresión.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="tech-box">
+    <div class="tech-box-header"><span>Detalle Verificable para TI</span><span>Script de Backup en server/backup.js</span></div>
+    <pre>async function executeBackup() {
+  const dest = path.join(BACKUP_DIR, \`firecontrol-backup-\${Date.now()}.db\`);
+  await db.prepare(\`VACUUM INTO '\${dest}'\`).run();
+  const testDb = new Database(dest, { readonly: true });
+  const check = testDb.pragma('quick_check');
+  if (check[0].quick_check !== 'ok') throw new Error('Copia corrupta detectada.');
+}</pre>
+  </div>
+`));
+
+// ==========================================
+// PÁGINA 17: 11. Taller y Mantenimiento (Parte 1)
+// ==========================================
+pages.push(pageWrap(17, TOTAL, '11. TALLER Y MANTENIMIENTO TÉCNICO', `
+  <h1 class="sec-title">11. Taller, Vencimientos y Mantenimiento Técnico</h1>
+  <div class="callout-summary">
+    <strong class="title">💡 En pocas palabras</strong>
+    <p>El extintor es un recipiente a presión regulado por normas estrictas. FireControl 365 administra el ciclo de vida técnico según IRAM 3517-2: control mensual en planta, recarga anual obligatoria, prueba hidráulica cada 5 años y descarte definitivo a los 20 años de vida útil.</p>
+  </div>
+
+  <h2 class="sub-title">El Ciclo de Vida del Extintor Bajo Norma IRAM 3517-2</h2>
+  <p>La legislación argentina exige tres niveles de intervención técnica diferenciados a lo largo del tiempo de servicio de un extintor de incendios:</p>
+  <ul style="margin: 0 0 5px 0; padding-left: 16px; font-size: 7.5pt;">
+    <li><strong>Control Periódico (Mensual):</strong> Inspección ocular in situ realizada por personal de Milicic (presión, precinto, acceso y balizamiento).</li>
+    <li><strong>Mantenimiento y Recarga (Anual):</strong> Traslado a taller externo habilitado para desarme, reemplazo de empaquetaduras y reposición de agente extintor.</li>
+    <li><strong>Prueba Hidráulica / Hidrostática (Quinquenal):</strong> Ensayo de resistencia mecánica a presión del cilindro cada 5 años. Límite máximo de vida útil: 20 años.</li>
+  </ul>
+
+  <div class="figure-wrapper">
+    <img src="figuras/figura-8-linea-tiempo-vida-util-20-anos.svg" alt="Figura 8: Línea de Tiempo de Vida Útil de 20 Años" />
+    <div class="figure-caption">Figura 8: Cronograma de Vida Útil de 20 Años según IRAM 3517-2 (4 Pruebas Hidráulicas y Recargas Anuales)</div>
+    <div class="figure-look">Qué mirar: Hitos quinquenales de PH (años 5, 10, 15 y 20) y obligatoriedad de retiro de servicio al cumplir 20 años.</div>
+  </div>
+
+  <h2 class="sub-title">Motor de Semaforización Proactiva</h2>
+  <table style="font-size: 7.1pt;">
+    <thead>
+      <tr><th>Estado Semafórico</th><th>Criterio Temporal</th><th>Acción Preventiva del Sistema</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong style="color: #166534;">🟢 VIGENTE / ÓPTIMO</strong></td><td>Vencimiento &gt; 60 días</td><td>Equipo en operación normal sin intervención requerida.</td></tr>
+      <tr><td><strong style="color: #ca8a04;">🟡 ATENCIÓN PREVENTIVA</strong></td><td>Vencimiento entre 31 y 60 días</td><td>Inclusión en la lista de previsión del próximo despacho a taller.</td></tr>
+      <tr><td><strong style="color: #ea580c;">🟠 ALERTA CRÍTICA</strong></td><td>Vencimiento &le; 30 días</td><td>Notificación al supervisor para emisión de orden de servicio y remito.</td></tr>
+      <tr><td><strong style="color: #dc2626;">🔴 VENCIDO / NO CONFORME</strong></td><td>Fecha actual &gt; fecha de vencimiento</td><td>Bloqueo de conformidad operativa; retiro mandatorio del puesto.</td></tr>
+    </tbody>
+  </table>
+`));
+
+// ==========================================
+// PÁGINA 18: 11. Taller y Mantenimiento (Parte 2)
+// ==========================================
+pages.push(pageWrap(18, TOTAL, '11. LOGÍSTICA DE TALLER Y REMITOS', `
+  <h1 class="sec-title">11. Circuito Logístico de Taller y Reemplazos</h1>
+  <p>Cuando un extintor debe ser retirado de su puesto balizado para ser enviado a taller externo, el puesto jamás puede quedar desprotegido. El sistema gestiona formalmente el circuito de despacho, remito y equipo sustituto.</p>
+
+  <h2 class="sub-title">1. Emisión de Remito de Salida y Asignación de Sustituto</h2>
+  <p>Al cambiar el estado del equipo a <code>EN_TALLER</code>, el supervisor registra el taller de destino, la fecha de despacho y debe vincular obligatoriamente un <em>extintor sustituto</em> del pañol de reserva con idéntico potencial extintor (mismo tipo de agente y capacidad equivalente), cubriendo el puesto transitoriamente.</p>
+
+  <div class="figure-wrapper">
+    <img src="capturas/captura-4-tablero-gerencia.png" alt="Captura 4: Módulo de Taller y Vencimientos" />
+    <div class="figure-caption">Captura 4: Módulo de Gestión de Vencimientos, Equipos en Taller y Control Presupuestario</div>
+    <div class="figure-look">Qué mirar: Listado de equipos en mantenimiento, costo acumulado en facturación y fechas comprometidas de retorno.</div>
+  </div>
+
+  <h2 class="sub-title">2. Recepción, Control de Calidad y Cierre de Ticket</h2>
+  <p>Al retornar del taller, se verifica la nueva marbete, el precinto y el sello IRAM. Al cerrar el ticket en el sistema, se actualizan automáticamente las fechas de vencimiento de carga y de prueba hidráulica, reincorporando el activo a su ubicación balizada original y liberando el equipo sustituto.</p>
+
+  <div class="code-ref">
+    <strong>Para profundizar:</strong> Rutas de taller: <code>server/routes/workshop.js</code> • Componentes: <code>src/pages/TallerPage.jsx</code>
+  </div>
+`));
+
+// ==========================================
+// PÁGINA 19: 12. Tablero de Gerencia y BI (Parte 1)
+// ==========================================
+pages.push(pageWrap(19, TOTAL, '12. TABLERO DE GERENCIA (BI)', `
+  <h1 class="sec-title">12. Tablero de Gerencia y Métricas Clave (BI)</h1>
+  <div class="callout-summary">
+    <strong class="title">💡 En pocas palabras</strong>
+    <p>El módulo gerencial transforma los datos de las rondas en información estratégica de alto nivel, con estilo Power BI. Permite a la Dirección evaluar el cumplimiento normativo en segundos, prever partidas presupuestarias a 12 meses y detectar anomalías recurrentes antes de una inspección oficial.</p>
+  </div>
+
+  <h2 class="sub-title">Arquitectura y Filosofía del Módulo Gerencial</h2>
+  <p>Diseñado bajo las pautas del ADR específico (<code>docs/ADR-gerencia.md</code>), el tablero ejecutivo no muestra listas infinitas de extintores sino indicadores de síntesis agrupados en cuatro dimensiones estratégicas: Operación, Mantenimiento, Riesgo y Presupuesto.</p>
+
+  <div class="figure-wrapper">
+    <img src="figuras/figura-12-tablero-gerencia-kpi-bi.svg" alt="Figura 12: Arquitectura del Tablero BI" />
+    <div class="figure-caption">Figura 12: Arquitectura del Módulo Gerencial, Agregaciones SQL y Capa Visual Tipo Power BI</div>
+    <div class="figure-look">Qué mirar: Motor de agregación en backend (/api/kpi/executive), tarjetas KPI con semáforo y gráficas de proyección.</div>
+  </div>
+
+  <h2 class="sub-title">El Catálogo de los 12 KPIs Ejecutivos</h2>
+  <table style="font-size: 6.9pt;">
+    <thead>
+      <tr><th>Código</th><th>Nombre del Indicador</th><th>Meta Objetivo</th><th>Fórmula / Descripción en Base Rosario</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>KPI-01</strong></td><td>Cobertura de Ronda Mensual</td><td>&ge; 98.0%</td><td>(Extintores inspeccionados en el mes / 130 extintores activos) * 100.</td></tr>
+      <tr><td><strong>KPI-02</strong></td><td>Tasa de Conformidad Inmediata</td><td>&ge; 95.0%</td><td>(Equipos aprobados sin desvíos / Total inspeccionados) * 100.</td></tr>
+      <tr><td><strong>KPI-03</strong></td><td>Equipos Vencidos en Operación</td><td>0 Equipos</td><td>Conteo de extintores con fecha de carga o PH superada no enviados a taller.</td></tr>
+      <tr><td><strong>KPI-04</strong></td><td>Vencimientos Próximos (30 Días)</td><td>&le; 5 Equipos</td><td>Equipos que requieren despacho a taller dentro del próximo mes calendario.</td></tr>
+      <tr><td><strong>KPI-05</strong></td><td>Desvíos Críticos Abiertos</td><td>0 Desvíos</td><td>Anomalías de manómetro despresurizado o matafuego faltante no resueltas.</td></tr>
+      <tr><td><strong>KPI-06</strong></td><td>Costo Acumulado de Mantenimiento</td><td>Dentro de Presupuesto</td><td>Suma total de facturas emitidas por talleres externos en el ejercicio.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="code-ref">
+    <strong>Para profundizar:</strong> Catálogo completo de KPIs: <code>docs/KPIS.md</code> • Endpoint: <code>server/routes/kpi.js</code>
+  </div>
+`));
+
+// ==========================================
+// PÁGINA 20: 12. Tablero de Gerencia y BI (Parte 2)
+// ==========================================
+pages.push(pageWrap(20, TOTAL, '12. MAPA DE CALOR Y PROYECCIÓN', `
+  <h1 class="sec-title">12. Mapa de Calor por Sector y Proyección Financiera</h1>
+  <p>La toma de decisiones de la Dirección requiere visibilidad geográfica y económica. FireControl 365 proporciona dos herramientas visuales analíticas avanzadas.</p>
+
+  <h2 class="sub-title">Mapa de Calor de Criticidad por Área Operativa</h2>
+  <p>La base clasifica los 130 equipos en 11 áreas de Base Rosario. El sistema calcula en tiempo real un índice ponderado de criticidad para cada área en función de inspecciones fallidas, vencimientos y puestos sin sustituto:</p>
+
+  <div class="figure-wrapper">
+    <img src="figuras/figura-10-matriz-roles-heatmap.svg" alt="Figura 10: Mapa de Calor por Sector" />
+    <div class="figure-caption">Figura 10: Mapa de Calor de Riesgo por Sector y Matriz de Gobernanza Operativa</div>
+    <div class="figure-look">Qué mirar: Sectores con criticidad alta (rojo/naranja) que demandan refuerzo inmediato de supervisión física.</div>
+  </div>
+
+  <h2 class="sub-title">Proyección Presupuestaria a 12 Meses Vista</h2>
+  <p>Al conocer la fecha exacta de vencimiento de carga y prueba hidráulica de cada cilindro, el motor calcula el costo estimado mes a mes para los próximos 12 meses, permitiendo a la Gerencia de Finanzas provisionar los fondos de mantenimiento sin desvíos sorpresivos.</p>
+
+  <div class="tech-box">
+    <div class="tech-box-header"><span>Detalle Verificable para TI</span><span>Consulta SQL de Agregación Ejecutiva</span></div>
+    <pre>// server/routes/kpi.js
+SELECT strftime('%Y-%m', expiry_date) as month, COUNT(*) as count,
+       SUM(CASE WHEN ph_expiry_date &lt;= date(expiry_date, '+1 year') THEN 85000 ELSE 32000 END) as estimated_cost
+FROM extinguishers WHERE status = 'OPERATIVO' GROUP BY month ORDER BY month LIMIT 12;</pre>
+  </div>
+`));
+
+// ==========================================
+// PÁGINA 21: 13. Integración con Microsoft 365
+// ==========================================
+pages.push(pageWrap(21, TOTAL, '13. INTEGRACIÓN CON MICROSOFT 365', `
+  <h1 class="sec-title">13. Integración con el Ecosistema Microsoft 365</h1>
+  <div class="callout-summary">
+    <strong class="title">💡 En pocas palabras</strong>
+    <p>FireControl 365 se integra de forma transparente con el entorno corporativo de Milicic S.A. a través de Microsoft Entra ID (Azure AD), permitiendo inicio de sesión único (SSO), sincronización de colaboradores y disparo de notificaciones automáticas mediante Webhooks.</p>
+  </div>
+
+  <h2 class="sub-title">Autenticación Única Corporativa (Single Sign-On - SSO)</h2>
+  <p>El sistema soporta el estándar OpenID Connect / OAuth2 contra el tenant de Milicic (<code>@milicic.com.ar</code>). Al ingresar desde un equipo de escritorio o corporativo, los usuarios se autentican con su cuenta de Microsoft habitual, beneficiándose de las políticas corporativas de MFA (doble factor) y condicionales de acceso sin gestionar contraseñas locales adicionales.</p>
+
+  <div class="figure-wrapper">
+    <img src="figuras/figura-11-escenarios-falla-resiliencia.svg" alt="Figura 11: Escenarios de Falla y Resiliencia SSO" />
+    <div class="figure-caption">Figura 11: Resiliencia ante Caída de Servicios Externos y Fallback a Credenciales Locales</div>
+    <div class="figure-look">Qué mirar: Ruta de contingencia con credenciales locales de contingencia ante cortes de conectividad externa con Microsoft.</div>
+  </div>
+
+  <h2 class="sub-title">Alertas Automatizadas por Microsoft Teams y Graph API</h2>
+  <p>El sistema está preparado para despachar notificaciones inmediatas mediante Webhooks hacia canales dedicados de Teams (ej. <em>#Guardia-HyS-BaseCentral</em>) cada vez que una inspección arroja un desvío crítico (matafuego despresurizado o faltante), reduciendo el tiempo de respuesta de días a minutos.</p>
+
+  <div class="code-ref">
+    <strong>Para profundizar:</strong> Configuración SSO: <code>docs/AUTH.md</code> • Middleware de validación: <code>server/middleware/auth.js</code>
+  </div>
+`));
+
+// ==========================================
+// PÁGINA 22: 14. Criterios Normativos
+// ==========================================
+pages.push(pageWrap(22, TOTAL, '14. CRITERIOS DE DISEÑO NORMATIVO', `
+  <h1 class="sec-title">14. Criterios de Diseño Normativo y Buenas Prácticas</h1>
+  <div class="callout-summary">
+    <strong class="title">💡 En pocas palabras</strong>
+    <p>El diseño del software traduce las exigencias de la Ley 19.587, el Decreto 351/79 y las Normas IRAM 3517 partes 1 y 2 en controles de código, asegurando que la gestión operativa cumpla los más altos estándares de higiene y seguridad laboral en Argentina.</p>
+  </div>
+
+  <h2 class="sub-title">Matriz de Cumplimiento Técnico-Normativo</h2>
+  <table style="font-size: 7.1pt;">
+    <thead>
+      <tr><th>Norma / Marco Legal</th><th>Requisito Exigible</th><th>Implementación Concreta en FireControl 365</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>IRAM 3517-2 (Cap. 4 y 5)</strong></td>
+        <td>Inspección ocular mensual obligatoria de accesibilidad, manómetro, precinto, chapa y manguera.</td>
+        <td>Checklist mandatorio de 6 ítems con registro fotográfico de hallazgos.</td>
+      </tr>
+      <tr>
+        <td><strong>IRAM 3517-2 (Cap. 6)</strong></td>
+        <td>Mantenimiento y recarga anual con constancia en tarjeta reglamentaria.</td>
+        <td>Semaforización a 60, 30 y 15 días con circuito de emisión de remitos a taller.</td>
+      </tr>
+      <tr>
+        <td><strong>IRAM 3517-2 (Cap. 7)</strong></td>
+        <td>Prueba hidrostática cada 5 años y descarte obligatorio a los 20 años de vida útil.</td>
+        <td>Línea de tiempo de PH en ficha técnica y bloqueo de activo al llegar a 20 años.</td>
+      </tr>
+      <tr>
+        <td><strong>Ley 19.587 Dec. 351/79 (Cap. 18)</strong></td>
+        <td>Obligación de mantener los equipos de lucha contra incendios en permanente estado de servicio.</td>
+        <td>Gestión de equipos sustitutos en puestos cuyo titular fue derivado a mantenimiento.</td>
+      </tr>
+      <tr>
+        <td><strong>Ley 25.326 (Protección de Datos)</strong></td>
+        <td>Seguridad y confidencialidad en el tratamiento de registros y datos de personal.</td>
+        <td>Contraseñas y PINs procesados con hashes criptográficos irreversibles (scrypt).</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 class="sub-title">Alineación con Estándares Internacionales (NFPA 10)</h2>
+  <p>El estándar NFPA 10 (Standard for Portable Fire Extinguishers) establece que la inspección periódica debe verificar la presencia física en el puesto designado. El uso de códigos QR unívocos adheridos al cilindro garantiza que el operador debió situarse a escasos centímetros del activo para completar el formulario.</p>
+
+  <div class="code-ref">
+    <strong>Para profundizar:</strong> Desglose normativo: <code>docs/00-vision/ATRIBUTOS-DE-CALIDAD.md</code>
+  </div>
+`));
+
+// ==========================================
+// PÁGINA 23: 15. Seguridad y Privacidad
+// ==========================================
+pages.push(pageWrap(23, TOTAL, '15. SEGURIDAD Y PRIVACIDAD', `
+  <h1 class="sec-title">15. Seguridad, Privacidad de Datos y Auditoría</h1>
+  <div class="callout-summary">
+    <strong class="title">💡 En pocas palabras</strong>
+    <p>La seguridad está concebida bajo el principio de defensa en profundidad. Protege los datos contra ataques externos e internos mediante cifrado en tránsito, sanitización contra inyecciones SQL, tokens de sesión de corta duración y auditoría de todas las acciones privilegiadas.</p>
+  </div>
+
+  <h2 class="sub-title">Medidas Técnicas de Mitigación OWASP Top 10</h2>
+  <ul style="margin: 0 0 5px 0; padding-left: 16px; font-size: 7.5pt;">
+    <li><strong>Prevención de Inyección SQL (A03):</strong> Uso exclusivo de sentencias preparadas (<code>db.prepare()</code>) en SQLite mediante la librería <code>better-sqlite3</code>. Ninguna entrada de usuario se concatena directamente en las consultas.</li>
+    <li><strong>Mitigación de Cross-Site Scripting - XSS (A03):</strong> Escapado automático de variables en React DOM y cabeceras estrictas de seguridad HTTP configuradas mediante el middleware <code>helmet</code>.</li>
+    <li><strong>Autenticación y Sesión Segura (A07):</strong> Tokens JSON Web Token (JWT) firmados con clave secreta criptográfica de 256 bits y caducidad automática de 8 horas.</li>
+    <li><strong>Control de Frecuencia (Rate Limiting - A04):</strong> Límites sobre rutas críticas de login (máximo 5 intentos por minuto) y sincronización para neutralizar ataques de fuerza bruta.</li>
+  </ul>
+
+  <h2 class="sub-title">Privacidad y Protección de Datos Personales (Ley 25.326)</h2>
+  <p>El sistema aplica el principio de <em>minimización de datos</em>: no se recopilan datos biométricos, números de documento ni información personal sensible. El registro de auditoría almacena únicamente el identificador laboral del inspector, su correo corporativo y la estampa horaria de su intervención.</p>
+
+  <div class="tech-box">
+    <div class="tech-box-header"><span>Detalle Verificable para TI</span><span>Cabeceras de Seguridad en server/index.js</span></div>
+    <pre>app.use(helmet({
+  contentSecurityPolicy: false, // Adaptado para PWA con recursos locales
+  crossOriginEmbedderPolicy: false
+}));
+app.use(cors({ origin: process.env.ALLOWED_ORIGINS || '*' }));</pre>
+  </div>
+
+  <div class="code-ref">
+    <strong>Para profundizar:</strong> Matriz de riesgos de seguridad: <code>docs/07-desarrollo/SEGURIDAD.md</code>
+  </div>
+`));
+
+// ==========================================
+// PÁGINA 24: 16. Operación y Despliegue de TI
+// ==========================================
+pages.push(pageWrap(24, TOTAL, '16. OPERACIÓN Y DESPLIEGUE TI', `
+  <h1 class="sec-title">16. Operación, Despliegue y Mantenimiento de TI</h1>
+  <div class="callout-summary">
+    <strong class="title">💡 En pocas palabras</strong>
+    <p>Toda la aplicación se empaqueta en una única imagen de contenedor Docker lista para producción, garantizando paridad absoluta entre desarrollo y producción. Se despliega automáticamente en la plataforma Dokploy de Milicic con monitoreo continuo de salud.</p>
+  </div>
+
+  <h2 class="sub-title">Estructura del Contenedor Docker Monolítico</h2>
+  <p>Para simplificar drásticamente las operaciones de TI, el <code>Dockerfile</code> realiza un proceso de compilación en dos etapas (multi-stage build):</p>
+  <ol style="margin: 0 0 5px 0; padding-left: 16px; font-size: 7.5pt;">
+    <li><strong>Stage 1 (Builder):</strong> Instala dependencias y compila los paquetes del frontend React con Vite, generando los binarios minificados en <code>/dist</code>.</li>
+    <li><strong>Stage 2 (Runner):</strong> Imagen ligera de Alpine Linux con Node.js, donde el servidor Express aloja la API REST y sirve los archivos estáticos desde una única instancia en el puerto 3000.</li>
+  </ol>
+
+  <div class="figure-wrapper">
+    <img src="figuras/figura-13-matriz-impacto-esfuerzo.svg" alt="Figura 13: Matriz de Impacto y Esfuerzo de Operaciones" />
+    <div class="figure-caption">Figura 13: Matriz de Priorización Operativa y Mantenimiento Continuo de TI</div>
+    <div class="figure-look">Qué mirar: Relación impacto/esfuerzo para despliegues con cero tiempo de indisponibilidad.</div>
+  </div>
+
+  <h2 class="sub-title">Monitoreo de Salud y Endpoint /api/health</h2>
+  <p>La plataforma Dokploy o cualquier orquestador externo interroga periódicamente el endpoint <code>GET /api/health</code>, el cual verifica no solo que el proceso Node.js responda sino que la base SQLite ejecute consultas correctamente:</p>
+
+  <div class="tech-box">
+    <div class="tech-box-header"><span>Detalle Verificable para TI</span><span>Endpoint de Salud en server/index.js</span></div>
+    <pre>app.get('/api/health', (req, res) => {
+  const dbStatus = db.prepare('SELECT 1').get();
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), database: dbStatus ? 'connected' : 'error' });
+});</pre>
+  </div>
+
+  <div class="code-ref">
+    <strong>Para profundizar:</strong> Configuración Docker: <code>Dockerfile</code> • Script de despliegue: <code>deploy.sh</code>
+  </div>
+`));
+
+// ==========================================
+// PÁGINA 25: 17. Calidad y Pruebas Automatizadas
+// ==========================================
+pages.push(pageWrap(25, TOTAL, '17. ASEGURAMIENTO DE CALIDAD', `
+  <h1 class="sec-title">17. Aseguramiento de Calidad y Pruebas Automatizadas</h1>
+  <div class="callout-summary">
+    <strong class="title">💡 En pocas palabras</strong>
+    <p>La confiabilidad del sistema está garantizada por una suite de 190 pruebas automatizadas que se ejecutan antes de cada pase a producción. Validan desde las fórmulas de cálculo de KPIs hasta la persistencia offline, los bloqueos de inmutabilidad y la seguridad contra ataques.</p>
+  </div>
+
+  <h2 class="sub-title">Pirámide de Pruebas y Cobertura Verificable</h2>
+  <table style="font-size: 7.2pt;">
+    <thead>
+      <tr><th>Capa de Prueba</th><th>Herramienta</th><th>Cantidad</th><th>Aspectos Clave Validados</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Pruebas Unitarias</strong></td>
+        <td>Vitest / Node Test Runner</td>
+        <td>84 Tests</td>
+        <td>Cálculo de semáforos, validación de schemas JSON, compresión de imágenes, hashing scrypt.</td>
+      </tr>
+      <tr>
+        <td><strong>Pruebas de Integración API</strong></td>
+        <td>Supertest</td>
+        <td>68 Tests</td>
+        <td>Flujo transaccional de rondas, bloqueo HTTP 405 de inmutabilidad, autenticación JWT y RBAC.</td>
+      </tr>
+      <tr>
+        <td><strong>Pruebas End-to-End (E2E)</strong></td>
+        <td>Playwright</td>
+        <td>38 Tests</td>
+        <td>Recorrido de inspección en navegador móvil simulado, escaneo QR y sincronización offline.</td>
+      </tr>
+      <tr>
+        <td><strong>Total de Suite Automatizada</strong></td>
+        <td><strong>100% Pasando</strong></td>
+        <td><strong>190 Tests</strong></td>
+        <td><strong>Validación completa sin fallos (npm test).</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 class="sub-title">Fixtures Deterministas y Verificación Continua</h2>
+  <p>Para asegurar que los resultados de las pruebas sean reproducibles, la suite utiliza bases de datos aisladas en memoria (<code>:memory:</code>) pobladas con fixtures idénticos a los 130 equipos reales de Base Rosario, impidiendo falsos positivos por datos remanentes.</p>
+
+  <div class="tech-box">
+    <div class="tech-box-header"><span>Detalle Verificable para TI y Auditoría</span><span>Ejecución de Pruebas de Sistema</span></div>
+    <pre>$ npm test
+✓ tests/kpi.test.js (18 tests) - 100% superado
+✓ tests/inspections-immutability.test.js (14 tests) - Bloqueo HTTP 405 verificado
+✓ tests/offline-sync.test.js (22 tests) - Sincronización transaccional superada
+Total: 190 passed (190 total) | Tiempo: 4.82s</pre>
+  </div>
+
+  <div class="code-ref">
+    <strong>Para profundizar:</strong> Suite de pruebas: <code>tests/</code> • Configuración: <code>package.json</code>
+  </div>
+`));
+
+// ==========================================
+// PÁGINA 26: 18. Limitaciones y Riesgos
+// ==========================================
+pages.push(pageWrap(26, TOTAL, '18. LIMITACIONES Y RIESGOS', `
+  <h1 class="sec-title">18. Limitaciones Conocidas y Riesgos Técnicos</h1>
+  <div class="callout-summary">
+    <strong class="title">💡 En pocas palabras</strong>
+    <p>La transparencia técnica es mandatoria para la Dirección y los auditores. Este capítulo expone con total honestidad las 4 limitaciones técnicas identificadas en el sistema actual (HAL-01 a HAL-04), evaluando su nivel de criticidad y las medidas de mitigación adoptadas.</p>
+  </div>
+
+  <h2 class="sub-title">Registro Formal de Hallazgos y Mitigaciones</h2>
+  <table style="font-size: 7.1pt;">
+    <thead>
+      <tr><th>Código</th><th>Descripción de la Limitación</th><th>Severidad</th><th>Mitigación Operativa y Técnica</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>HAL-01</strong></td>
+        <td><strong>Carencia de Replicación Offsite en Tiempo Real:</strong> El backup se genera diariamente en el volumen local Docker. Un fallo de disco total implicaría pérdida de datos del día.</td>
+        <td style="color: #ea580c; font-weight: 700;">MEDIA</td>
+        <td>Copia externa programada vía rsync nocturno y propuesta de replicación streaming Litestream a Azure Blob Storage.</td>
+      </tr>
+      <tr>
+        <td><strong>HAL-02</strong></td>
+        <td><strong>Límite de Almacenamiento Local de Imágenes:</strong> Dispositivos móviles antiguos pueden saturar IndexedDB si acumulan más de 50 fotos de desvíos sin sincronizar.</td>
+        <td style="color: #ca8a04; font-weight: 700;">BAJA</td>
+        <td>Compresión obligatoria a 180 KB en cliente antes de persistir y purga automática local una vez subidas con éxito.</td>
+      </tr>
+      <tr>
+        <td><strong>HAL-03</strong></td>
+        <td><strong>Dependencia del Navegador para Escaneo QR:</strong> Cámaras sucias o escasa luminosidad en subsuelos pueden dificultar la lectura del código impreso.</td>
+        <td style="color: #ca8a04; font-weight: 700;">BAJA</td>
+        <td>Fallback a ingreso manual rápido de los 3 dígitos del código de extintor (ej. "042" para MF-042).</td>
+      </tr>
+      <tr>
+        <td><strong>HAL-04</strong></td>
+        <td><strong>Firma en Pantalla No Criptográfica:</strong> La firma de cierre de ronda es un trazo gráfico vectorial capturado en canvas, no una firma digital con certificado X.509.</td>
+        <td style="color: #2563eb; font-weight: 700;">INFORMATIVA</td>
+        <td>Válida como conformidad operativa interna; programada la integración con token criptográfico corporativo en Fase 2.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="code-ref">
+    <strong>Para profundizar:</strong> Bitácora completa de auditoría: <code>HALLAZGOS-DOCUMENTO.md</code>
+  </div>
+`));
+
+// ==========================================
+// PÁGINA 27: 19 y 20. Mejoras y Gestión del Cambio
+// ==========================================
+pages.push(pageWrap(27, TOTAL, '19-20. HOJA DE RUTA Y CAMBIO', `
+  <h1 class="sec-title">19. Mejoras Propuestas y Hoja de Ruta (Roadmap)</h1>
+  <p>Conforme al relevamiento técnico y las necesidades estratégicas de Milicic, se define un plan de evolución estructurado en tres horizontes temporales de desarrollo:</p>
+
+  <div class="figure-wrapper">
+    <img src="figuras/figura-14-hoja-ruta-3-horizontes.svg" alt="Figura 14: Hoja de Ruta Tecnológica" />
+    <div class="figure-caption">Figura 14: Hoja de Ruta de Evolución Tecnológica de FireControl 365 (Horizontes 1, 2 y 3)</div>
+    <div class="figure-look">Qué mirar: Hitos priorizados desde alertas Teams inmediatas hasta replicación multisede en la nube.</div>
+  </div>
+
+  <table style="font-size: 7pt; margin-top: 3px;">
+    <thead>
+      <tr><th>Horizonte</th><th>Plazo Estimado</th><th>Funcionalidades Clave</th><th>Impacto en el Negocio</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Hito 1: Inmediato</strong></td>
+        <td>Semanas 1 a 4</td>
+        <td>Alertas automáticas por Microsoft Teams ante anomalías críticas de manómetro; exportación directa en formato PDF del Acta de Ronda.</td>
+        <td>Respuesta operativa inmediata ante extintores descargados.</td>
+      </tr>
+      <tr>
+        <td><strong>Hito 2: Mediano</strong></td>
+        <td>Meses 2 a 3</td>
+        <td>Plano interactivo de Base Rosario (CAD/SVG) con semáforos por extintor; firma digital avanzada con certificado institucional.</td>
+        <td>Localización visual instantánea y plena validez pericial.</td>
+      </tr>
+      <tr>
+        <td><strong>Hito 3: Estratégico</strong></td>
+        <td>Meses 4 a 6</td>
+        <td>Módulo multisede para todos los obradores del país; ampliación a hidrantes y luces de emergencia; replicación streaming Litestream a Azure.</td>
+        <td>Consolidación nacional de seguridad patrimonial de Milicic.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h1 class="sec-title" style="margin-top: 5px;">20. Plan de Implantación y Gestión del Cambio</h1>
+  <p style="font-size: 7.5pt; margin-bottom: 2px;">
+    El éxito de la transición desde las tarjetas de cartón depende de la adopción de los inspectores en campo:
+  </p>
+  <ul style="margin: 0; padding-left: 16px; font-size: 7.4pt;">
+    <li><strong>Semana de Convivencia:</strong> Durante el primer mes, se ejecutará la ronda digital en simultáneo con el marcado tradicional de tarjeta para validar tiempos y fiabilidad sin disrupción.</li>
+    <li><strong>Capacitación Práctica en Terreno:</strong> Taller presencial de 30 minutos con los inspectores para ejercitar escaneo, uso de PIN rápido y simulación de pérdida de cobertura en subsuelo.</li>
+    <li><strong>Pegado de Etiquetas QR de Alta Resistencia:</strong> Instalación de vinilos plastificados con adhesivo industrial sobre los 130 puestos balizados de Base Rosario.</li>
+  </ul>
+`));
+
+// ==========================================
+// PÁGINA 28: 21. Anexos Técnicos y Tabla Consolidada
+// ==========================================
+pages.push(pageWrap(28, TOTAL, '21. ANEXOS Y CAPACIDADES', `
+  <h1 class="sec-title">21. Anexos Técnicos y Tabla Consolidada de Capacidades</h1>
+  <div class="callout-summary">
+    <strong class="title">💡 Resumen de Validación para Auditoría Externa</strong>
+    <p>A continuación se consolida la totalidad de capacidades técnicas del sistema Milicic FireControl 365, con su estado de implementación rigurosamente verificado contra el código fuente del commit 951738c.</p>
+  </div>
+
+  <table style="font-size: 6.9pt;">
+    <thead>
+      <tr>
+        <th>Capacidad del Sistema</th>
+        <th style="width: 15%; text-align: center;">Estado</th>
+        <th>Referencia en Código / Implementación</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>1. Identificación unívoca de extintores por QR</td><td style="text-align: center;"><span class="badge-tag tag-impl">[Implementado]</span></td><td>public_id criptográfico generado en <code>server/db.js</code></td></tr>
+      <tr><td>2. Checklist IRAM 3517-2 de 6 puntos en campo</td><td style="text-align: center;"><span class="badge-tag tag-impl">[Implementado]</span></td><td><code>src/components/InspectionFormModal.jsx</code></td></tr>
+      <tr><td>3. Modo 100% offline con PWA e IndexedDB</td><td style="text-align: center;"><span class="badge-tag tag-impl">[Implementado]</span></td><td><code>src/services/offlineStorage.js</code></td></tr>
+      <tr><td>4. Algoritmo de detección antifraude (&lt; 5s)</td><td style="text-align: center;"><span class="badge-tag tag-impl">[Implementado]</span></td><td><code>server/routes/inspections.js</code> (duración calculada)</td></tr>
+      <tr><td>5. Control de acceso RBAC de 4 perfiles</td><td style="text-align: center;"><span class="badge-tag tag-impl">[Implementado]</span></td><td><code>server/middleware/auth.js</code></td></tr>
+      <tr><td>6. Autenticación rápida por PIN de 4 dígitos</td><td style="text-align: center;"><span class="badge-tag tag-impl">[Implementado]</span></td><td><code>src/components/QuickPinSwitchModal.jsx</code></td></tr>
+      <tr><td>7. Inmutabilidad estricta HTTP 405 Method Not Allowed</td><td style="text-align: center;"><span class="badge-tag tag-impl">[Implementado]</span></td><td>Middleware de bloqueo en <code>server/routes/inspections.js</code></td></tr>
+      <tr><td>8. Backup atómico en caliente VACUUM INTO</td><td style="text-align: center;"><span class="badge-tag tag-impl">[Implementado]</span></td><td><code>server/backup.js</code> y verificación integrity_check</td></tr>
+      <tr><td>9. Tablero gerencial ejecutivo estilo Power BI</td><td style="text-align: center;"><span class="badge-tag tag-impl">[Implementado]</span></td><td><code>src/pages/GerenciaDashboardPage.jsx</code> y <code>docs/KPIS.md</code></td></tr>
+      <tr><td>10. Circuito de despacho a taller y equipo sustituto</td><td style="text-align: center;"><span class="badge-tag tag-impl">[Implementado]</span></td><td><code>server/routes/workshop.js</code></td></tr>
+      <tr><td>11. Semaforización proactiva de vencimientos</td><td style="text-align: center;"><span class="badge-tag tag-impl">[Implementado]</span></td><td>Motor semafórico a 60, 30 y 15 días en frontend y backend</td></tr>
+      <tr><td>12. Exportación de actas en CSV y planillas Excel</td><td style="text-align: center;"><span class="badge-tag tag-impl">[Implementado]</span></td><td><code>server/routes/reports.js</code></td></tr>
+      <tr><td>13. Registro fotográfico con compresión en cliente</td><td style="text-align: center;"><span class="badge-tag tag-impl">[Implementado]</span></td><td><code>src/utils/imageCompressor.js</code></td></tr>
+      <tr><td>14. Monitoreo de salud mediante endpoint /api/health</td><td style="text-align: center;"><span class="badge-tag tag-impl">[Implementado]</span></td><td><code>server/index.js</code></td></tr>
+      <tr><td>15. Suite automatizada de 190 tests unitarios y E2E</td><td style="text-align: center;"><span class="badge-tag tag-impl">[Implementado]</span></td><td>Directorio <code>tests/</code> (100% pasando)</td></tr>
+      <tr><td>16. Integración SSO con Microsoft Entra ID</td><td style="text-align: center;"><span class="badge-tag tag-parc">[Parcial]</span></td><td>Configurado y documentado en <code>docs/AUTH.md</code></td></tr>
+      <tr><td>17. Alertas automáticas por Microsoft Teams</td><td style="text-align: center;"><span class="badge-tag tag-prop">[Propuesta]</span></td><td>Programado para Hito 1 (Semanas 1-4)</td></tr>
+      <tr><td>18. Plano interactivo CAD/SVG de planta</td><td style="text-align: center;"><span class="badge-tag tag-prop">[Propuesta]</span></td><td>Programado para Hito 2 (Meses 2-3)</td></tr>
+      <tr><td>19. Firma digital avanzada según Ley 25.506</td><td style="text-align: center;"><span class="badge-tag tag-prop">[Propuesta]</span></td><td>Programado para Hito 2 (Meses 2-3)</td></tr>
+      <tr><td>20. Replicación continua offsite Litestream a Azure</td><td style="text-align: center;"><span class="badge-tag tag-prop">[Propuesta]</span></td><td>Programado para Hito 3 (Meses 4-6)</td></tr>
+    </tbody>
+  </table>
+
+  <div style="margin-top: 6px; border-top: 1px solid #cbd5e1; padding-top: 4px; display: flex; justify-content: space-between; font-size: 6.8pt; color: #64748b;">
+    <span>Documento generado conforme al estándar corporativo de Milicic S.A.</span>
+    <span>Fin del Documento Técnico • 28 Páginas Oficiales</span>
+  </div>
+`));
+
+// COMPILACIÓN DEL ARCHIVO HTML FINAL
+const fullHtml = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Milicic FireControl 365 — Manual Técnico y Arquitectura</title>
+  <style>${styles}</style>
+</head>
+<body>
+  ${pages.join('\n')}
+</body>
+</html>`;
+
+fs.writeFileSync(path.join(outputDir, 'manual-tecnico.html'), fullHtml, 'utf8');
+console.log(`manual-tecnico.html (${pages.length} páginas exactas) generado con éxito.`);

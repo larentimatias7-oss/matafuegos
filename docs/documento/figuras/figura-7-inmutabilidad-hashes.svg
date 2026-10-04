@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 300" width="100%" height="100%">
+  <rect width="880" height="300" fill="#f8fafc" rx="12"/>
+  <text x="440" y="30" fill="#0f172a" font-family="system-ui, sans-serif" font-weight="800" font-size="14" text-anchor="middle">INMUTABILIDAD DE REGISTROS Y HASH CRIPTOGRÁFICO DE CIERRE</text>
+
+  <!-- Bloque Inspección 1 -->
+  <g transform="translate(60, 60)">
+    <rect width="200" height="130" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+    <rect x="0" y="0" width="200" height="30" rx="8" fill="#0f172a"/>
+    <text x="100" y="20" fill="#ffffff" font-family="system-ui, sans-serif" font-weight="700" font-size="11" text-anchor="middle">INSPECCIÓN #1042</text>
+    <text x="15" y="55" fill="#334155" font-family="system-ui, sans-serif" font-size="10">Extintor: MF-014</text>
+    <text x="15" y="72" fill="#334155" font-family="system-ui, sans-serif" font-size="10">Inspector: Santiago Amaya</text>
+    <text x="15" y="89" fill="#334155" font-family="system-ui, sans-serif" font-size="10">Resultado: APROBADO</text>
+    <text x="15" y="110" fill="#16a34a" font-family="system-ui, sans-serif" font-weight="700" font-size="10">PUT / PATCH / DELETE: 405</text>
+  </g>
+
+  <!-- Flecha Encadenada -->
+  <path d="M 260 125 L 340 125" stroke="#ea580c" stroke-width="2" fill="none"/>
+  <polygon points="340,120 350,125 340,130" fill="#ea580c"/>
+
+  <!-- Bloque Inspección 2 -->
+  <g transform="translate(350, 60)">
+    <rect width="200" height="130" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+    <rect x="0" y="0" width="200" height="30" rx="8" fill="#0f172a"/>
+    <text x="100" y="20" fill="#ffffff" font-family="system-ui, sans-serif" font-weight="700" font-size="11" text-anchor="middle">INSPECCIÓN #1043</text>
+    <text x="15" y="55" fill="#334155" font-family="system-ui, sans-serif" font-size="10">Extintor: MF-015</text>
+    <text x="15" y="72" fill="#334155" font-family="system-ui, sans-serif" font-size="10">Inspector: Marcos Paz</text>
+    <text x="15" y="89" fill="#334155" font-family="system-ui, sans-serif" font-size="10">Resultado: FALLA (Manómetro)</text>
+    <text x="15" y="110" fill="#dc2626" font-family="system-ui, sans-serif" font-weight="700" font-size="10">Apertura Caso #45</text>
+  </g>
+
+  <!-- Flecha Encadenada -->
+  <path d="M 550 125 L 630 125" stroke="#ea580c" stroke-width="2" fill="none"/>
+  <polygon points="630,120 640,125 630,130" fill="#ea580c"/>
+
+  <!-- Bloque Snapshot Mensual -->
+  <g transform="translate(640, 60)">
+    <rect width="200" height="130" rx="8" fill="#fff7ed" stroke="#fdba74" stroke-width="2"/>
+    <rect x="0" y="0" width="200" height="30" rx="8" fill="#ea580c"/>
+    <text x="100" y="20" fill="#ffffff" font-family="system-ui, sans-serif" font-weight="700" font-size="11" text-anchor="middle">SNAPSHOT MENSUAL</text>
+    <text x="15" y="55" fill="#c2410c" font-family="system-ui, sans-serif" font-weight="700" font-size="10">Mes: 2026-10 (Ronda)</text>
+    <text x="15" y="72" fill="#334155" font-family="system-ui, sans-serif" font-size="10">Cobertura: 98.5%</text>
+    <text x="15" y="90" fill="#0f172a" font-family="Courier, monospace" font-size="9">hash_integridad:</text>
+    <text x="15" y="105" fill="#0f172a" font-family="Courier, monospace" font-size="8">e3b0c44298fc1c149af...</text>
+    <text x="15" y="122" fill="#16a34a" font-family="system-ui, sans-serif" font-weight="700" font-size="9">✔ SHA-256 Verificado</text>
+  </g>
+
+  <!-- Barra informativa inferior -->
+  <rect x="60" y="220" width="780" height="50" rx="8" fill="#ffffff" stroke="#e2e8f0"/>
+  <text x="450" y="243" fill="#0f172a" font-family="system-ui, sans-serif" font-weight="700" font-size="11" text-anchor="middle">Principio de No Repudio: Si se intentara editar la base de datos externamente sin la app,</text>
+  <text x="450" y="258" fill="#dc2626" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">la huella SHA-256 no coincidirá con el snapshot registrado, denunciando la adulteración en auditoría.</text>
+</svg>

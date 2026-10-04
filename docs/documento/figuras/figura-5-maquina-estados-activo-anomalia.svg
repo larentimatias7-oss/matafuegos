@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 340" width="100%" height="100%">
+  <rect width="880" height="340" fill="#f8fafc" rx="12"/>
+  
+  <text x="440" y="35" fill="#0f172a" font-family="system-ui, sans-serif" font-weight="800" font-size="14" text-anchor="middle">MÁQUINA DE ESTADOS: ACTIVO &amp; ANOMALÍAS</text>
+
+  <!-- Estado OPERATIVO -->
+  <g transform="translate(60, 90)">
+    <rect width="190" height="90" rx="12" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+    <text x="95" y="35" fill="#16a34a" font-family="system-ui, sans-serif" font-weight="800" font-size="15" text-anchor="middle">OPERATIVO</text>
+    <text x="95" y="55" fill="#334155" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">En puesto reglamentario</text>
+    <text x="95" y="70" fill="#16a34a" font-family="system-ui, sans-serif" font-weight="600" font-size="10" text-anchor="middle">Listo para actuar</text>
+  </g>
+
+  <!-- Transición Falla -->
+  <path d="M 250 120 L 370 120" stroke="#dc2626" stroke-width="2.5" fill="none"/>
+  <polygon points="370,115 380,120 370,125" fill="#dc2626"/>
+  <text x="315" y="110" fill="#dc2626" font-family="system-ui, sans-serif" font-weight="700" font-size="10" text-anchor="middle">Inspección Fallida</text>
+  <text x="315" y="140" fill="#64748b" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle">Abre caso ABIERTO</text>
+
+  <!-- Estado EN TALLER -->
+  <g transform="translate(380, 90)">
+    <rect width="190" height="90" rx="12" fill="#fff7ed" stroke="#ea580c" stroke-width="2"/>
+    <text x="95" y="35" fill="#c2410c" font-family="system-ui, sans-serif" font-weight="800" font-size="15" text-anchor="middle">EN_TALLER</text>
+    <text x="95" y="55" fill="#334155" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">Enviado con Orden Servicio</text>
+    <text x="95" y="70" fill="#c2410c" font-family="system-ui, sans-serif" font-weight="600" font-size="10" text-anchor="middle">Con cilindro sustituto</text>
+  </g>
+
+  <!-- Transición Retorno de Taller -->
+  <path d="M 475 180 L 475 240 L 155 240 L 155 180" stroke="#16a34a" stroke-width="2.5" fill="none"/>
+  <polygon points="150,185 155,180 160,185" fill="#16a34a"/>
+  <text x="315" y="230" fill="#16a34a" font-family="system-ui, sans-serif" font-weight="700" font-size="10" text-anchor="middle">Retorno con Remito y Marbete Nuevo (Caso RESUELTO)</text>
+
+  <!-- Transición Descarte / Fin vida útil -->
+  <path d="M 570 135 L 690 135" stroke="#64748b" stroke-width="2" stroke-dasharray="4" fill="none"/>
+  <polygon points="690,130 700,135 690,140" fill="#64748b"/>
+  <text x="635" y="125" fill="#64748b" font-family="system-ui, sans-serif" font-weight="700" font-size="10" text-anchor="middle">Fallo PH / &gt;20 Años</text>
+
+  <!-- Estado DE BAJA -->
+  <g transform="translate(700, 90)">
+    <rect width="140" height="90" rx="12" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="70" y="35" fill="#475569" font-family="system-ui, sans-serif" font-weight="800" font-size="14" text-anchor="middle">DE_BAJA</text>
+    <text x="70" y="55" fill="#64748b" font-family="system-ui, sans-serif" font-size="10" text-anchor="middle">Chatarrización</text>
+    <text x="70" y="70" fill="#64748b" font-family="system-ui, sans-serif" font-size="10" text-anchor="middle">Baja contable</text>
+  </g>
+
+  <!-- Leyenda inferior -->
+  <rect x="60" y="275" width="760" height="40" rx="8" fill="#ffffff" stroke="#e2e8f0"/>
+  <text x="440" y="300" fill="#334155" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">Regla de Negocio: Mientras un extintor está EN_TALLER, se exige la asignación de temp_replacement_code para mantener cubierto el puesto.</text>
+</svg>

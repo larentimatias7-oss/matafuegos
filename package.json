@@ -25,7 +25,8 @@
     "restore": "node scripts/restore-db.js",
     "crear-admin": "node scripts/crear-admin.js",
     "docs:check": "node scripts/docs-check.js",
-    "docs:generate": "node scripts/docs-generate.js"
+    "docs:generate": "node scripts/docs-generate.js",
+    "docs:pdf": "node scripts/generate-manual-pdf.js"
   },
   "keywords": [],
   "author": "",

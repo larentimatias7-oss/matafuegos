@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 350" width="100%" height="100%">
+  <rect width="880" height="350" fill="#f8fafc" rx="12"/>
+  <text x="440" y="30" fill="#0f172a" font-family="system-ui, sans-serif" font-weight="800" font-size="14" text-anchor="middle">MAPA DE CALOR: MATRIZ DE ROLES Y PERMISOS (RBAC)</text>
+
+  <!-- Encabezados de tabla -->
+  <g transform="translate(60, 55)">
+    <rect x="0" y="0" width="220" height="30" fill="#0f172a"/>
+    <text x="110" y="20" fill="#ffffff" font-family="system-ui, sans-serif" font-weight="700" font-size="11" text-anchor="middle">MÓDULO / ACCIÓN</text>
+
+    <rect x="225" y="0" width="90" height="30" fill="#0f172a"/>
+    <text x="270" y="20" fill="#ffffff" font-family="system-ui, sans-serif" font-weight="700" font-size="10" text-anchor="middle">SUPERADMIN</text>
+
+    <rect x="320" y="0" width="85" height="30" fill="#0f172a"/>
+    <text x="362" y="20" fill="#ffffff" font-family="system-ui, sans-serif" font-weight="700" font-size="10" text-anchor="middle">ADMIN</text>
+
+    <rect x="410" y="0" width="85" height="30" fill="#0f172a"/>
+    <text x="452" y="20" fill="#ffffff" font-family="system-ui, sans-serif" font-weight="700" font-size="10" text-anchor="middle">SUPERVISOR</text>
+
+    <rect x="500" y="0" width="85" height="30" fill="#0f172a"/>
+    <text x="542" y="20" fill="#ffffff" font-family="system-ui, sans-serif" font-weight="700" font-size="10" text-anchor="middle">INSPECTOR</text>
+
+    <rect x="590" y="0" width="85" height="30" fill="#0f172a"/>
+    <text x="632" y="20" fill="#ffffff" font-family="system-ui, sans-serif" font-weight="700" font-size="10" text-anchor="middle">AUDITOR</text>
+
+    <rect x="680" y="0" width="85" height="30" fill="#0f172a"/>
+    <text x="722" y="20" fill="#ffffff" font-family="system-ui, sans-serif" font-weight="700" font-size="10" text-anchor="middle">GERENCIA</text>
+  </g>
+
+  <!-- Filas -->
+  <!-- Fila 1 -->
+  <g transform="translate(60, 90)">
+    <rect x="0" y="0" width="220" height="28" fill="#ffffff" stroke="#e2e8f0"/>
+    <text x="10" y="18" fill="#1e293b" font-family="system-ui, sans-serif" font-size="11">Crear / Editar Extintores</text>
+    <rect x="225" y="0" width="90" height="28" fill="#dcfce7"/><text x="270" y="18" fill="#16a34a" font-weight="700" text-anchor="middle">SÍ</text>
+    <rect x="320" y="0" width="85" height="28" fill="#dcfce7"/><text x="362" y="18" fill="#16a34a" font-weight="700" text-anchor="middle">SÍ</text>
+    <rect x="410" y="0" width="85" height="28" fill="#fee2e2"/><text x="452" y="18" fill="#dc2626" font-weight="700" text-anchor="middle">NO</text>
+    <rect x="500" y="0" width="85" height="28" fill="#fee2e2"/><text x="542" y="18" fill="#dc2626" font-weight="700" text-anchor="middle">NO</text>
+    <rect x="590" y="0" width="85" height="28" fill="#fee2e2"/><text x="632" y="18" fill="#dc2626" font-weight="700" text-anchor="middle">NO</text>
+    <rect x="680" y="0" width="85" height="28" fill="#fee2e2"/><text x="722" y="18" fill="#dc2626" font-weight="700" text-anchor="middle">NO</text>
+  </g>
+
+  <!-- Fila 2 -->
+  <g transform="translate(60, 122)">
+    <rect x="0" y="0" width="220" height="28" fill="#f8fafc" stroke="#e2e8f0"/>
+    <text x="10" y="18" fill="#1e293b" font-family="system-ui, sans-serif" font-size="11">Registrar Inspección</text>
+    <rect x="225" y="0" width="90" height="28" fill="#dcfce7"/><text x="270" y="18" fill="#16a34a" font-weight="700" text-anchor="middle">SÍ</text>
+    <rect x="320" y="0" width="85" height="28" fill="#dcfce7"/><text x="362" y="18" fill="#16a34a" font-weight="700" text-anchor="middle">SÍ</text>
+    <rect x="410" y="0" width="85" height="28" fill="#dcfce7"/><text x="452" y="18" fill="#16a34a" font-weight="700" text-anchor="middle">SÍ</text>
+    <rect x="500" y="0" width="85" height="28" fill="#dcfce7"/><text x="542" y="18" fill="#16a34a" font-weight="700" text-anchor="middle">SÍ*</text>
+    <rect x="590" y="0" width="85" height="28" fill="#fee2e2"/><text x="632" y="18" fill="#dc2626" font-weight="700" text-anchor="middle">NO</text>
+    <rect x="680" y="0" width="85" height="28" fill="#fee2e2"/><text x="722" y="18" fill="#dc2626" font-weight="700" text-anchor="middle">NO</text>
+  </g>
+
+  <!-- Fila 3 -->
+  <g transform="translate(60, 154)">
+    <rect x="0" y="0" width="220" height="28" fill="#ffffff" stroke="#e2e8f0"/>
+    <text x="10" y="18" fill="#1e293b" font-family="system-ui, sans-serif" font-size="11">Cerrar / Reabrir Rondas</text>
+    <rect x="225" y="0" width="90" height="28" fill="#dcfce7"/><text x="270" y="18" fill="#16a34a" font-weight="700" text-anchor="middle">SÍ</text>
+    <rect x="320" y="0" width="85" height="28" fill="#dcfce7"/><text x="362" y="18" fill="#16a34a" font-weight="700" text-anchor="middle">SÍ</text>
+    <rect x="410" y="0" width="85" height="28" fill="#fef3c7"/><text x="452" y="18" fill="#d97706" font-weight="700" text-anchor="middle">REABRIR</text>
+    <rect x="500" y="0" width="85" height="28" fill="#fee2e2"/><text x="542" y="18" fill="#dc2626" font-weight="700" text-anchor="middle">NO</text>
+    <rect x="590" y="0" width="85" height="28" fill="#fee2e2"/><text x="632" y="18" fill="#dc2626" font-weight="700" text-anchor="middle">NO</text>
+    <rect x="680" y="0" width="85" height="28" fill="#fee2e2"/><text x="722" y="18" fill="#dc2626" font-weight="700" text-anchor="middle">NO</text>
+  </g>
+
+  <!-- Fila 4 -->
+  <g transform="translate(60, 186)">
+    <rect x="0" y="0" width="220" height="28" fill="#f8fafc" stroke="#e2e8f0"/>
+    <text x="10" y="18" fill="#1e293b" font-family="system-ui, sans-serif" font-size="11">Tablero de Gerencia (BI)</text>
+    <rect x="225" y="0" width="90" height="28" fill="#dcfce7"/><text x="270" y="18" fill="#16a34a" font-weight="700" text-anchor="middle">SÍ</text>
+    <rect x="320" y="0" width="85" height="28" fill="#dcfce7"/><text x="362" y="18" fill="#16a34a" font-weight="700" text-anchor="middle">SÍ</text>
+    <rect x="410" y="0" width="85" height="28" fill="#fee2e2"/><text x="452" y="18" fill="#dc2626" font-weight="700" text-anchor="middle">NO</text>
+    <rect x="500" y="0" width="85" height="28" fill="#fee2e2"/><text x="542" y="18" fill="#dc2626" font-weight="700" text-anchor="middle">NO</text>
+    <rect x="590" y="0" width="85" height="28" fill="#dcfce7"/><text x="632" y="18" fill="#16a34a" font-weight="700" text-anchor="middle">SÍ</text>
+    <rect x="680" y="0" width="85" height="28" fill="#dcfce7"/><text x="722" y="18" fill="#16a34a" font-weight="700" text-anchor="middle">SÍ</text>
+  </g>
+
+  <!-- Fila 5 -->
+  <g transform="translate(60, 218)">
+    <rect x="0" y="0" width="220" height="28" fill="#ffffff" stroke="#e2e8f0"/>
+    <text x="10" y="18" fill="#1e293b" font-family="system-ui, sans-serif" font-size="11">Backups y Configuración TI</text>
+    <rect x="225" y="0" width="90" height="28" fill="#dcfce7"/><text x="270" y="18" fill="#16a34a" font-weight="700" text-anchor="middle">SÍ</text>
+    <rect x="320" y="0" width="85" height="28" fill="#fee2e2"/><text x="362" y="18" fill="#dc2626" font-weight="700" text-anchor="middle">NO</text>
+    <rect x="410" y="0" width="85" height="28" fill="#fee2e2"/><text x="452" y="18" fill="#dc2626" font-weight="700" text-anchor="middle">NO</text>
+    <rect x="500" y="0" width="85" height="28" fill="#fee2e2"/><text x="542" y="18" fill="#dc2626" font-weight="700" text-anchor="middle">NO</text>
+    <rect x="590" y="0" width="85" height="28" fill="#fee2e2"/><text x="632" y="18" fill="#dc2626" font-weight="700" text-anchor="middle">NO</text>
+    <rect x="680" y="0" width="85" height="28" fill="#fee2e2"/><text x="722" y="18" fill="#dc2626" font-weight="700" text-anchor="middle">NO</text>
+  </g>
+
+  <text x="440" y="280" fill="#64748b" font-family="system-ui, sans-serif" font-size="10" text-anchor="middle">* El rol INSPECTOR tiene su alcance limitado exclusivamente a los pisos y edificios definidos en usuarios_sectores.</text>
+</svg>
