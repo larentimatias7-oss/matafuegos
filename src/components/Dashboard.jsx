@@ -188,14 +188,14 @@ export default function Dashboard({
       <div className="dashboard-kpi-grid">
         {/* KPI 1: Cobertura de la Ronda */}
         <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.5rem' }}>
             <span className="label">Avance Ronda Mensual</span>
             <span className="status-badge pending" style={{ fontSize: '0.72rem' }}>
               {metrics.coveragePercentage}% Cobertura
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', marginBottom: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '2.1rem', fontWeight: 900, color: 'var(--text-main)' }}>
               {metrics.inspectedThisMonth}
             </span>
@@ -222,11 +222,11 @@ export default function Dashboard({
             }} />
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-            <span className="status-badge ok" style={{ padding: '0.2rem 0.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+            <span className="status-badge ok" style={{ padding: '0.25rem 0.5rem' }}>
               <CheckCircle size={14} weight="bold" aria-hidden="true" /> {metrics.inspectedThisMonth - metrics.failedThisMonth} OK
             </span>
-            <span className="status-badge pending" style={{ padding: '0.2rem 0.5rem' }}>
+            <span className="status-badge pending" style={{ padding: '0.25rem 0.5rem' }}>
               <Clock size={14} weight="bold" aria-hidden="true" /> {metrics.pendingThisMonth} Pendientes
             </span>
           </div>
@@ -234,11 +234,11 @@ export default function Dashboard({
 
         {/* KPI 2: Casos / Anomalías Detectadas */}
         <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.5rem' }}>
             <span className="label">Anomalías y Casos</span>
             <WarningCircle size={20} weight="bold" color="var(--status-fault-text)" aria-hidden="true" />
           </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', marginBottom: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '2.1rem', fontWeight: 900, color: metrics.openCasesCount > 0 ? 'var(--status-fault-text)' : 'var(--text-main)' }}>
               {metrics.openCasesCount || metrics.failedThisMonth}
             </span>
@@ -250,6 +250,7 @@ export default function Dashboard({
             <button 
               onClick={() => onNavigate('cases')}
               className="btn btn-secondary btn-sm btn-full"
+              style={{ minHeight: '40px', justifyContent: 'center', textAlign: 'center' }}
             >
               <span>Ver Casos de Anomalías</span>
               <ArrowRight size={14} weight="bold" aria-hidden="true" />
@@ -259,11 +260,11 @@ export default function Dashboard({
 
         {/* KPI 3: Vencimientos Recarga Anual */}
         <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.5rem' }}>
             <span className="label">Vto. Carga Anual</span>
             <ShieldWarning size={20} weight="bold" color={metrics.expiredCharges > 0 ? 'var(--status-expired-text)' : 'var(--status-pending-text)'} aria-hidden="true" />
           </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', marginBottom: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '2.1rem', fontWeight: 900, color: metrics.expiredCharges > 0 ? 'var(--status-expired-text)' : 'var(--text-main)' }}>
               {metrics.expiredCharges}
             </span>
@@ -271,7 +272,7 @@ export default function Dashboard({
               vencidos actualmente
             </span>
           </div>
-          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
             <span>• 15 días: <strong>{metrics.expiringCharge15}</strong> por vencer</span>
             <span>• 30 días: <strong>{metrics.expiringCharge30}</strong> por vencer</span>
             <span>• 60 días: <strong>{metrics.expiringCharge60}</strong> por vencer</span>
@@ -280,11 +281,11 @@ export default function Dashboard({
 
         {/* KPI 4: Prueba Hidráulica (PH 5 años) */}
         <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.5rem' }}>
             <span className="label">Prueba Hidráulica (PH)</span>
             <CalendarCheck size={20} weight="bold" color="var(--status-info-text)" aria-hidden="true" />
           </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', marginBottom: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '2.1rem', fontWeight: 900, color: 'var(--status-info-text)' }}>
               {metrics.expiringPhSoon}
             </span>
@@ -292,7 +293,7 @@ export default function Dashboard({
               en los próximos 90 días
             </span>
           </div>
-          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>
             Coordinar rotación y retiro escalonado con taller habilitado IRAM.
           </p>
         </div>

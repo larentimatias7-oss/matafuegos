@@ -503,13 +503,13 @@ export default function GerenciaDashboard({ currentUser }) {
             <span className="panel-tag">Meta Reglamentaria: 95%</span>
           </div>
 
-          <div style={{ position: 'relative', width: '100%', height: '220px' }}>
+            <div style={{ position: 'relative', width: '100%', height: '220px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <svg
               width="100%"
               height="100%"
               viewBox="0 0 500 200"
               preserveAspectRatio="none"
-              style={{ overflow: 'visible' }}
+              style={{ overflow: 'visible', minWidth: '320px' }}
             >
               {/* Grid Lines */}
               <line x1="40" y1="20" x2="490" y2="20" stroke="var(--border-color)" strokeDasharray="3 3" opacity="0.6" />
@@ -640,7 +640,7 @@ export default function GerenciaDashboard({ currentUser }) {
           </div>
 
           {/* Legend */}
-          <div style={{ display: 'flex', gap: '1.25rem', justifyContent: 'center', fontSize: '0.78rem', fontWeight: 600 }}>
+          <div className="chart-legend-wrap">
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <span style={{ width: '12px', height: '3px', background: 'var(--milicic-orange)', borderRadius: '2px' }} />
               <span>Cumplimiento Ronda Mensual</span>
@@ -713,13 +713,13 @@ export default function GerenciaDashboard({ currentUser }) {
           </div>
 
           {/* Stacked Bars SVG */}
-          <div style={{ position: 'relative', width: '100%', height: '170px' }}>
+          <div style={{ position: 'relative', width: '100%', height: '170px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <svg
               width="100%"
               height="100%"
               viewBox="0 0 500 160"
               preserveAspectRatio="none"
-              style={{ overflow: 'visible' }}
+              style={{ overflow: 'visible', minWidth: '320px' }}
             >
               {vencimientosData.map((item, idx) => {
                 const totalBars = vencimientosData.length;
@@ -791,22 +791,22 @@ export default function GerenciaDashboard({ currentUser }) {
           </div>
 
           {/* Summary Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Cargas Anuales</div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--milicic-orange)' }}>
+          <div className="vencimientos-summary-grid">
+            <div style={{ textAlign: 'center', background: 'var(--bg-app)', padding: '0.65rem 0.5rem', borderRadius: 'var(--radius-sm)' }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>Cargas Anuales</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--milicic-orange)', marginTop: '0.15rem' }}>
                 {vencimientosTotales.cargas} unid.
               </div>
             </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Pruebas Hidrostáticas</div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#8b5cf6' }}>
+            <div style={{ textAlign: 'center', background: 'var(--bg-app)', padding: '0.65rem 0.5rem', borderRadius: 'var(--radius-sm)' }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>Pruebas Hidrostáticas</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#8b5cf6', marginTop: '0.15rem' }}>
                 {vencimientosTotales.ph} unid.
               </div>
             </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Presupuesto Anual Est.</div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)' }}>
+            <div style={{ textAlign: 'center', background: 'var(--bg-app)', padding: '0.65rem 0.5rem', borderRadius: 'var(--radius-sm)' }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>Presupuesto Anual Est.</div>
+              <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '0.15rem' }}>
                 $ {vencimientosTotales.costo.toLocaleString('es-AR')}
               </div>
             </div>
@@ -839,12 +839,12 @@ export default function GerenciaDashboard({ currentUser }) {
               return rows.map((r) => {
                 const pct = Math.round((r.count / total) * 100);
                 return (
-                  <div key={r.label} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.78rem' }}>
-                    <span style={{ width: '85px', color: 'var(--text-muted)', fontWeight: 600 }}>{r.label}</span>
-                    <div style={{ flex: 1, height: '8px', background: 'var(--border-color)', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div key={r.label} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', flexWrap: 'wrap' }}>
+                    <span style={{ minWidth: '70px', color: 'var(--text-muted)', fontWeight: 600 }}>{r.label}</span>
+                    <div style={{ flex: 1, minWidth: '80px', height: '8px', background: 'var(--border-color)', borderRadius: '4px', overflow: 'hidden' }}>
                       <div style={{ width: `${pct}%`, height: '100%', background: r.color }} />
                     </div>
-                    <span style={{ width: '45px', textAlign: 'right', fontWeight: 700, color: 'var(--text-main)' }}>
+                    <span style={{ minWidth: '45px', textAlign: 'right', fontWeight: 700, color: 'var(--text-main)' }}>
                       {r.count} ({pct}%)
                     </span>
                   </div>
