@@ -196,6 +196,24 @@ router.post('/login', validateBody(LoginSchema), async (req, res) => {
   }
 });
 
+// 2.5 GET /api/auth/pin-operators - Lista de colaboradores autorizados para cambio rápido en dispositivo compartido
+router.get('/pin-operators', (req, res) => {
+  try {
+    const operators = db.prepare(`
+      SELECT id, nombre, apellido, email, rol,
+             (CASE WHEN pin_hash IS NOT NULL THEN 1 ELSE 0 END) as has_pin
+      FROM usuarios
+      WHERE activo = 1 AND rol IN ('INSPECTOR', 'SUPERVISOR', 'ADMIN', 'SUPERADMIN')
+      ORDER BY nombre ASC, apellido ASC
+    `).all();
+
+    return res.json({ success: true, data: operators });
+  } catch (err) {
+    console.error('[PIN OPERATORS ERROR]', err);
+    return res.status(500).json({ success: false, error: 'Error al consultar colaboradores' });
+  }
+});
+
 // 3. POST /api/auth/pin-switch - Cambio rápido de usuario en dispositivo compartido
 router.post('/pin-switch', validateBody(PinSwitchSchema), async (req, res) => {
   const { pin, usuario_id, email } = req.body;

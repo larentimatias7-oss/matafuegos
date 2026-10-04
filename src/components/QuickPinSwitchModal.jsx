@@ -1,13 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   X, 
   DeviceMobile, 
-  Key, 
   Backspace, 
   Check, 
   WarningCircle, 
   ArrowsClockwise,
-  UserCheck
+  Info
 } from '@phosphor-icons/react';
 
 export default function QuickPinSwitchModal({ onClose, onSwitchSuccess }) {
@@ -21,13 +20,22 @@ export default function QuickPinSwitchModal({ onClose, onSwitchSuccess }) {
   const fetchInspectors = async () => {
     try {
       setLoadingUsers(true);
-      const res = await fetch('/api/users?activo=1');
+      setError(null);
+      // Intentar primero con el endpoint público de operadores de turno
+      let res = await fetch('/api/auth/pin-operators');
+      if (!res.ok) {
+        // Fallback a /api/users si tiene permisos
+        res = await fetch('/api/users?activo=1');
+      }
       const data = await res.json();
-      if (data.success) {
+      if (data.success && Array.isArray(data.data)) {
         setUsers(data.data);
+      } else {
+        setError('No se pudo obtener la lista de colaboradores.');
       }
     } catch (e) {
       console.warn('Error fetching inspectors:', e);
+      setError('Error de conexión al cargar colaboradores.');
     } finally {
       setLoadingUsers(false);
     }
@@ -37,25 +45,37 @@ export default function QuickPinSwitchModal({ onClose, onSwitchSuccess }) {
     fetchInspectors();
   }, []);
 
-  const handleDigit = (digit) => {
+  const handleDigit = useCallback((digit) => {
+    if (!selectedUser) {
+      setError('Seleccione primero su nombre en la lista de colaboradores');
+      return;
+    }
+    if (selectedUser.has_pin === 0) {
+      setError('Este colaborador no tiene PIN configurado. Ingrese con contraseña para asignarlo.');
+      return;
+    }
     if (pin.length < 6) {
       setPin(prev => prev + digit);
       setError(null);
     }
-  };
+  }, [pin, selectedUser]);
 
-  const handleDeleteDigit = () => {
+  const handleDeleteDigit = useCallback(() => {
     setPin(prev => prev.slice(0, -1));
     setError(null);
-  };
+  }, []);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!selectedUser) {
-      setError('Seleccione un colaborador');
+      setError('Seleccione su nombre en la lista de colaboradores');
+      return;
+    }
+    if (selectedUser.has_pin === 0) {
+      setError('Este usuario no tiene PIN asignado. Ingrese inicialmente con contraseña para crear su PIN.');
       return;
     }
     if (pin.length < 4) {
-      setError('El PIN debe tener al menos 4 números');
+      setError('El PIN debe tener entre 4 y 6 números');
       return;
     }
 
@@ -75,19 +95,44 @@ export default function QuickPinSwitchModal({ onClose, onSwitchSuccess }) {
         setPin('');
       }
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Error al validar el PIN');
       setPin('');
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [selectedUser, pin, onSwitchSuccess]);
+
+  // Soporte para teclado físico de computadora o tablet
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ignorar si el usuario está interactuando con el select
+      if (e.target.tagName === 'SELECT') return;
+
+      if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
+        handleDigit(e.key);
+      } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        handleDeleteDigit();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSubmit();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleDigit, handleDeleteDigit, handleSubmit, onClose]);
 
   return (
     <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true">
       <div 
         className="modal-content"
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: '420px', textAlign: 'center', padding: '1.5rem' }}
+        style={{ maxWidth: '420px', textAlign: 'center', padding: '1.5rem', maxHeight: '92vh', overflowY: 'auto' }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
@@ -116,18 +161,24 @@ export default function QuickPinSwitchModal({ onClose, onSwitchSuccess }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '0.4rem'
+            gap: '0.4rem',
+            lineHeight: 1.35
           }}>
-            <WarningCircle size={16} weight="bold" />
+            <WarningCircle size={18} weight="bold" style={{ flexShrink: 0 }} />
             <span>{error}</span>
           </div>
         )}
 
         {/* User Picker */}
         <div style={{ marginBottom: '1.25rem', textAlign: 'left' }}>
-          <label className="form-label" htmlFor="user-select">Colaborador en Turno *</label>
+          <label className="form-label" htmlFor="user-select" style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--text-main)' }}>
+            Colaborador en Turno *
+          </label>
           {loadingUsers ? (
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Cargando usuarios...</div>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 0' }}>
+              <ArrowsClockwise size={16} className="animate-spin" />
+              <span>Cargando colaboradores disponibles...</span>
+            </div>
           ) : (
             <select
               id="user-select"
@@ -136,16 +187,44 @@ export default function QuickPinSwitchModal({ onClose, onSwitchSuccess }) {
               onChange={(e) => {
                 const found = users.find(u => u.id === e.target.value);
                 setSelectedUser(found || null);
+                setPin('');
                 setError(null);
+              }}
+              style={{
+                width: '100%',
+                padding: '0.55rem 0.75rem',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-input)',
+                color: 'var(--text-main)',
+                fontSize: '0.875rem',
+                fontWeight: 600
               }}
             >
               <option value="">-- Seleccione su nombre --</option>
               {users.map(u => (
                 <option key={u.id} value={u.id}>
-                  {u.nombre} {u.apellido} ({u.rol})
+                  {u.nombre} {u.apellido} ({u.rol}){u.has_pin === 0 ? ' • [Sin PIN]' : ''}
                 </option>
               ))}
             </select>
+          )}
+
+          {selectedUser && selectedUser.has_pin === 0 && (
+            <div style={{
+              marginTop: '0.5rem',
+              padding: '0.45rem 0.65rem',
+              background: 'var(--status-pending-bg, #fef3c7)',
+              color: 'var(--status-pending-text, #92400e)',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '0.75rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem'
+            }}>
+              <Info size={16} weight="bold" style={{ flexShrink: 0 }} />
+              <span>Este colaborador no tiene PIN configurado. Ingrese con contraseña para definirlo en su perfil.</span>
+            </div>
           )}
         </div>
 
@@ -200,7 +279,8 @@ export default function QuickPinSwitchModal({ onClose, onSwitchSuccess }) {
             onClick={handleDeleteDigit}
             className="btn btn-secondary"
             style={{ height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            title="Borrar"
+            title="Borrar dígito"
+            aria-label="Borrar dígito"
           >
             <Backspace size={20} weight="bold" />
           </button>
@@ -220,16 +300,23 @@ export default function QuickPinSwitchModal({ onClose, onSwitchSuccess }) {
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={submitting || pin.length < 4 || !selectedUser}
+            disabled={submitting}
             className="btn btn-primary"
-            style={{ height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            title="Confirmar"
+            style={{
+              height: '52px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: (!selectedUser || pin.length < 4 || selectedUser.has_pin === 0) ? 0.5 : 1
+            }}
+            title="Confirmar ingreso con PIN"
+            aria-label="Confirmar ingreso con PIN"
           >
             {submitting ? <ArrowsClockwise size={20} className="animate-spin" /> : <Check size={22} weight="bold" />}
           </button>
         </div>
 
-        <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
           <button type="button" onClick={onClose} className="btn btn-secondary btn-sm">
             Cancelar
           </button>
