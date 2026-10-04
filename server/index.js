@@ -154,6 +154,25 @@ if (fs.existsSync(rawDocsPath)) {
   app.use('/docs', express.static(rawDocsPath));
 }
 
+// Direct friendly endpoints for PDF downloads and Executive Presentation
+app.get(['/manual.pdf', '/manual-tecnico.pdf'], (req, res) => {
+  const file = path.join(__dirname, '../docs/documento/Milicic-FireControl365-Manual-Tecnico.pdf');
+  if (fs.existsSync(file)) return res.sendFile(file);
+  return res.status(404).send('Manual Técnico no encontrado.');
+});
+
+app.get(['/resumen.pdf', '/resumen-ejecutivo.pdf'], (req, res) => {
+  const file = path.join(__dirname, '../docs/documento/Milicic-FireControl365-Resumen-Ejecutivo.pdf');
+  if (fs.existsSync(file)) return res.sendFile(file);
+  return res.status(404).send('Resumen Ejecutivo no encontrado.');
+});
+
+app.get(['/presentacion', '/dossier'], (req, res) => {
+  const file = path.join(__dirname, '../docs/documento/presentacion.html');
+  if (fs.existsSync(file)) return res.sendFile(file);
+  return res.redirect('/resumen.pdf');
+});
+
 // Route specifically for DESIGN.md
 app.get('/DESIGN.md', (req, res) => {
   if (req.accepts('html')) {

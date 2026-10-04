@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Milicic FireControl 365 — Dossier Oficial de Presentación</title>
+  <style>
+    :root {
+      --primary: #ea580c;
+      --primary-hover: #c2410c;
+      --slate-900: #0f172a;
+      --slate-800: #1e293b;
+      --slate-700: #334155;
+      --slate-100: #f1f5f9;
+      --border: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f8fafc;
+      color: var(--text-main);
+      line-height: 1.5;
+    }
+    header {
+      background: linear-gradient(135deg, var(--slate-900) 0%, var(--slate-800) 100%);
+      color: #ffffff;
+      padding: 2.5rem 1.5rem 2rem;
+      border-top: 6px solid var(--primary);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    .header-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+    }
+    .brand-box {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+    .logo-badge {
+      background: #ffffff;
+      padding: 8px 18px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    .logo-badge img { height: 38px; }
+    .title-area h1 {
+      font-size: 1.85rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .title-area p {
+      color: #cbd5e1;
+      font-size: 0.95rem;
+      margin-top: 0.2rem;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 0.85rem;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.25rem;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.88rem;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(234, 88, 12, 0.35);
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+    .btn-secondary {
+      background: #ffffff;
+      color: var(--slate-900);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .btn-secondary:hover {
+      background: #f1f5f9;
+      transform: translateY(-1px);
+    }
+    .main-wrap {
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+    }
+    .meta-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .meta-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    }
+    .meta-card .label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .meta-card .val {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--slate-900);
+      margin-top: 0.25rem;
+    }
+    .meta-card .sub {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.15rem;
+    }
+    .section-title {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--slate-900);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .section-title::before {
+      content: "";
+      width: 4px;
+      height: 1.2rem;
+      background: var(--primary);
+      border-radius: 2px;
+      display: inline-block;
+    }
+    .viewer-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+      margin-bottom: 2.5rem;
+    }
+    .viewer-header {
+      background: var(--slate-900);
+      color: #ffffff;
+      padding: 0.85rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .tabs-bar {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .tab-btn {
+      background: var(--slate-800);
+      color: #cbd5e1;
+      padding: 0.45rem 0.9rem;
+      border-radius: 4px;
+      border: 1px solid var(--slate-700);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+    .pdf-frame {
+      width: 100%;
+      height: 800px;
+      border: none;
+      display: block;
+      background: #525659;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2.5rem;
+    }
+    .feature-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    }
+    .feature-card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--slate-900);
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .feature-card p {
+      font-size: 0.85rem;
+      color: #475569;
+      line-height: 1.45;
+    }
+    .tag {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .tag-impl { background: #dcfce7; color: #166534; }
+    footer {
+      background: var(--slate-900);
+      color: #94a3b8;
+      text-align: center;
+      padding: 1.75rem 1rem;
+      font-size: 0.82rem;
+      border-top: 1px solid var(--slate-800);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-container">
+      <div class="brand-box">
+        <div class="logo-badge">
+          <img src="/logo-milicic.svg" alt="Milicic S.A." onerror="this.src='/logo-milicic.png'" />
+        </div>
+        <div class="title-area">
+          <h1>Milicic FireControl 365</h1>
+          <p>Dossier Oficial de Presentación y Entrega a la Dirección</p>
+        </div>
+      </div>
+      <div class="hero-actions">
+        <a href="/resumen.pdf" target="_blank" class="btn btn-primary">
+          📄 Descargar Resumen (PDF 4 Págs)
+        </a>
+        <a href="/manual.pdf" target="_blank" class="btn btn-secondary">
+          📘 Descargar Manual Completo (PDF 28 Págs)
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <div class="main-wrap">
+    <div class="meta-cards">
+      <div class="meta-card">
+        <div class="label">Población de Activos</div>
+        <div class="val">130 Extintores</div>
+        <div class="sub">Base Central Rosario (11 Áreas)</div>
+      </div>
+      <div class="meta-card">
+        <div class="label">Velocidad en Campo</div>
+        <div class="val">&le; 12 Segundos</div>
+        <div class="sub">Escaneo QR + Checklist 6 Puntos</div>
+      </div>
+      <div class="meta-card">
+        <div class="label">Resiliencia Operativa</div>
+        <div class="val">100% Offline</div>
+        <div class="sub">PWA + Almacén Local IndexedDB</div>
+      </div>
+      <div class="meta-card">
+        <div class="label">Integridad Pericial</div>
+        <div class="val">Inmutable (405)</div>
+        <div class="sub">Sin borrado ni edición de auditoría</div>
+      </div>
+    </div>
+
+    <div class="section-title">Visualizador Interactivo de Documentos Oficiales</div>
+    <div class="viewer-card">
+      <div class="viewer-header">
+        <div class="tabs-bar">
+          <button class="tab-btn active" onclick="switchPdf('/resumen.pdf', this)">
+            Resumen Ejecutivo (4 Páginas)
+          </button>
+          <button class="tab-btn" onclick="switchPdf('/manual.pdf', this)">
+            Manual Técnico Completo (28 Páginas)
+          </button>
+        </div>
+        <a id="download-current-btn" href="/resumen.pdf" target="_blank" style="color: #ffffff; text-decoration: none; font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+          Abrir en Pestaña Completa &rarr;
+        </a>
+      </div>
+      <iframe id="pdf-frame" class="pdf-frame" src="/resumen.pdf"></iframe>
+    </div>
+
+    <div class="section-title">Pilares de Diseño y Garantías Verificables</div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <h3>⚡ Operación Móvil Ultrarrápida <span class="tag tag-impl">Implementado</span></h3>
+        <p>Los inspectores leen el código QR unívoco con la cámara del teléfono y completan los 6 puntos normativos IRAM 3517-2 en menos de 15 segundos sin instalar aplicaciones desde tiendas comerciales.</p>
+      </div>
+      <div class="feature-card">
+        <h3>🛡️ Resiliencia en Subsuelos y Depósitos <span class="tag tag-impl">Implementado</span></h3>
+        <p>Arquitectura PWA con base local IndexedDB. Permite realizar inspecciones completas sin señal celular. Al recuperar conectividad, las rondas se sincronizan automáticamente con resolución segura de conflictos.</p>
+      </div>
+      <div class="feature-card">
+        <h3>🔒 Evidencia Pericial Inmutable <span class="tag tag-impl">Implementado</span></h3>
+        <p>Middleware estricto que rechaza con HTTP 405 Method Not Allowed cualquier intento de edición o borrado de inspecciones. Historial append-only auditado para ART, IRAM y peritajes ante siniestros.</p>
+      </div>
+      <div class="feature-card">
+        <h3>📊 Tablero Ejecutivo Power BI Style <span class="tag tag-impl">Implementado</span></h3>
+        <p>12 KPIs estratégicos para la Gerencia: tasa de cobertura de ronda, semáforo de vencimientos a 60, 30 y 15 días, mapa de calor por sector y proyección financiera de recargas a 12 meses.</p>
+      </div>
+      <div class="feature-card">
+        <h3>🛠️ Taller y Cobertura Obligatoria <span class="tag tag-impl">Implementado</span></h3>
+        <p>Circuito logístico formal de remito para envío a taller externo con asignación obligatoria de extintor sustituto del pañol de reserva, impidiendo que el puesto balizado quede desprotegido.</p>
+      </div>
+      <div class="feature-card">
+        <h3>💾 Copias de Seguridad Atómicas <span class="tag tag-impl">Implementado</span></h3>
+        <p>Comando nativo VACUUM INTO en caliente con verificación obligatoria PRAGMA integrity_check. Garantiza RTO menor a 15 minutos y RPO menor a 24 horas ante fallos de infraestructura.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p><strong>Milicic S.A.</strong> • Área de Higiene, Seguridad y Medio Ambiente (HyS) & Gerencia de TI</p>
+    <p style="margin-top: 4px; font-size: 0.75rem;">Documentación Técnica Oficial de Arquitectura — Base Central Rosario</p>
+  </footer>
+
+  <script>
+    function switchPdf(url, btn) {
+      document.getElementById('pdf-frame').src = url;
+      document.getElementById('download-current-btn').href = url;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+  </script>
+</body>
+</html>
