@@ -325,6 +325,8 @@ router.post('/', authenticate, requirePermiso(PERMISOS.INSPECCION_CREAR), async 
     const is_suspicious = fraudEval.isSuspicious ? 1 : 0;
     const fraud_flags = fraudEval.fraudFlags.join(';') || null;
 
+    const cleanPhotoUrl = (photo_url && String(photo_url).trim() !== '0' && String(photo_url).trim() !== '') ? String(photo_url).trim() : null;
+
     // Insert immutable inspection record with full traceability
     const insert = db.prepare(`
       INSERT INTO inspections (
@@ -333,7 +335,7 @@ router.post('/', authenticate, requirePermiso(PERMISOS.INSPECCION_CREAR), async 
         passed, check_location, check_pressure, check_seal, check_physical, check_signage, check_card,
         observations, photo_url, synced_m365, round_id, is_reinspection, reinspection_reason,
         duration_seconds, is_suspicious, fraud_flags, latitude, longitude, geo_accuracy, checklist_results
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const result = insert.run(
@@ -353,7 +355,7 @@ router.post('/', authenticate, requirePermiso(PERMISOS.INSPECCION_CREAR), async 
       Number(check_signage),
       Number(check_card),
       observations.trim(),
-      photo_url,
+      cleanPhotoUrl,
       round_id,
       Number(is_reinspection),
       reinspection_reason || null,
@@ -406,7 +408,7 @@ router.post('/', authenticate, requirePermiso(PERMISOS.INSPECCION_CREAR), async 
           extinguisher_id, extinguisher_code, inspection_id, title, description, status, priority, photo_url
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ABIERTO', 'ALTA', ?)
       `);
-      const caseRes = insertCase.run(orgId, usuarioId, inspector, ext.id, ext.code, inspectionId, title, desc, photo_url);
+      const caseRes = insertCase.run(orgId, usuarioId, inspector, ext.id, ext.code, inspectionId, title, desc, cleanPhotoUrl);
       caseId = caseRes.lastInsertRowid;
     }
 

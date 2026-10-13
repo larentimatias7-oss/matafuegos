@@ -177,6 +177,25 @@ function initSchema() {
     console.warn('Migración de offline_pin_hash notice:', errUserMig.message);
   }
 
+  // --- REPAIR HISTORICAL PHOTO_URL MISALIGNMENT ---
+  try {
+    db.exec(`
+      UPDATE inspections 
+      SET photo_url = synced_m365, synced_m365 = 0 
+      WHERE synced_m365 LIKE 'data:image%' OR synced_m365 LIKE 'http%';
+
+      UPDATE inspections 
+      SET photo_url = NULL 
+      WHERE photo_url = '0' OR photo_url = '';
+
+      UPDATE cases 
+      SET photo_url = NULL 
+      WHERE photo_url = '0' OR photo_url = '';
+    `);
+  } catch (errPhotoRepair) {
+    console.warn('Reparación de photo_url notice:', errPhotoRepair.message);
+  }
+
   // Ensure public_id is populated for existing extinguishers
   const extsWithoutPublicId = db.prepare("SELECT id FROM extinguishers WHERE public_id IS NULL OR public_id = ''").all();
   if (extsWithoutPublicId.length > 0) {

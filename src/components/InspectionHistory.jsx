@@ -13,7 +13,8 @@ import {
   X, 
   MapPin, 
   ShieldCheck, 
-  ShieldWarning 
+  ShieldWarning,
+  Camera
 } from '@phosphor-icons/react';
 
 export default function InspectionHistory({ onExportExcel }) {
@@ -281,7 +282,25 @@ export default function InspectionHistory({ onExportExcel }) {
                     </span>
                   </td>
                   <td style={{ maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.observations}>
-                    {item.observations || <span style={{ color: 'var(--text-muted)' }}>Sin observaciones</span>}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                      {item.photo_url && item.photo_url !== '0' && (item.photo_url.startsWith('data:image') || item.photo_url.startsWith('http') || item.photo_url.startsWith('/')) && (
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.2rem',
+                          background: 'var(--milicic-orange-soft, rgba(234, 88, 12, 0.12))',
+                          color: 'var(--milicic-orange, #ea580c)',
+                          padding: '0.12rem 0.45rem',
+                          borderRadius: '4px',
+                          fontSize: '0.72rem',
+                          fontWeight: 800,
+                          flexShrink: 0
+                        }} title="Fotografía de evidencia adjunta">
+                          <Camera size={13} weight="bold" /> Foto
+                        </span>
+                      )}
+                      <span>{item.observations || <span style={{ color: 'var(--text-muted)' }}>Sin observaciones</span>}</span>
+                    </div>
                   </td>
                   <td style={{ textAlign: 'right' }}>
                     <button 
@@ -415,12 +434,30 @@ export default function InspectionHistory({ onExportExcel }) {
                 </div>
               )}
 
-              {/* Fotografía de Evidencia si existe */}
-              {selectedInspection.photo_url && (
+              {/* Fotografía de Evidencia si existe y es válida */}
+              {selectedInspection.photo_url && selectedInspection.photo_url !== '0' && (selectedInspection.photo_url.startsWith('data:image') || selectedInspection.photo_url.startsWith('http') || selectedInspection.photo_url.startsWith('/')) && (
                 <div>
-                  <label className="label">Fotografía de Evidencia Adjunta</label>
-                  <div style={{ borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--border-color)', maxHeight: '220px' }}>
-                    <img src={selectedInspection.photo_url} alt="Evidencia" style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                    <label className="label" style={{ margin: 0, fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <Camera size={16} weight="bold" color="var(--milicic-orange)" />
+                      <span>Fotografía de Evidencia Adjunta</span>
+                    </label>
+                    <a 
+                      href={selectedInspection.photo_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: '0.74rem', padding: '0.2rem 0.55rem' }}
+                    >
+                      Ver Pantalla Completa
+                    </a>
+                  </div>
+                  <div style={{ borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--border-color)', maxHeight: '280px', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <img 
+                      src={selectedInspection.photo_url} 
+                      alt="Evidencia fotográfica" 
+                      style={{ width: '100%', maxHeight: '280px', objectFit: 'contain' }} 
+                    />
                   </div>
                 </div>
               )}

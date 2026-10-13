@@ -10,7 +10,8 @@ import {
   FloppyDisk, 
   Check, 
   ArrowRight,
-  UserCheck
+  UserCheck,
+  Camera
 } from '@phosphor-icons/react';
 
 export default function CasesList() {
@@ -189,6 +190,22 @@ export default function CasesList() {
                     <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.3rem', marginBottom: 0 }}>
                       Puesto: {c.location} ({c.type} {c.capacity}) • Nivel: {c.floor}
                     </p>
+
+                    {c.photo_url && c.photo_url !== '0' && (c.photo_url.startsWith('data:image') || c.photo_url.startsWith('http') || c.photo_url.startsWith('/')) && (
+                      <div style={{ marginTop: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', fontWeight: 700, color: 'var(--milicic-orange)', marginBottom: '0.25rem' }}>
+                          <Camera size={14} weight="bold" />
+                          <span>Fotografía de Evidencia Adjunta:</span>
+                        </div>
+                        <div style={{ borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border-color)', maxHeight: '160px', maxWidth: '280px', background: '#0f172a' }}>
+                          <img 
+                            src={c.photo_url} 
+                            alt="Evidencia de anomalía" 
+                            style={{ width: '100%', maxHeight: '160px', objectFit: 'contain', display: 'block' }} 
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -246,6 +263,22 @@ export default function CasesList() {
             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
               {editingCase.title}
             </p>
+
+            {editingCase.photo_url && editingCase.photo_url !== '0' && (editingCase.photo_url.startsWith('data:image') || editingCase.photo_url.startsWith('http') || editingCase.photo_url.startsWith('/')) && (
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label className="label" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <Camera size={15} weight="bold" color="var(--milicic-orange)" />
+                  <span>Fotografía de Evidencia Registrada en Inspección</span>
+                </label>
+                <div style={{ borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', maxHeight: '240px', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <img 
+                    src={editingCase.photo_url} 
+                    alt="Evidencia de anomalía" 
+                    style={{ width: '100%', maxHeight: '240px', objectFit: 'contain' }} 
+                  />
+                </div>
+              </div>
+            )}
 
             <form onSubmit={handleUpdateCase} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
