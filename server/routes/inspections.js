@@ -256,14 +256,46 @@ router.post('/', authenticate, requirePermiso(PERMISOS.INSPECCION_CREAR), async 
       geo_accuracy = null,
       is_reinspection = 0,
       reinspection_reason = '',
-      checklist_results = null
+      checklist_results = null,
+      created_at_local
     } = req.body;
 
+    const orgId = req.user?.organizacion_id || 1;
+    const usuarioId = req.user?.id || null;
+
     let ext;
-    if (extinguisher_id) {
-      ext = db.prepare('SELECT * FROM extinguishers WHERE id = ?').get(extinguisher_id);
-    } else if (extinguisher_code) {
-      ext = db.prepare('SELECT * FROM extinguishers WHERE code = ?').get(extinguisher_code.toUpperCase());
+    if (extinguisher_id && !isNaN(Number(extinguisher_id))) {
+      ext = db.prepare('SELECT * FROM extinguishers WHERE id = ?').get(Number(extinguisher_id));
+    }
+    if (!ext && extinguisher_code) {
+      ext = db.prepare('SELECT * FROM extinguishers WHERE UPPER(code) = UPPER(?)').get(extinguisher_code.trim());
+    }
+    if (!ext && extinguisher_id) {
+      ext = db.prepare('SELECT * FROM extinguishers WHERE UPPER(code) = UPPER(?) OR LOWER(public_id) = LOWER(?)').get(String(extinguisher_id).trim(), String(extinguisher_id).trim());
+    }
+
+    // Si el extintor fue relevado offline en campo y marcado como borrador provisional, auto-registrarlo
+    if (!ext && extinguisher_code && (req.body.is_offline_draft || req.body.isOfflineDraft)) {
+      const cleanCode = extinguisher_code.trim().toUpperCase();
+      const oneYearLater = new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0];
+      const fiveYearsLater = new Date(Date.now() + 5 * 365 * 86400000).toISOString().split('T')[0];
+      const insertDraft = db.prepare(`
+        INSERT INTO extinguishers (
+          organizacion_id, code, type, capacity, location, area, floor, expiration_charge, expiration_ph, status, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'OPERATIVO', 'Alta automática por sincronización de inspección offline')
+      `);
+      const draftRes = insertDraft.run(
+        orgId,
+        cleanCode,
+        'ABC (Polvo químico)',
+        '5 kg',
+        'Ubicación a verificar (relevado en campo)',
+        'General',
+        'Planta Baja',
+        oneYearLater,
+        fiveYearsLater
+      );
+      ext = db.prepare('SELECT * FROM extinguishers WHERE id = ?').get(draftRes.lastInsertRowid);
     }
 
     if (!ext) {
@@ -279,12 +311,24 @@ router.post('/', authenticate, requirePermiso(PERMISOS.INSPECCION_CREAR), async 
     }
 
     const now = new Date();
-    const todayBA = getBuenosAiresDateString(now);
+    // Usar la fecha real en que el operario inspeccionó en campo (vital para auditoría offline e IRAM 3517-2)
+    let effectiveDate = now;
+    if (created_at_local) {
+      const parsedLocal = new Date(created_at_local);
+      if (!isNaN(parsedLocal.getTime())) {
+        effectiveDate = parsedLocal;
+      }
+    } else if (req.body.inspection_date) {
+      const parsedDate = new Date(req.body.inspection_date);
+      if (!isNaN(parsedDate.getTime())) {
+        effectiveDate = parsedDate;
+      }
+    }
+
+    const todayBA = getBuenosAiresDateString(effectiveDate);
     const year_month = todayBA.slice(0, 7);
-    const inspection_date = now.toISOString().replace('T', ' ').substring(0, 19);
+    const inspection_date = effectiveDate.toISOString().replace('T', ' ').substring(0, 19);
     const inspector = (inspector_name || (req.user ? req.user.name : 'Inspector')).trim();
-    const usuarioId = req.user?.id || null;
-    const orgId = req.user?.organizacion_id || 1;
 
     // Regla de una inspección por ronda o reinspección motivada
     const existingCount = db.prepare(`
@@ -315,8 +359,21 @@ router.post('/', authenticate, requirePermiso(PERMISOS.INSPECCION_CREAR), async 
       Number(check_card) === 1
     ) ? 1 : 0;
 
-    // Active Round
-    let round = db.prepare("SELECT id FROM rounds WHERE year_month = ?").get(year_month);
+    // Active Round: obtener o asegurar ronda correspondiente
+    let round = db.prepare("SELECT id FROM rounds WHERE year_month = ? AND organizacion_id = ?").get(year_month, orgId);
+    if (!round) {
+      round = db.prepare("SELECT id FROM rounds WHERE year_month = ?").get(year_month);
+    }
+    if (!round) {
+      const parts = year_month.split('-');
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+      const rName = `Ronda ${months[(m || 1) - 1] || 'Mensual'} ${y || new Date().getFullYear()}`;
+      const insertRound = db.prepare("INSERT INTO rounds (organizacion_id, name, year_month, status) VALUES (?, ?, ?, 'ABIERTA')");
+      const rRes = insertRound.run(orgId, rName, year_month);
+      round = { id: rRes.lastInsertRowid };
+    }
     const round_id = round ? round.id : null;
 
     // --- ANTIFRAUD VERIFICATION ---

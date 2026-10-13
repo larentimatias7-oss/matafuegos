@@ -142,11 +142,12 @@ export default function App() {
         return;
       }
 
-      const [extRes, statsRes, opRes, chkRes] = await Promise.all([
+      const [extRes, statsRes, opRes, chkRes, roundRes] = await Promise.all([
         fetch('/api/extinguishers'),
         fetch('/api/inspections/stats'),
         fetch('/api/auth/pin-operators').catch(() => null),
-        fetch('/api/checklist').catch(() => null)
+        fetch('/api/checklist').catch(() => null),
+        fetch('/api/rounds/active').catch(() => null)
       ]);
 
       const extData = await extRes.json().catch(() => ({}));
@@ -180,6 +181,13 @@ export default function App() {
         const chkItems = Array.isArray(chkData) ? chkData : (chkData.items || []);
         if (Array.isArray(chkItems) && chkItems.length > 0) {
           localStorage.setItem('firecontrol_checklist', JSON.stringify(chkItems));
+        }
+      }
+
+      if (roundRes && roundRes.ok) {
+        const roundData = await roundRes.json().catch(() => ({}));
+        if (roundData.success) {
+          localStorage.setItem('firecontrol_active_round', JSON.stringify(roundData));
         }
       }
     } catch (err) {
@@ -301,7 +309,8 @@ export default function App() {
       const result = await syncOfflineInspections();
       if (result.synced > 0) {
         setSyncFeedback(`Se sincronizaron ${result.synced} inspección(es) exitosamente.`);
-        fetchData();
+        await fetchData();
+        window.dispatchEvent(new CustomEvent('firecontrol_synced', { detail: result }));
       }
       await checkOfflineQueue();
     } catch (e) {

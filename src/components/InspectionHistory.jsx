@@ -61,6 +61,9 @@ export default function InspectionHistory({ onExportExcel }) {
 
   useEffect(() => {
     loadInspections();
+    const handleSync = () => loadInspections();
+    window.addEventListener('firecontrol_synced', handleSync);
+    return () => window.removeEventListener('firecontrol_synced', handleSync);
   }, []);
 
   const filtered = inspections.filter(item => {

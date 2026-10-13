@@ -234,12 +234,38 @@ export default function InspectionForm({ extinguisher, currentUser, isOnline: is
       longitude: geoCoords?.longitude,
       geo_accuracy: geoCoords?.accuracy,
       is_reinspection: isAlreadyInspected ? 1 : 0,
-      reinspection_reason: reinspectionReason.trim()
+      reinspection_reason: reinspectionReason.trim(),
+      is_offline_draft: extinguisher?.isOfflineDraft ? 1 : 0
     };
 
     if (!isOnline) {
       try {
         await enqueueOfflineInspection(inspectionPayload);
+
+        // Actualizar de inmediato la caché local de extintores para que la UI offline refleje el control al instante
+        try {
+          const cachedExtStr = localStorage.getItem('firecontrol_extinguishers');
+          if (cachedExtStr) {
+            const cachedExts = JSON.parse(cachedExtStr);
+            const idx = cachedExts.findIndex(e => e.id === extinguisher.id || (e.code && e.code.toUpperCase() === extinguisher.code?.toUpperCase()));
+            if (idx !== -1) {
+              cachedExts[idx].monthlyStatus = {
+                statusKey: hasAnyFailure ? 'FALLA' : 'CONFORME',
+                badgeColor: hasAnyFailure ? '#EF4444' : '#10B981',
+                label: hasAnyFailure ? 'Con Anomalías (Pendiente Sincronizar)' : 'Conforme (Pendiente Sincronizar)',
+                inspectedThisMonth: true,
+                passed: !hasAnyFailure,
+                date: new Date().toISOString(),
+                observations: observations.trim(),
+                isPendingSync: true
+              };
+              localStorage.setItem('firecontrol_extinguishers', JSON.stringify(cachedExts));
+            }
+          }
+        } catch (_cacheErr) {
+          // Ignorar error de actualización de caché
+        }
+
         setSavedResult({
           success: true,
           passed: !hasAnyFailure,
@@ -260,15 +286,37 @@ export default function InspectionForm({ extinguisher, currentUser, isOnline: is
       const response = await fetch('/api/inspections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(inspectionPayload)
       });
 
-      const data = await response.json();
-      if (!data.success) {
-        throw new Error(data.error || 'Error al guardar el control mensual');
+      const data = await response.json().catch(() => ({}));
+
+      // Service worker interceptor para modo offline
+      if (data.offline || response.status === 503) {
+        await enqueueOfflineInspection(inspectionPayload);
+        setSavedResult({
+          success: true,
+          passed: !hasAnyFailure,
+          isOffline: true,
+          message: 'Sin conexión a Internet. El control se guardó en tu dispositivo y se sincronizará automáticamente al recuperar señal.',
+          nextPendingCode: null
+        });
+        setSaving(false);
+        return;
+      }
+
+      if (!response.ok || !data.success) {
+        if (response.status === 409) {
+          setIsReinspection(true);
+        }
+        setError(data.error || 'Error al guardar el control mensual');
+        setSaving(false);
+        return;
       }
 
       setSavedResult(data);
+      setSaving(false);
     } catch (err) {
       console.warn('Fallo de red en envío, respaldando offline:', err);
       try {

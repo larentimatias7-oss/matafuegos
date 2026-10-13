@@ -56,6 +56,9 @@ export default function RouteView({ onInspectCode }) {
 
   useEffect(() => {
     loadRoute();
+    const handleSync = () => loadRoute();
+    window.addEventListener('firecontrol_synced', handleSync);
+    return () => window.removeEventListener('firecontrol_synced', handleSync);
   }, []);
 
   const items = routeData?.route || [];

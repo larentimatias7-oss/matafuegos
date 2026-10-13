@@ -165,7 +165,7 @@ export async function syncOfflineInspections(onItemSynced) {
 
   for (const item of pending) {
     try {
-      const { id, created_at_local, ...payload } = item;
+      const { id, ...payload } = item;
       const res = await fetch('/api/inspections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -173,10 +173,36 @@ export async function syncOfflineInspections(onItemSynced) {
         body: JSON.stringify(payload)
       });
 
-      if (res.ok || res.status === 409) {
+      if (res.ok) {
         await removeOfflineInspection(id);
         synced++;
         if (onItemSynced) onItemSynced(item);
+      } else if (res.status === 409) {
+        // Conflicto de ronda: el equipo ya fue controlado previamente este mes.
+        // Reintentar declarando reinspección para no perder el control realizado en campo
+        const reason = payload.reinspection_reason && payload.reinspection_reason.trim().length >= 5
+          ? payload.reinspection_reason.trim()
+          : 'Reinspección o actualización sincronizada desde modo offline';
+
+        const retryRes = await fetch('/api/inspections', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            ...payload,
+            is_reinspection: 1,
+            reinspection_reason: reason
+          })
+        });
+
+        if (retryRes.ok) {
+          await removeOfflineInspection(id);
+          synced++;
+          if (onItemSynced) onItemSynced(item);
+        } else {
+          console.warn('Reintento de reinspección falló con status:', retryRes.status);
+          failed++;
+        }
       } else if (res.status === 401 || res.status === 403) {
         // Usuario revocado a mitad del envío
         const remaining = pending.slice(synced);
@@ -189,6 +215,7 @@ export async function syncOfflineInspections(onItemSynced) {
           quarantined: remaining.length
         };
       } else {
+        console.warn(`Sync de registro offline falló con status ${res.status}`);
         failed++;
       }
     } catch (err) {

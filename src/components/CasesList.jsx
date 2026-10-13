@@ -46,6 +46,12 @@ export default function CasesList() {
     loadCases();
   }, [filterStatus]);
 
+  useEffect(() => {
+    const handleSync = () => loadCases();
+    window.addEventListener('firecontrol_synced', handleSync);
+    return () => window.removeEventListener('firecontrol_synced', handleSync);
+  }, []);
+
   const handleUpdateCase = async (e) => {
     e.preventDefault();
     if (!editingCase) return;
