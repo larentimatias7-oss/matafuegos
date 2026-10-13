@@ -1,6 +1,6 @@
 // c:\antigravity\matafuegos\public\sw.js
 // Milicic S.A. - Service Worker con Network First para navegación
-const CACHE_NAME = 'milicic-firecontrol-v4';
+const CACHE_NAME = 'milicic-firecontrol-v5';
 const STATIC_ASSETS = [
   '/manifest.webmanifest',
   '/manifest.json',
@@ -36,6 +36,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request).catch(() => {
         return new Response(JSON.stringify({ offline: true, error: 'Sin conexión a internet' }), {
+          status: 503,
           headers: { 'Content-Type': 'application/json' }
         });
       })

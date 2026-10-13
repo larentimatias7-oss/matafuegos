@@ -131,23 +131,32 @@ export async function syncOfflineInspections(onItemSynced) {
   const pending = await getOfflineInspections();
   if (!pending.length) return { synced: 0, failed: 0, status: 'EMPTY' };
 
-  // Revalidar sesión antes de sincronizar
+  // Revalidar sesión antes de sincronizar si hay conexión
   try {
-    const authCheck = await fetch('/api/auth/me', { credentials: 'include' });
-    if (!authCheck.ok) {
-      const authData = await authCheck.json().catch(() => ({}));
-      const reason = authData.error || 'Sesión no válida o usuario inactivo';
-      await quarantineInspections(pending, reason);
-      return {
-        synced: 0,
-        failed: pending.length,
-        status: 'AUTH_REJECTED',
-        error: reason,
-        quarantined: pending.length
-      };
+    if (!navigator.onLine) {
+      return { synced: 0, failed: pending.length, status: 'OFFLINE_RETRY' };
     }
-  } catch (err) {
-    // Si la red sigue caída, no reintentamos envío
+    const authCheck = await fetch('/api/auth/me', { credentials: 'include' });
+    const authData = await authCheck.json().catch(() => ({}));
+    if (authData.offline || authCheck.status === 503) {
+      return { synced: 0, failed: pending.length, status: 'OFFLINE_RETRY' };
+    }
+    if (!authCheck.ok) {
+      if (authCheck.status === 401 || authCheck.status === 403) {
+        const reason = authData.error || 'Sesión no válida o usuario inactivo';
+        await quarantineInspections(pending, reason);
+        return {
+          synced: 0,
+          failed: pending.length,
+          status: 'AUTH_REJECTED',
+          error: reason,
+          quarantined: pending.length
+        };
+      }
+      return { synced: 0, failed: pending.length, status: 'OFFLINE_RETRY' };
+    }
+  } catch (_err) {
+    // Si la red sigue caída, no reintentamos envío ni modificamos la cola
     return { synced: 0, failed: pending.length, status: 'OFFLINE_RETRY' };
   }
 

@@ -33,8 +33,22 @@ export default function App() {
     }
     return 'dashboard';
   });
-  const [extinguishers, setExtinguishers] = useState([]);
-  const [stats, setStats] = useState(null);
+  const [extinguishers, setExtinguishers] = useState(() => {
+    try {
+      const cached = localStorage.getItem('firecontrol_extinguishers');
+      return cached ? JSON.parse(cached) : [];
+    } catch (_e) {
+      return [];
+    }
+  });
+  const [stats, setStats] = useState(() => {
+    try {
+      const cached = localStorage.getItem('firecontrol_stats');
+      return cached ? JSON.parse(cached) : null;
+    } catch (_e) {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [pendingOfflineCount, setPendingOfflineCount] = useState(0);
@@ -81,43 +95,90 @@ export default function App() {
     extinguisher: null
   });
 
-  // Verify server session on load
+  // Verify server session on load without wiping offline credentials
   const verifySession = async () => {
+    // Si el dispositivo está sin conexión a Internet, NO invalidar la sesión local
+    if (!navigator.onLine) {
+      return;
+    }
     try {
       const res = await fetch('/api/auth/me');
-      const data = await res.json();
-      if (data.authenticated && data.user) {
+      const data = await res.json().catch(() => ({}));
+
+      // Si el Service Worker responde offline o el servidor da 503, mantener la sesión local
+      if (data.offline || res.status === 503) {
+        return;
+      }
+
+      if (res.ok && data.authenticated && data.user) {
         setUser(data.user);
         localStorage.setItem('firecontrol_user', JSON.stringify(data.user));
         setShowLoginModal(false);
         if (data.user?.role === 'GERENCIA' && activeTab === 'dashboard') {
           setActiveTab('gerencia');
         }
-      } else {
+      } else if (res.status === 401 || (res.ok && data.authenticated === false)) {
+        // Únicamente limpiar si el servidor en línea responde explícitamente no autenticado
         setUser(null);
         localStorage.removeItem('firecontrol_user');
         setShowLoginModal(true);
       }
     } catch (e) {
-      console.warn('Error verificando sesión con el servidor:', e);
+      console.warn('Error verificando sesión con el servidor (manteniendo sesión local):', e);
     }
   };
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [extRes, statsRes] = await Promise.all([
+
+      // Si no hay red, usar datos guardados en el dispositivo
+      if (!navigator.onLine) {
+        const cachedExt = localStorage.getItem('firecontrol_extinguishers');
+        const cachedStats = localStorage.getItem('firecontrol_stats');
+        if (cachedExt) setExtinguishers(JSON.parse(cachedExt));
+        if (cachedStats) setStats(JSON.parse(cachedStats));
+        setLoading(false);
+        return;
+      }
+
+      const [extRes, statsRes, opRes] = await Promise.all([
         fetch('/api/extinguishers'),
-        fetch('/api/inspections/stats')
+        fetch('/api/inspections/stats'),
+        fetch('/api/auth/pin-operators').catch(() => null)
       ]);
 
-      const extData = await extRes.json();
-      const statsData = await statsRes.json();
+      const extData = await extRes.json().catch(() => ({}));
+      const statsData = await statsRes.json().catch(() => ({}));
 
-      if (extData.success) setExtinguishers(extData.data);
-      if (statsData.success) setStats(statsData);
+      if (extData.success && Array.isArray(extData.data)) {
+        setExtinguishers(extData.data);
+        localStorage.setItem('firecontrol_extinguishers', JSON.stringify(extData.data));
+      } else {
+        const cachedExt = localStorage.getItem('firecontrol_extinguishers');
+        if (cachedExt) setExtinguishers(JSON.parse(cachedExt));
+      }
+
+      if (statsData.success) {
+        setStats(statsData);
+        localStorage.setItem('firecontrol_stats', JSON.stringify(statsData));
+      } else {
+        const cachedStats = localStorage.getItem('firecontrol_stats');
+        if (cachedStats) setStats(JSON.parse(cachedStats));
+      }
+
+      if (opRes && opRes.ok) {
+        const opData = await opRes.json().catch(() => ({}));
+        if (opData.success && Array.isArray(opData.data)) {
+          localStorage.setItem('firecontrol_pin_operators', JSON.stringify(opData.data));
+        }
+      }
     } catch (err) {
-      console.error('Error fetching data:', err);
+      console.error('Error fetching data (usando caché local):', err);
+      const cachedExt = localStorage.getItem('firecontrol_extinguishers');
+      const cachedStats = localStorage.getItem('firecontrol_stats');
+      if (cachedExt) setExtinguishers(JSON.parse(cachedExt));
+      if (cachedStats) setStats(JSON.parse(cachedStats));
     } finally {
       setLoading(false);
     }
@@ -136,20 +197,35 @@ export default function App() {
       }
       target = target.split('#')[0].split('?')[0].replace(/\/+$/, '').trim();
 
-      const res = await fetch(`/api/extinguishers/${encodeURIComponent(target)}`);
-      const data = await res.json();
-      if (data.success && data.data) {
-        setInspectingExtinguisher(data.data);
-        setActiveTab('scan');
-        return;
-      }
-
-      // Fallback: check in local state extinguishers array
+      // Búsqueda inmediata en memoria local (vital para modo offline en campo)
       const localFound = extinguishers.find(e => 
         (e.code && e.code.toUpperCase() === target.toUpperCase()) ||
         (e.public_id && e.public_id.toLowerCase() === target.toLowerCase()) ||
         String(e.id) === target
       );
+
+      if (!navigator.onLine) {
+        if (localFound) {
+          setInspectingExtinguisher(localFound);
+          setActiveTab('scan');
+        } else {
+          alert(`No se encontró el extintor "${codeOrPublicId}" en la base de datos descargada en el dispositivo.`);
+        }
+        return;
+      }
+
+      // Si hay conexión, intentar refrescar datos del extintor
+      try {
+        const res = await fetch(`/api/extinguishers/${encodeURIComponent(target)}`);
+        const data = await res.json().catch(() => ({}));
+        if (data.success && data.data) {
+          setInspectingExtinguisher(data.data);
+          setActiveTab('scan');
+          return;
+        }
+      } catch (_e) {
+        // En caso de corte momentáneo de red, usar el registro local
+      }
 
       if (localFound) {
         setInspectingExtinguisher(localFound);
@@ -158,7 +234,6 @@ export default function App() {
         alert(`No se encontró ningún matafuego con el código "${codeOrPublicId}".`);
       }
     } catch (e) {
-      // Offline fallback: check local extinguishers array
       const target = String(codeOrPublicId).trim().toUpperCase();
       const localFound = extinguishers.find(e => 
         (e.code && e.code.toUpperCase() === target) ||
@@ -205,13 +280,16 @@ export default function App() {
   // Network online/offline listener and auto-sync
   useEffect(() => {
     checkOfflineQueue();
-    verifySession();
 
     const handleOnline = () => {
       setIsOnline(true);
+      verifySession();
+      fetchData();
       handleTriggerSync();
     };
-    const handleOffline = () => setIsOnline(false);
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -219,7 +297,7 @@ export default function App() {
     // Periodically check queue
     const interval = setInterval(() => {
       checkOfflineQueue();
-      if (navigator.onLine && pendingOfflineCount > 0) {
+      if (navigator.onLine) {
         handleTriggerSync();
       }
     }, 15000);
@@ -229,7 +307,7 @@ export default function App() {
       window.removeEventListener('offline', handleOffline);
       clearInterval(interval);
     };
-  }, [pendingOfflineCount]);
+  }, []);
 
   useEffect(() => {
     verifySession();

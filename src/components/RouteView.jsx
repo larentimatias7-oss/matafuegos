@@ -14,21 +14,43 @@ import {
 } from '@phosphor-icons/react';
 
 export default function RouteView({ onInspectCode }) {
-  const [routeData, setRouteData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [routeData, setRouteData] = useState(() => {
+    try {
+      const cached = localStorage.getItem('firecontrol_active_round');
+      return cached ? JSON.parse(cached) : null;
+    } catch (_e) {
+      return null;
+    }
+  });
+  const [loading, setLoading] = useState(() => !localStorage.getItem('firecontrol_active_round'));
   const [selectedFloor, setSelectedFloor] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
   const loadRoute = () => {
+    if (!navigator.onLine) {
+      const cached = localStorage.getItem('firecontrol_active_round');
+      if (cached) setRouteData(JSON.parse(cached));
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     fetch('/api/rounds/active')
       .then(res => res.json())
       .then(data => {
         if (data.success) {
           setRouteData(data);
+          localStorage.setItem('firecontrol_active_round', JSON.stringify(data));
+        } else {
+          const cached = localStorage.getItem('firecontrol_active_round');
+          if (cached) setRouteData(JSON.parse(cached));
         }
       })
-      .catch(console.error)
+      .catch((err) => {
+        console.warn('Error cargando ronda (usando caché local):', err);
+        const cached = localStorage.getItem('firecontrol_active_round');
+        if (cached) setRouteData(JSON.parse(cached));
+      })
       .finally(() => setLoading(false));
   };
 

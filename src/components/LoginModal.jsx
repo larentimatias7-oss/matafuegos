@@ -8,7 +8,8 @@ import {
   WarningCircle, 
   ArrowsClockwise, 
   X,
-  ShieldCheck
+  ShieldCheck,
+  WifiSlash
 } from '@phosphor-icons/react';
 
 export default function LoginModal({ onLogin, onClose, onOpenPinSwitch }) {
@@ -180,6 +181,28 @@ export default function LoginModal({ onLogin, onClose, onOpenPinSwitch }) {
             }}>
               <WarningCircle size={18} weight="bold" style={{ flexShrink: 0 }} />
               <span>{error}</span>
+            </div>
+          )}
+
+          {!navigator.onLine && (
+            <div style={{
+              padding: '0.65rem 0.85rem',
+              background: 'var(--status-pending-bg, #fef3c7)',
+              color: 'var(--status-pending-text, #92400e)',
+              border: '1px solid var(--status-pending-border, #fcd34d)',
+              borderRadius: '8px',
+              fontSize: '0.8rem',
+              marginBottom: '1.25rem',
+              textAlign: 'left',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              lineHeight: 1.35
+            }}>
+              <WifiSlash size={18} weight="bold" style={{ flexShrink: 0 }} />
+              <div>
+                <strong>Modo Sin Conexión:</strong> Utilice la opción <em>Cambio rápido en tablet (PIN)</em> para identificarse localmente sin conexión.
+              </div>
             </div>
           )}
 

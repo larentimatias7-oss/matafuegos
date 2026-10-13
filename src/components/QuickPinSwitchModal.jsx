@@ -6,36 +6,77 @@ import {
   Check, 
   WarningCircle, 
   ArrowsClockwise,
-  Info
+  Info,
+  WifiSlash
 } from '@phosphor-icons/react';
 
+async function computeSha256(message) {
+  if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
+    const msgUint8 = new TextEncoder().encode(message);
+    const hashBuffer = await window.crypto.subtle.digest('SHA-256', msgUint8);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  return null;
+}
+
 export default function QuickPinSwitchModal({ onClose, onSwitchSuccess }) {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState(() => {
+    try {
+      const cached = localStorage.getItem('firecontrol_pin_operators');
+      return cached ? JSON.parse(cached) : [];
+    } catch (_e) {
+      return [];
+    }
+  });
   const [selectedUser, setSelectedUser] = useState(null);
   const [pin, setPin] = useState('');
-  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [loadingUsers, setLoadingUsers] = useState(() => {
+    return !localStorage.getItem('firecontrol_pin_operators');
+  });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
   const fetchInspectors = async () => {
     try {
-      setLoadingUsers(true);
       setError(null);
+
+      // Si estamos offline, usar directamente los colaboradores en memoria local
+      if (!navigator.onLine) {
+        const cached = localStorage.getItem('firecontrol_pin_operators');
+        if (cached) {
+          setUsers(JSON.parse(cached));
+          setLoadingUsers(false);
+          return;
+        }
+      }
+
       // Intentar primero con el endpoint público de operadores de turno
       let res = await fetch('/api/auth/pin-operators');
       if (!res.ok) {
         // Fallback a /api/users si tiene permisos
         res = await fetch('/api/users?activo=1');
       }
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (data.success && Array.isArray(data.data)) {
         setUsers(data.data);
+        localStorage.setItem('firecontrol_pin_operators', JSON.stringify(data.data));
       } else {
-        setError('No se pudo obtener la lista de colaboradores.');
+        const cached = localStorage.getItem('firecontrol_pin_operators');
+        if (cached) {
+          setUsers(JSON.parse(cached));
+        } else {
+          setError('No se pudo obtener la lista de colaboradores.');
+        }
       }
     } catch (e) {
-      console.warn('Error fetching inspectors:', e);
-      setError('Error de conexión al cargar colaboradores.');
+      console.warn('Error fetching inspectors (usando caché local):', e);
+      const cached = localStorage.getItem('firecontrol_pin_operators');
+      if (cached) {
+        setUsers(JSON.parse(cached));
+      } else {
+        setError('Error de conexión al cargar colaboradores.');
+      }
     } finally {
       setLoadingUsers(false);
     }
@@ -79,6 +120,50 @@ export default function QuickPinSwitchModal({ onClose, onSwitchSuccess }) {
       return;
     }
 
+    const verifyOffline = async () => {
+      if (selectedUser.offline_pin_hash) {
+        const computed = await computeSha256('milicic_fc365_offline_salt:' + selectedUser.id + ':' + pin.trim());
+        if (computed && computed === selectedUser.offline_pin_hash) {
+          const offlineUser = {
+            id: selectedUser.id,
+            name: `${selectedUser.nombre} ${selectedUser.apellido}`.trim(),
+            nombre: selectedUser.nombre,
+            apellido: selectedUser.apellido,
+            email: selectedUser.email,
+            role: selectedUser.rol,
+            rol: selectedUser.rol,
+            tenant: 'Milicic S.A.',
+            organizacion_id: 1,
+            isGlobalScope: true,
+            sectores: []
+          };
+          onSwitchSuccess(offlineUser);
+          return true;
+        } else {
+          setError('PIN incorrecto (verificación local en dispositivo).');
+          setPin('');
+          return false;
+        }
+      } else {
+        setError('Sin conexión para validar este colaborador. Inicie sesión una vez con red para descargar credenciales de campo.');
+        setPin('');
+        return false;
+      }
+    };
+
+    if (!navigator.onLine) {
+      setSubmitting(true);
+      setError(null);
+      try {
+        await verifyOffline();
+      } catch (errOffline) {
+        setError('Error en validación offline: ' + errOffline.message);
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
     try {
       setSubmitting(true);
       setError(null);
@@ -87,7 +172,11 @@ export default function QuickPinSwitchModal({ onClose, onSwitchSuccess }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ usuario_id: selectedUser.id, pin })
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (data.offline || res.status === 503) {
+        await verifyOffline();
+        return;
+      }
       if (data.success) {
         onSwitchSuccess(data.user);
       } else {
@@ -95,12 +184,16 @@ export default function QuickPinSwitchModal({ onClose, onSwitchSuccess }) {
         setPin('');
       }
     } catch (err) {
-      setError(err.message || 'Error al validar el PIN');
-      setPin('');
+      console.warn('Error en red durante pin-switch, intentando validación local:', err);
+      const ok = await verifyOffline();
+      if (!ok && !error) {
+        setError(err.message || 'Error al validar el PIN');
+        setPin('');
+      }
     } finally {
       setSubmitting(false);
     }
-  }, [selectedUser, pin, onSwitchSuccess]);
+  }, [selectedUser, pin, onSwitchSuccess, error]);
 
   // Soporte para teclado físico de computadora o tablet
   useEffect(() => {
@@ -145,6 +238,24 @@ export default function QuickPinSwitchModal({ onClose, onSwitchSuccess }) {
             <X size={16} weight="bold" />
           </button>
         </div>
+
+        {!navigator.onLine && (
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            background: 'var(--status-pending-bg, #fef3c7)',
+            color: 'var(--status-pending-text, #92400e)',
+            padding: '0.3rem 0.75rem',
+            borderRadius: '999px',
+            fontSize: '0.74rem',
+            fontWeight: 700,
+            marginBottom: '0.85rem'
+          }}>
+            <WifiSlash size={14} weight="bold" />
+            <span>Modo Sin Conexión • Validación en Dispositivo</span>
+          </div>
+        )}
 
         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
           Seleccione su usuario e ingrese su PIN de 4-6 dígitos para operar en este dispositivo compartido:

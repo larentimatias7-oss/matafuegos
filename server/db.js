@@ -159,6 +159,24 @@ function initSchema() {
   ensureColumn('inspections', 'geo_accuracy', 'REAL');
   ensureColumn('inspections', 'checklist_results', 'TEXT');
 
+  // --- MIGRATIONS FOR OFFLINE AUTH & COLLABORATORS ---
+  try {
+    ensureColumn('usuarios', 'offline_pin_hash', 'TEXT');
+    const defaultOfflinePins = [
+      { id: '11111111-1111-4111-8111-111111111111', pin: '1234' },
+      { id: 'a5c57ded-2699-4822-9b5a-9095cd07419b', pin: '1234' },
+      { id: '33333333-3333-4333-8333-333333333333', pin: '1234' },
+      { id: '71970460-6f1f-46f8-91f6-50acf1ed24c1', pin: '4826' }
+    ];
+    const updatePinStmt = db.prepare("UPDATE usuarios SET offline_pin_hash = ? WHERE id = ? AND (offline_pin_hash IS NULL OR offline_pin_hash = '')");
+    for (const item of defaultOfflinePins) {
+      const hash = crypto.createHash('sha256').update('milicic_fc365_offline_salt:' + item.id + ':' + item.pin).digest('hex');
+      updatePinStmt.run(hash, item.id);
+    }
+  } catch (errUserMig) {
+    console.warn('Migración de offline_pin_hash notice:', errUserMig.message);
+  }
+
   // Ensure public_id is populated for existing extinguishers
   const extsWithoutPublicId = db.prepare("SELECT id FROM extinguishers WHERE public_id IS NULL OR public_id = ''").all();
   if (extsWithoutPublicId.length > 0) {

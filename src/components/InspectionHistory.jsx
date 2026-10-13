@@ -17,22 +17,44 @@ import {
 } from '@phosphor-icons/react';
 
 export default function InspectionHistory({ onExportExcel }) {
-  const [inspections, setInspections] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [inspections, setInspections] = useState(() => {
+    try {
+      const cached = localStorage.getItem('firecontrol_inspections');
+      return cached ? JSON.parse(cached) : [];
+    } catch (_e) {
+      return [];
+    }
+  });
+  const [loading, setLoading] = useState(() => !localStorage.getItem('firecontrol_inspections'));
   const [searchTerm, setSearchTerm] = useState('');
   const [filterResult, setFilterResult] = useState('');
   const [selectedInspection, setSelectedInspection] = useState(null);
 
   const loadInspections = () => {
+    if (!navigator.onLine) {
+      const cached = localStorage.getItem('firecontrol_inspections');
+      if (cached) setInspections(JSON.parse(cached));
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     fetch('/api/inspections?limit=250')
       .then(res => res.json())
       .then(data => {
-        if (data.success) {
+        if (data.success && Array.isArray(data.data)) {
           setInspections(data.data);
+          localStorage.setItem('firecontrol_inspections', JSON.stringify(data.data));
+        } else {
+          const cached = localStorage.getItem('firecontrol_inspections');
+          if (cached) setInspections(JSON.parse(cached));
         }
       })
-      .catch(console.error)
+      .catch((err) => {
+        console.warn('Error cargando historial (usando caché local):', err);
+        const cached = localStorage.getItem('firecontrol_inspections');
+        if (cached) setInspections(JSON.parse(cached));
+      })
       .finally(() => setLoading(false));
   };
 

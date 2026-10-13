@@ -201,7 +201,8 @@ router.get('/pin-operators', (req, res) => {
   try {
     const operators = db.prepare(`
       SELECT id, nombre, apellido, email, rol,
-             (CASE WHEN pin_hash IS NOT NULL THEN 1 ELSE 0 END) as has_pin
+             (CASE WHEN pin_hash IS NOT NULL THEN 1 ELSE 0 END) as has_pin,
+             offline_pin_hash
       FROM usuarios
       WHERE activo = 1 AND rol IN ('INSPECTOR', 'SUPERVISOR', 'ADMIN', 'SUPERADMIN')
       ORDER BY nombre ASC, apellido ASC
@@ -327,7 +328,8 @@ router.post('/set-pin', validateBody(SetPinSchema), async (req, res) => {
 
   try {
     const pinHashed = await hashPin(pin);
-    db.prepare('UPDATE usuarios SET pin_hash = ?, pin_intentos_fallidos = 0, pin_bloqueado_hasta = NULL WHERE id = ?').run(pinHashed, req.user.id);
+    const offlinePinHash = crypto.createHash('sha256').update('milicic_fc365_offline_salt:' + req.user.id + ':' + pin.trim()).digest('hex');
+    db.prepare('UPDATE usuarios SET pin_hash = ?, offline_pin_hash = ?, pin_intentos_fallidos = 0, pin_bloqueado_hasta = NULL WHERE id = ?').run(pinHashed, offlinePinHash, req.user.id);
 
     recordAudit(db, {
       usuario_id: req.user.id,
