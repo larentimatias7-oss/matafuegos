@@ -142,10 +142,11 @@ export default function App() {
         return;
       }
 
-      const [extRes, statsRes, opRes] = await Promise.all([
+      const [extRes, statsRes, opRes, chkRes] = await Promise.all([
         fetch('/api/extinguishers'),
         fetch('/api/inspections/stats'),
-        fetch('/api/auth/pin-operators').catch(() => null)
+        fetch('/api/auth/pin-operators').catch(() => null),
+        fetch('/api/checklist').catch(() => null)
       ]);
 
       const extData = await extRes.json().catch(() => ({}));
@@ -173,6 +174,14 @@ export default function App() {
           localStorage.setItem('firecontrol_pin_operators', JSON.stringify(opData.data));
         }
       }
+
+      if (chkRes && chkRes.ok) {
+        const chkData = await chkRes.json().catch(() => ({}));
+        const chkItems = Array.isArray(chkData) ? chkData : (chkData.items || []);
+        if (Array.isArray(chkItems) && chkItems.length > 0) {
+          localStorage.setItem('firecontrol_checklist', JSON.stringify(chkItems));
+        }
+      }
     } catch (err) {
       console.error('Error fetching data (usando caché local):', err);
       const cachedExt = localStorage.getItem('firecontrol_extinguishers');
@@ -198,19 +207,45 @@ export default function App() {
       target = target.split('#')[0].split('?')[0].replace(/\/+$/, '').trim();
 
       // Búsqueda inmediata en memoria local (vital para modo offline en campo)
-      const localFound = extinguishers.find(e => 
+      let found = extinguishers.find(e => 
         (e.code && e.code.toUpperCase() === target.toUpperCase()) ||
         (e.public_id && e.public_id.toLowerCase() === target.toLowerCase()) ||
         String(e.id) === target
       );
 
-      if (!navigator.onLine) {
-        if (localFound) {
-          setInspectingExtinguisher(localFound);
-          setActiveTab('scan');
-        } else {
-          alert(`No se encontró el extintor "${codeOrPublicId}" en la base de datos descargada en el dispositivo.`);
+      // Si no estaba en el estado React, revisar directamente localStorage
+      if (!found) {
+        try {
+          const cached = JSON.parse(localStorage.getItem('firecontrol_extinguishers') || '[]');
+          if (Array.isArray(cached)) {
+            found = cached.find(e => 
+              (e.code && e.code.toUpperCase() === target.toUpperCase()) ||
+              (e.public_id && e.public_id.toLowerCase() === target.toLowerCase()) ||
+              String(e.id) === target
+            );
+          }
+        } catch (_e) {
+          // Ignorar fallback parse error
         }
+      }
+
+      if (!navigator.onLine) {
+        if (!found) {
+          // Si no está en el listado precargado, generar ficha provisional para no frenar la auditoría en campo
+          const cleanCode = target.toUpperCase().startsWith('MF-') ? target.toUpperCase() : `MF-${target.toUpperCase()}`;
+          found = {
+            id: target,
+            code: cleanCode,
+            type: 'ABC (Polvo químico)',
+            capacity: '5 kg',
+            location: 'Extintor en Campo (Sin red previa)',
+            sector: 'Sector a sincronizar',
+            status: 'PENDIENTE',
+            isOfflineDraft: true
+          };
+        }
+        setInspectingExtinguisher(found);
+        setActiveTab('scan');
         return;
       }
 
@@ -227,8 +262,8 @@ export default function App() {
         // En caso de corte momentáneo de red, usar el registro local
       }
 
-      if (localFound) {
-        setInspectingExtinguisher(localFound);
+      if (found) {
+        setInspectingExtinguisher(found);
         setActiveTab('scan');
       } else {
         alert(`No se encontró ningún matafuego con el código "${codeOrPublicId}".`);
@@ -497,6 +532,7 @@ export default function App() {
               <InspectionForm 
                 extinguisher={inspectingExtinguisher}
                 currentUser={user}
+                isOnline={isOnline}
                 onBack={() => setInspectingExtinguisher(null)}
                 onSaved={() => {
                   fetchData();

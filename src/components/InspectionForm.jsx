@@ -20,8 +20,78 @@ import {
 } from '@phosphor-icons/react';
 import { enqueueOfflineInspection, compressImageFile } from '../utils/offlineQueue';
 
-export default function InspectionForm({ extinguisher, onBack, onSaved, onInspectNext }) {
+const FALLBACK_CHECKLIST = [
+  {
+    code: 'check_location',
+    label: 'Ubicación y Acceso Despejado',
+    description: 'En puesto reglamentario sin obstáculos que impidan el retiro rápido.'
+  },
+  {
+    code: 'check_pressure',
+    label: 'Presión / Manómetro en Verde (o Peso CO2)',
+    description: 'Manómetro en zona verde reglamentaria. En extintores CO2: verificación de peso por balanza.'
+  },
+  {
+    code: 'check_seal',
+    label: 'Precinto y Pasador de Seguridad',
+    description: 'Traba metálica colocada y precinto plástico inviolado (sin signos de accionamiento previo).'
+  },
+  {
+    code: 'check_physical',
+    label: 'Cilindro, Manguera y Tobera',
+    description: 'Sin corrosión profunda ni abolladuras. Manguera flexible y tobera sin fisuras ni taponamientos.'
+  },
+  {
+    code: 'check_signage',
+    label: 'Señalización y Chapa Baliza',
+    description: 'Chapa baliza reglamentaria limpia y cartel visible a distancia adecuada.'
+  },
+  {
+    code: 'check_card',
+    label: 'Tarjeta de Control y Marbete Anual',
+    description: 'Tarjeta legible y marbete plástico en cuello con color correspondiente al año en curso.'
+  }
+];
+
+function getInitialChecklistItems() {
+  try {
+    const cached = localStorage.getItem('firecontrol_checklist');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (_e) {
+    // Ignorar JSON parse error y usar FALLBACK_CHECKLIST
+  }
+  return FALLBACK_CHECKLIST;
+}
+
+function getInitialChecks(items) {
+  const initial = {};
+  items.forEach(item => {
+    initial[item.code] = 1; // Todos en verde (1) por defecto
+  });
+  return initial;
+}
+
+export default function InspectionForm({ extinguisher, currentUser, isOnline: isOnlineProp, onBack, onSaved, onInspectNext }) {
+  const [internalOnline, setInternalOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
+
+  useEffect(() => {
+    const handleOnline = () => setInternalOnline(true);
+    const handleOffline = () => setInternalOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  const isOnline = typeof isOnlineProp === 'boolean' ? isOnlineProp : internalOnline;
+
   const [inspectorName, setInspectorName] = useState(() => {
+    if (currentUser?.name) return currentUser.name;
     try {
       const u = JSON.parse(localStorage.getItem('firecontrol_user') || 'null');
       if (u && u.name) return u.name;
@@ -32,9 +102,9 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
     return saved || '';
   });
 
-  const [checklistItems, setChecklistItems] = useState([]);
-  const [loadingChecklist, setLoadingChecklist] = useState(true);
-  const [checks, setChecks] = useState({});
+  const [checklistItems, setChecklistItems] = useState(getInitialChecklistItems);
+  const [loadingChecklist, setLoadingChecklist] = useState(false);
+  const [checks, setChecks] = useState(() => getInitialChecks(getInitialChecklistItems()));
   const [observations, setObservations] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
   const [saving, setSaving] = useState(false);
@@ -73,40 +143,46 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
 
   useEffect(() => {
     const fetchChecklist = async () => {
+      // Si estamos offline, no intentar fetch y asegurar que los items estén poblados
+      if (!isOnline) {
+        const items = getInitialChecklistItems();
+        setChecklistItems(items);
+        setChecks(prev => {
+          const next = { ...prev };
+          items.forEach(item => {
+            if (next[item.code] === undefined) next[item.code] = 1;
+          });
+          return next;
+        });
+        return;
+      }
+
       try {
         const res = await fetch('/api/checklist');
-        const data = await res.json();
-        const items = Array.isArray(data) ? data : (data.items || []);
-        setChecklistItems(items);
+        const data = await res.json().catch(() => ({}));
+        if (data.offline || res.status === 503) {
+          return;
+        }
 
-        // Pre-fill all with OK (1) by default for fast thumb inspection
-        const initial = {};
-        items.forEach(item => {
-          initial[item.code] = 1;
-        });
-        setChecks(initial);
+        const items = Array.isArray(data) ? data : (data.items || []);
+        if (Array.isArray(items) && items.length > 0) {
+          setChecklistItems(items);
+          localStorage.setItem('firecontrol_checklist', JSON.stringify(items));
+          setChecks(prev => {
+            const next = { ...prev };
+            items.forEach(item => {
+              if (next[item.code] === undefined) next[item.code] = 1;
+            });
+            return next;
+          });
+        }
       } catch (err) {
-        console.error('Error al cargar checklist:', err);
-        // Fallback standard checklist items if offline
-        const fallback = [
-          { code: 'check_location', label: 'Ubicación y Acceso', description: 'Extintor visible, en su puesto reglamentario y con acceso despejado' },
-          { code: 'check_pressure', label: 'Manómetro / Presión', description: 'Aguja indicadora en zona verde operativa' },
-          { code: 'check_seal', label: 'Precinto y Traba', description: 'Precinto plástico de seguridad intacto con pasador colocado' },
-          { code: 'check_physical', label: 'Estado Físico y Manguera', description: 'Sin golpes, corrosión ni manguera cuarteada u obstruida' },
-          { code: 'check_signage', label: 'Chapa Baliza y Cartel', description: 'Cartel señalizador normalizado y chapa baliza limpia' },
-          { code: 'check_card', label: 'Tarjeta de Control', description: 'Tarjeta IRAM presente y legible' },
-        ];
-        setChecklistItems(fallback);
-        const initial = {};
-        fallback.forEach(item => { initial[item.code] = 1; });
-        setChecks(initial);
-      } finally {
-        setLoadingChecklist(false);
+        console.warn('Uso de checklist local (offline):', err);
       }
     };
 
     fetchChecklist();
-  }, []);
+  }, [isOnline]);
 
   const toggleCheck = (code, val) => {
     // Provide short haptic feedback on toggle if available
@@ -161,7 +237,7 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
       reinspection_reason: reinspectionReason.trim()
     };
 
-    if (!navigator.onLine) {
+    if (!isOnline) {
       try {
         await enqueueOfflineInspection(inspectionPayload);
         setSavedResult({
@@ -248,7 +324,24 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
           {savedResult.message}
         </p>
 
-        {savedResult.nextPendingCode ? (
+        {savedResult.isOffline ? (
+          <div style={{
+            background: 'var(--status-pending-bg)',
+            border: '1.5px solid var(--status-pending-border)',
+            borderRadius: '10px',
+            padding: '1.25rem',
+            marginBottom: '1.5rem',
+            textAlign: 'center'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', color: 'var(--status-pending-text)', fontWeight: 800, marginBottom: '0.4rem' }}>
+              <WifiSlash size={22} weight="bold" />
+              <span>Guardado en Celular (Modo Offline)</span>
+            </div>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-body)', lineHeight: 1.45 }}>
+              El control se encoló exitosamente en la memoria del celular. Podés continuar escaneando otros extintores normalmente. Cuando vuelvas a tener señal, se enviará automáticamente.
+            </div>
+          </div>
+        ) : savedResult.nextPendingCode ? (
           <div style={{
             background: 'var(--status-pending-bg)',
             border: '1.5px solid var(--status-pending-border)',
@@ -296,10 +389,10 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
 
           <button
             onClick={onSaved}
-            className="btn btn-secondary btn-full"
-            style={{ minHeight: '44px' }}
+            className="btn btn-primary btn-full"
+            style={{ fontWeight: 800, fontSize: '1rem', minHeight: '46px' }}
           >
-            Finalizar y volver
+            <span>{savedResult.isOffline ? 'Escanear Siguiente Extintor' : 'Finalizar y Volver'}</span>
           </button>
         </div>
       </div>
@@ -394,6 +487,48 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
         </div>
       )}
 
+      {/* High-Impact Offline Notification Banner */}
+      {!isOnline && (
+        <div style={{
+          padding: '1.15rem 1.25rem',
+          borderRadius: '12px',
+          background: 'linear-gradient(135deg, rgba(234, 88, 12, 0.14) 0%, rgba(249, 115, 22, 0.07) 100%)',
+          border: '2px solid var(--milicic-orange, #ea580c)',
+          boxShadow: '0 4px 16px rgba(234, 88, 12, 0.12)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.65rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#c2410c', fontWeight: 900, fontSize: '1.02rem' }}>
+              <WifiSlash size={24} weight="bold" />
+              <span>MODO SIN CONEXIÓN ACTIVO (OFFLINE)</span>
+            </div>
+            <span style={{
+              background: '#ea580c',
+              color: '#ffffff',
+              padding: '0.22rem 0.65rem',
+              borderRadius: '999px',
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase'
+            }}>
+              Guardado Local en Celular
+            </span>
+          </div>
+
+          <div style={{ fontSize: '0.86rem', color: 'var(--text-main)', lineHeight: 1.5 }}>
+            <div style={{ marginBottom: '0.45rem', fontWeight: 800, color: 'var(--status-ok-text, #166534)' }}>
+              🟢 Todos los puntos del checklist están en CONFORME (OK / Verde) por defecto.
+            </div>
+            <div style={{ color: 'var(--text-muted)' }}>
+              Verifique el extintor físicamente y modifique a <strong>FALLA (Rojo)</strong> únicamente los puntos donde detecte anomalías. Al presionar <em>Guardar</em>, los datos se almacenarán en su celular y <strong>se enviarán automáticamente a la base de datos central cuando recupere la conexión</strong>.
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Official Normative Disclaimer */}
       <div style={{
         padding: '0.65rem 0.85rem',
@@ -411,10 +546,24 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
       </div>
 
       {/* Quick 1-Tap Shortcut Button */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
-        <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-          Checklist Mensual
-        </span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Checklist Mensual
+          </span>
+          {!isOnline && (
+            <span style={{
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              padding: '0.2rem 0.5rem',
+              borderRadius: '4px',
+              background: 'var(--status-pending-bg)',
+              color: 'var(--status-pending-text)'
+            }}>
+              Pre-cargado OK • Editable
+            </span>
+          )}
+        </div>
 
         <button
           type="button"
@@ -423,7 +572,7 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
           style={{ fontWeight: 800, padding: '0.4rem 1rem' }}
         >
           <Lightning size={16} weight="fill" aria-hidden="true" />
-          <span>Todo OK</span>
+          <span>Restablecer Todo OK</span>
         </button>
       </div>
 
@@ -578,9 +727,16 @@ export default function InspectionForm({ extinguisher, onBack, onSaved, onInspec
           >
             <PaperPlaneTilt size={18} weight="bold" aria-hidden="true" />
             <span>
-              {saving ? 'Guardando...' : (hasAnyFailure ? 'Guardar y Abrir Caso' : 'Guardar y Siguiente')}
+              {saving ? 'Guardando...' : 
+               !isOnline ? (hasAnyFailure ? 'Guardar Falla en Celular (Offline)' : 'Guardar Inspección en Celular (Offline)') :
+               (hasAnyFailure ? 'Guardar y Abrir Caso' : 'Guardar y Siguiente')}
             </span>
           </button>
+          {!isOnline && (
+            <div style={{ textAlign: 'center', fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '0.35rem', fontWeight: 600 }}>
+              Se guardará en la memoria del celular y se sincronizará automáticamente cuando vuelva la conexión
+            </div>
+          )}
         </div>
 
       </form>

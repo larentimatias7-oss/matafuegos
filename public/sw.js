@@ -1,6 +1,6 @@
 // c:\antigravity\matafuegos\public\sw.js
 // Milicic S.A. - Service Worker con Network First para navegación
-const CACHE_NAME = 'milicic-firecontrol-v5';
+const CACHE_NAME = 'milicic-firecontrol-v6';
 const STATIC_ASSETS = [
   '/manifest.webmanifest',
   '/manifest.json',
