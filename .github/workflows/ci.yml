@@ -75,7 +75,7 @@ jobs:
           BASE_URL: http://localhost:3000
 
       - name: Subir Reportes de Prueba en caso de fallo
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: test-artifacts
